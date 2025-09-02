@@ -8,15 +8,16 @@ const substituteRequestSchema = new mongoose.Schema({
   endTime: { type: String, required: true },
   subject: { type: String, required: true },
   substituteTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  status: { type: String, enum: ['pending','accepted','declined'], default: 'pending' },
+  status: { type: String, enum: ['pending','accepted'], default: 'pending' },
   formLink: { type: String },
-  responses: [
+  response:
     {
-      teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      canAttend: { type: Boolean },
+      firstName: { type: String },
+      lastName: { type: String },
+      email: { type: String },
       notes: { type: String }
     }
-  ]
+  
 }, { timestamps: true });
 
 export default mongoose.model('SubstituteRequest', substituteRequestSchema);
