@@ -1,12 +1,24 @@
 import User from '../models/User.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-
+import Class from '../models/Class.js';
 // --- Authentication ---
 
 export const register = async (req, res) => {
   try {
     const { firstName, lastName, gender, userId, email, birthDate, password, role, classes, subjects, ishomeroom } = req.body;
+    
+    let validClasses = [];
+    if (classes && classes.length > 0) {
+      const existingClasses = await Class.find({ name: { $in: classes } });
+      if (existingClasses.length !== classes.length) {
+        const existingNames = existingClasses.map(c => c.name);
+        const invalidNames = classes.filter(c => !existingNames.includes(c));
+        return res.status(400).json({ message: `These classes do not exist: ${invalidNames.join(', ')}` });
+      }
+      validClasses = existingClasses.map(c => c._id);
+    }
+    
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -20,7 +32,7 @@ export const register = async (req, res) => {
       birthDate,
       password: hashedPassword,
       role,
-      classes,
+      classes: validClasses,
       subjects,
       ishomeroom
     });
