@@ -5,7 +5,17 @@ const userSchema = new mongoose.Schema({
   lastName: { type: String, required: true },
   userName: { type: String, unique: true }, 
   gender: { type: String, enum: ['male', 'female'], required: true },
-  userId: { type: String, required: true, unique: true },
+  userId: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    validate: {
+      validator: function(v) {
+        return /^\d{9}$/.test(v); // בדיוק 9 ספרות
+      },
+      message: props => `${props.value} is not a valid Israeli ID number`
+    }
+  },
   email: { type: String, required: true },
   birthDate: { type: Date },
   password: { type: String, required: true },

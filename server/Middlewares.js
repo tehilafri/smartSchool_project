@@ -17,7 +17,7 @@ export const jwtMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, secret);
-    req.userId = decoded.userId; 
+    req.id = decoded.id; 
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

@@ -2,7 +2,8 @@ import mongoose from 'mongoose'
 
 const substituteRequestSchema = new mongoose.Schema({
   originalTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  // classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  classId: { type: String, required: true },
   date: { type: Date, required: true },
   startTime: { type: String, required: true },
   endTime: { type: String, required: true },
@@ -10,6 +11,7 @@ const substituteRequestSchema = new mongoose.Schema({
   substituteTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   status: { type: String, enum: ['pending','accepted'], default: 'pending' },
   formLink: { type: String },
+  reason: { type: String },
   response:
     {
       firstName: { type: String },

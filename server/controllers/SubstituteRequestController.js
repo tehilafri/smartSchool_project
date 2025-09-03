@@ -6,9 +6,10 @@ export const reportAbsence = async (req, res) => {
   try {
     const {date, startTime, endTime,subject, classId, reason } = req.body;
     const teacher = await User.findById(req.id);
+    console.log("req.id:", req.id);
 
     const absence = new SubstituteRequest({
-      originalTeacherId: teacher.userId,
+      originalTeacherId: teacher._id,
       date,
       startTime,
       endTime,

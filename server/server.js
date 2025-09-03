@@ -8,6 +8,7 @@ import connectDB from "./config/dbConn.js";
 import corsOptions from "./config/corsOption.js";
 import UserRouter from './routes/UserRouter.js';
 import SubstituteRequestRouter from './routes/SubstituteRequestRouter.js';
+import ClassRouter from './routes/ClassRouter.js';
 
 const server = express();
 
@@ -32,7 +33,7 @@ server.get("/", (req, res) => {
 
 server.use('/api/users', UserRouter);
 server.use('/api/substitute-requests', SubstituteRequestRouter);
-
+server.use('/api/classes', ClassRouter);
 
 // מאזינים לאירועים של מסד הנתונים
 mongoose.connection.once("open", () => {
