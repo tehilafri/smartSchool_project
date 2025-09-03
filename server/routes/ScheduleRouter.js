@@ -1,12 +1,13 @@
 import express from 'express';
-import {getNextLessonForStudent , getScheduleByTeacher, createSchedule, updateScheduleDay} from '../controllers/ScheduleController.js';
-import { jwtMiddleware } from '../Middlewares.js';
+import {getNextLessonForStudent, getNextLessonForTeacher , getScheduleByTeacher, createSchedule, updateScheduleDay} from '../controllers/ScheduleController.js';
+import { jwtMiddleware ,requireRole} from '../Middlewares.js';
 
 const router = express.Router();
 
-router.get('/nextLesson', jwtMiddleware, getNextLessonForStudent);
-router.get('/ScheduleByTeacher', jwtMiddleware, getScheduleByTeacher);
-router.post('/createSchedule', jwtMiddleware, createSchedule);
-router.put('/updateDay', jwtMiddleware, updateScheduleDay);
+router.get('/nextLesson', jwtMiddleware,requireRole('student'), getNextLessonForStudent);
+router.get('/nextLessonForTeacher', jwtMiddleware, requireRole('teacher'), getNextLessonForTeacher);
+router.get('/ScheduleByTeacher', jwtMiddleware,requireRole('teacher', 'admin'), getScheduleByTeacher);
+router.post('/createSchedule', jwtMiddleware,requireRole('teacher', 'admin'), createSchedule);
+router.put('/updateDay', jwtMiddleware,requireRole('teacher', 'admin'), updateScheduleDay);
 
 export default router;
