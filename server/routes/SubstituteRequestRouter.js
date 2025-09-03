@@ -9,8 +9,8 @@ import { jwtMiddleware } from '../Middlewares.js';
 const router = express.Router();
 
 // כל ה־routes כאן מוגנים ב־JWT
-router.post('/report', jwtMiddleware, reportAbsence);
-router.post('/approve', jwtMiddleware, approveReplacement);
-router.get('/', jwtMiddleware, getSubstituteRequests);
+router.post('/report', jwtMiddleware,requireRole('teacher', 'admin'), reportAbsence);
+router.post('/approve', jwtMiddleware, requireRole('teacher'), approveReplacement);
+router.get('/', jwtMiddleware, requireRole('admin,teacher'), getSubstituteRequests);
 
 export default router;

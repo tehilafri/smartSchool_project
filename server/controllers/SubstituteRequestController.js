@@ -10,24 +10,18 @@ export const reportAbsence = async (req, res) => {
 
     // למצוא את המורה המדווחת לפי ה־ID מהטוקן
     const teacher = await User.findById(req.id);
-    console.log("Reported by teacher ID:", req.id);
     if (!teacher) {
       return res.status(404).json({ message: 'Teacher not found' });
     }
 
-    // למצוא את הכיתה לפי שם, ולוודא שהמורה שייכת אליה
-    const schoolClass = await Class.findOne({ 
+    // למצוא את הכיתה ולוודא שהמורה שייכת אליה
+    const schoolClass = await Class.findOne({
       name: className,
       $or: [
-        { homeroomTeacher: new mongoose.Types.ObjectId(teacher._id) },
-        { teachers: new mongoose.Types.ObjectId(teacher._id) }
+        { homeroomTeacher: teacher._id },
+        { teachers: teacher._id }
       ]
     });
-    
-    const c = await Class.findOne({ name: className });
-    console.log('className from req:', className, typeof className);
-    console.log('homeroomTeacher in DB:', c.homeroomTeacher, typeof c.homeroomTeacher);
-    console.log("Class found:", schoolClass);
 
     if (!schoolClass) {
       return res.status(403).json({ message: 'You are not assigned to this class' });
@@ -49,30 +43,42 @@ export const reportAbsence = async (req, res) => {
     res.status(201).json({ message: 'Absence reported', absence });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
+
 export const approveReplacement = async (req, res) => {
   try {
-    const {absenceId,firstName,lastName,email,notes} = req.body;
+    const { absenceId, firstName, lastName, email, notes } = req.body;
 
     const absence = await SubstituteRequest.findById(absenceId);
     if (!absence) return res.status(404).json({ message: 'Absence not found' });
 
-    if(absence.status == 'accepted')
-        return res.json({ message: 'Replacement already approved' });
+    // הרשאה – רק מי שיצר את הבקשה יכול לאשר
+    if (absence.originalTeacherId.toString() !== req.id) {
+      return res.status(403).json({ message: 'You are not allowed to approve this request' });
+    }
+
+    if (absence.status === 'accepted') {
+      return res.json({ message: 'Replacement already approved' });
+    }
 
     absence.status = 'accepted';
-    absence.response = { firstName, lastName, email ,notes};
+    absence.response = { firstName, lastName, email, notes };
     await absence.save();
 
-    const originalTeacher = await User.findById(absence.originalTeacherId);
-    await sendEmail(originalTeacher.email, 'The matter has been resolved', `The teacher ${firstName} ${lastName} with email: ${email} will cover your lesson`);
+    // שליחת מייל – כאן אפשר לבחור אם בכלל צריך,
+    // כי זה אותו מורה שמאשר לעצמו
+    await sendEmail(
+      email,
+      'Replacement approved',
+      `You have been approved as a substitute for ${absence.subject}`
+    );
 
-    res.json({ message: 'Replacement approved' });
-    
+    res.json({ message: 'Replacement approved', absence });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 };

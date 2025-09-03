@@ -30,3 +30,17 @@ export const jwtMiddleware = (req, res, next) => {
     }
   }
 };
+
+export const requireRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.role) {
+      return res.status(401).json({ message: "Unauthorized - no role found" });
+    }
+
+    if (!allowedRoles.includes(req.role)) {
+      return res.status(403).json({ message: "Forbidden - insufficient permissions" });
+    }
+
+    next();
+  };
+};
