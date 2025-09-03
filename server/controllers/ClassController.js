@@ -1,4 +1,4 @@
-import ClassModel from '../models/Class.js';
+import Class from '../models/Class.js';
 import User from '../models/User.js';
 
 export const createClass = async (req, res) => {
@@ -58,7 +58,7 @@ export const createClass = async (req, res) => {
 
 export const getAllClasses = async (req, res) => {
   try {
-    const classes = await ClassModel.find()
+    const classes = await Class.find()
       .populate('homeroomTeacher', 'userId name')
       .populate('students', 'userId name');
     res.json(classes);
@@ -143,50 +143,34 @@ export const removeStudentFromClass = async (req, res) => {
 
 export const updateHomeroomTeacher = async (req, res) => {
   try {
-    const { name } = req.params; // שם הכיתה
-    const { homeroomTeacher, students } = req.body;
+    const { className } = req.params; // שם הכיתה ב-URL
+    const { newHomeroomTeacherId } = req.body; // ת"ז של המורה החדשה
 
-    const classObj = await ClassModel.findOne({ name });
-    if (!classObj) {
+    // בדיקה שהכיתה קיימת
+    const classDoc = await Class.findOne({ name: className });
+    if (!classDoc) {
       return res.status(404).json({ message: 'Class not found' });
     }
 
-    if (homeroomTeacher) {
-      const teacher = await User.findOne({ userId: homeroomTeacher });
-      if (!teacher) {
-        return res.status(404).json({ message: 'Homeroom teacher not found' });
-      }
-
-      const teacherInAnotherClass = await ClassModel.findOne({ homeroomTeacher: teacher._id, _id: { $ne: classObj._id } });
-      if (teacherInAnotherClass) {
-        return res.status(400).json({ message: 'This teacher is already homeroom teacher of another class' });
-      }
-
-      classObj.homeroomTeacher = teacher._id;
+    // בדיקה שהמורה קיימת
+    const teacher = await User.findOne({ userId: newHomeroomTeacherId, role: 'teacher' });
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
     }
 
-    if (students && students.length > 0) {
-      // בדיקה שכל התלמידים קיימים ושאינם בכיתה אחרת
-      const existingStudents = await User.find({ userId: { $in: students } });
-      if (existingStudents.length !== students.length) {
-        return res.status(400).json({ message: 'Some students not found' });
-      }
-
-      for (let student of existingStudents) {
-        const studentInAnotherClass = await ClassModel.findOne({ students: student._id, _id: { $ne: classObj._id } });
-        if (studentInAnotherClass) {
-          return res.status(400).json({ message: `Student ${student.userId} is already in another class` });
-        }
-      }
-
-      classObj.students = existingStudents.map(s => s._id);
+    // בדיקה שהיא לא כבר מחנכת בכיתה אחרת
+    const alreadyHomeroom = await Class.findOne({ homeroomTeacher: teacher._id });
+    if (alreadyHomeroom && alreadyHomeroom.name !== className) {
+      return res.status(400).json({ message: 'This teacher is already a homeroom teacher in another class' });
     }
 
-    await classObj.save();
-    res.json({ message: 'Class updated', class: classObj });
+    // עדכון המחנכת
+    classDoc.homeroomTeacher = teacher._id;
+    await classDoc.save();
 
+    res.json({ message: 'Homeroom teacher updated successfully', class: classDoc });
   } catch (err) {
-    console.error(err);
+    console.error('Error updating homeroom teacher:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };

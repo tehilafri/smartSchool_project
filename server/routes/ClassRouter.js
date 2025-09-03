@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.post('/createClass', jwtMiddleware, createClass);
 router.get('/', jwtMiddleware, getAllClasses);
-router.put('/updateHomeroomTeacher/:name', jwtMiddleware, updateHomeroomTeacher);
+router.put('/updateHomeroomTeacher/:className', jwtMiddleware, updateHomeroomTeacher);
 router.post('/addStudent', jwtMiddleware, addStudentToClass);
 router.post('/removeStudent', jwtMiddleware, removeStudentFromClass);
 
