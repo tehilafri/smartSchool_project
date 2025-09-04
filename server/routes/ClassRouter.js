@@ -5,14 +5,14 @@ import { createClass,
          removeStudentFromClass,
          addStudentToClass,
         } from '../controllers/ClassController.js';
-import { jwtMiddleware } from '../Middlewares.js';
+import { jwtMiddleware, requireRole } from '../Middlewares.js';
 
 const router = express.Router();
 
-router.post('/createClass', jwtMiddleware, createClass);
+router.post('/createClass', jwtMiddleware, requireRole('admin'), createClass);
 router.get('/', jwtMiddleware, getAllClasses);
-router.put('/updateHomeroomTeacher/:className', jwtMiddleware, updateHomeroomTeacher);
-router.post('/addStudent', jwtMiddleware, addStudentToClass);
-router.post('/removeStudent', jwtMiddleware, removeStudentFromClass);
+router.put('/updateHomeroomTeacher/:className', jwtMiddleware, requireRole('admin'), updateHomeroomTeacher);
+router.post('/addStudent', jwtMiddleware, requireRole('admin'), addStudentToClass);
+router.post('/removeStudent', jwtMiddleware, requireRole('admin'), removeStudentFromClass);
 
 export default router;

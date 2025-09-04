@@ -2,17 +2,10 @@ import mongoose from 'mongoose';
 import SubstituteRequest from '../models/SubstituteRequest.js';
 import User from '../models/User.js';
 import { sendEmail } from '../utils/email.js';
+import { generateCode } from '../utils/generatedCode.js';
 import Class from '../models/Class.js';
 import ExternalSubstitute from '../models/ExternalSubstitute.js';
 
-function generateAbsenceCode() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
 
 export const reportAbsence = async (req, res) => {
   try {
@@ -33,7 +26,7 @@ export const reportAbsence = async (req, res) => {
       return res.status(403).json({ message: 'You are not assigned to this class' });
     }
 
-    const absenceCode = generateAbsenceCode();
+    const absenceCode = generateCode();
 
     const absence = new SubstituteRequest({
       originalTeacherId: teacher._id,

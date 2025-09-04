@@ -4,14 +4,14 @@ import { addEvent,
          getEventById,
          updateEvent,
          deleteEvent } from '../controllers/EventController.js';
-import { jwtMiddleware } from '../Middlewares.js';
+import { jwtMiddleware, requireRole } from '../Middlewares.js';
 
 const router = express.Router();
 
-router.post('/addEvent', jwtMiddleware, addEvent);
+router.post('/addEvent', jwtMiddleware, requireRole('admin', 'teacher'), addEvent);
 router.get('/', jwtMiddleware, getEvents);
 router.get('/:eventId', jwtMiddleware, getEventById);
-router.put('/:eventId', jwtMiddleware, updateEvent);
-router.delete('/:eventId', jwtMiddleware, deleteEvent);
+router.put('/:eventId', jwtMiddleware, requireRole('admin'), updateEvent);
+router.delete('/:eventId', jwtMiddleware, requireRole('admin', 'teacher'), deleteEvent);
 
 export default router;
