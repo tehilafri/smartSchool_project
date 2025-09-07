@@ -2,6 +2,16 @@ import Schedule from '../models/Schedule.js';
 import Class from '../models/Class.js';
 import User from '../models/User.js';
 
+const addSubjectToTeacher = async (teacherId, subject) => {
+  const teacher = await User.findById(teacherId);
+  if (!teacher) throw new Error("מורה לא נמצאה");
+
+  if (!teacher.subjects.includes(subject)) {
+    teacher.subjects.push(subject);
+    await teacher.save();
+  }
+};
+
 export const createSchedule = async (req, res) => {
   try {
     const { className, weekPlan } = req.body;
@@ -30,6 +40,8 @@ export const createSchedule = async (req, res) => {
         weekPlanWithDefaults[day].map(async (lesson) => {
           const teacher = await User.findOne({ userId: lesson.teacherId });
           if (!teacher) throw new Error(`מורה עם ת"ז ${lesson.teacherId} לא נמצא`);
+           // הוספה לסל ידע
+          await addSubjectToTeacher(teacher._id, lesson.subject);
           return { ...lesson, teacherId: teacher._id };
         })
       );
@@ -46,6 +58,22 @@ export const createSchedule = async (req, res) => {
     if (!classDoc.schedule.includes(schedule._id)) {
       classDoc.schedule.push(schedule._id);
       await classDoc.save();
+    }
+
+    // הוספת הכיתה לכל המורים שמופיעים בשיעורים
+    const teachers = new Set(); // למנוע כפילויות
+    for (const day of Object.keys(weekPlanWithDefaults)) {
+      for (const lesson of weekPlanWithDefaults[day]) {
+        teachers.add(lesson.teacherId.toString());
+      }
+    }
+
+    for (const teacherId of teachers) {
+      const teacher = await User.findById(teacherId);
+      if (!teacher.classes.includes(classDoc._id)) {
+        teacher.classes.push(classDoc._id);
+        await teacher.save();
+      }
     }
 
     res.json({ message: "מערכת נשמרה בהצלחה", schedule });
@@ -76,6 +104,8 @@ export const updateScheduleDay = async (req, res) => {
       lessons.map(async (lesson) => {
         const teacher = await User.findOne({ userId: lesson.teacherId });
         if (!teacher) throw new Error(`מורה עם ת"ז ${lesson.teacherId} לא נמצא`);
+        // הוספה לסל ידע
+        await addSubjectToTeacher(teacher._id, lesson.subject);
         return { ...lesson, teacherId: teacher._id };
       })
     );
@@ -87,6 +117,17 @@ export const updateScheduleDay = async (req, res) => {
       { new: true, upsert: true }
     );
 
+    // הוספת הכיתה לכל המורים שמופיעים ביום הזה
+    const teachers = new Set(lessonsWithIds.map(l => l.teacherId.toString()));
+
+    for (const teacherId of teachers) {
+      const teacher = await User.findById(teacherId);
+      if (!teacher.classes.includes(classDoc._id)) {
+        teacher.classes.push(classDoc._id);
+        await teacher.save();
+      }
+    }
+    
     res.json({ message: `המערכת ליום ${day} עודכנה בהצלחה`, schedule });
 
   } catch (err) {
