@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
@@ -20,7 +21,20 @@ const userSchema = new mongoose.Schema({
   classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }], // למורים ולסטודנטים
   subjects: [{ type: String }], // סל ידע למורים
   ishomeroom: { type: Boolean, default: false },
-  points: { type: Number, default: 0 }
+  points: { type: Number, default: 0 },
+  // הוספת שדות לשחזור סיסמה
+  resetPasswordToken: { type: String },
+  resetPasswordExpire: { type: Date }
 }, { timestamps: true });
+
+// --- פונקציה ליצירת טוקן לשחזור סיסמה ---
+userSchema.methods.getResetPasswordToken = function() {
+  const resetToken = crypto.randomBytes(20).toString('hex');
+
+  this.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  this.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // שעה מהיצירה
+
+  return resetToken;
+};
 
 export default mongoose.model('User', userSchema)

@@ -1,22 +1,29 @@
 import nodemailer from "nodemailer";
 import { google } from "googleapis";
 
-const OAuth2 = google.auth.OAuth2;
-
-const oAuth2Client = new OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  "https://developers.google.com/oauthplayground" // redirect URI
-);
-
-oAuth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
-});
-
 export const sendEmail = async (to, subject, text) => {
   try {
-    const accessToken = await oAuth2Client.getAccessToken();
+    // יוצרים את ה‑OAuth2Client בתוך הפונקציה
+    const oAuth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI || "https://developers.google.com/oauthplayground"
+    );
 
+    // מגדירים את ה‑refresh token
+    oAuth2Client.setCredentials({
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+    });
+
+    // שולפים את ה‑access token
+    const at = await oAuth2Client.getAccessToken();
+    const accessToken = typeof at === "string" ? at : at?.token;
+
+    if (!accessToken) {
+      throw new Error("Failed to get access token from OAuth2 client");
+    }
+
+    // יוצרים את ה‑transporter של nodemailer
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -25,10 +32,11 @@ export const sendEmail = async (to, subject, text) => {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-        accessToken: accessToken.token, // Nodemailer יוכל גם לקרוא אוטומטית
+        accessToken,
       },
     });
 
+    // מגדירים את המייל
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to,
@@ -36,8 +44,9 @@ export const sendEmail = async (to, subject, text) => {
       text,
     };
 
+    // שולחים את המייל
     const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent: " + info.response);
+    console.log("Email sent:", info.response);
     return info;
   } catch (err) {
     console.error("Error sending email:", err);
