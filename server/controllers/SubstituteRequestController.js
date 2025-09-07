@@ -55,7 +55,8 @@ export const approveReplacement = async (req, res) => {
     // חיפוש בקשת ההיעדרות לפי הקוד
     const absence = await SubstituteRequest.findOne({ absenceCode });
     if (!absence) return res.status(404).json({ message: "Absence not found" });
-
+    console.log("Found absence:", absence);
+    console.log("Requesting user ID:", req.id);
     // רק מי שיצר את הבקשה יכול לאשר אותה
     if (absence.originalTeacherId.toString() !== req.id) {
       return res.status(403).json({ message: "You are not allowed to approve this request" });
@@ -87,10 +88,24 @@ export const approveReplacement = async (req, res) => {
       lastName,
       identityNumber,
       email,
-      notes
+      notes,
     };
 
     await absence.save();
+
+    // שולחים מייל למי שאישר (המשתמש הנוכחי)
+    const approver = await User.findById(req.id);
+    console.log("Approver:", approver);
+    if (approver && approver.email) {
+      await sendEmail(
+        approver.email,
+        "Replacement Approved",
+        `Hi ${approver.firstName} ${approver.lastName},\n\nThe replacement request code: **${absenceCode}** was successfully approved.\n\n
+        Substitute Request to Notify: ${absence.response.notes}\n\n
+        To view the substitute's details, please enter the absence code on the website under the tab: Absences -> Absence Confirmation Details.\n\n
+        Have a great day!\n\nsmartSchool Team`
+      );
+    }
 
     res.json({ message: "Replacement approved", absence });
   } catch (err) {

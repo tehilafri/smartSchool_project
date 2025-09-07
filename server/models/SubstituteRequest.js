@@ -16,7 +16,7 @@ const substituteRequestSchema = new mongoose.Schema({
   response: {
     firstName: { type: String },
     lastName: { type: String },
-    identityNumber : { type: String, unique: true },
+    identityNumber : { type: String},
     email: { type: String },
     notes: { type: String }
   }
