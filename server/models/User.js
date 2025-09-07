@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true },
   birthDate: { type: Date },
   password: { type: String, required: true , unique: true},
-  role: { type: String, enum: ['student','teacher','admin'], required: true },
+  role: { type: String, enum: ['student','teacher','admin','secretary'], required: true },
   classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }], // למורים ולסטודנטים
   subjects: [{ type: String }], // סל ידע למורים
   ishomeroom: { type: Boolean, default: false },

@@ -6,12 +6,12 @@ import {
   getAllStudents,
   getUserById
 } from '../controllers/UserController.js';
-import { jwtMiddleware } from '../Middlewares.js';
+import { jwtMiddleware, requireRole } from '../Middlewares.js';
 
 const router = express.Router();
 
 // --- Auth routes (לא צריכים middleware) ---
-router.post('/register', register);
+router.post('/register', jwtMiddleware, requireRole('admin', 'secretary'), register);
 router.post('/login', login);
 
 
