@@ -99,7 +99,6 @@ export const approveReplacement = async (req, res) => {
   }
 };
 
-
 export const getSubstituteRequests = async (req, res) => {
   try {
     const requests = await SubstituteRequest.find()

@@ -2,12 +2,23 @@ import User from '../models/User.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Class from '../models/Class.js';
-// --- Authentication ---
 
 export const register = async (req, res) => {
   try {
     const { firstName, lastName, gender, userId, email, birthDate, password, role, classes, subjects, ishomeroom } = req.body;
-    
+
+    // לבדוק מי המשתמש שמבצע את הבקשה
+    const currentUser = await User.findById(req.id);
+    if (!currentUser) {
+      return res.status(403).json({ message: 'Unauthorized: user not found' });
+    }
+
+    // אם המשתמש הוא secretary והוא מנסה ליצור secretary אחר – אסור
+    if (currentUser.role === 'secretary' && role === 'secretary') {
+      return res.status(403).json({ message: 'Secretaries cannot create other secretaries' });
+    }
+
+    // בדיקת הכיתות שהוזנו
     let validClasses = [];
     if (classes && classes.length > 0) {
       const existingClasses = await Class.find({ name: { $in: classes } });
@@ -18,7 +29,8 @@ export const register = async (req, res) => {
       }
       validClasses = existingClasses.map(c => c._id);
     }
-    
+
+    // הצפנת סיסמה
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -39,6 +51,7 @@ export const register = async (req, res) => {
 
     await newUser.save();
     res.status(201).json({ message: 'User registered successfully' });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -61,8 +74,6 @@ export const login = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
-// --- Admin---
 
 export const getAllTeachers = async (req, res) => {
   try {
