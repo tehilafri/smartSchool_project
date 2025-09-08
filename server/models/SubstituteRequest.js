@@ -11,6 +11,7 @@ const substituteRequestSchema = new mongoose.Schema({
   substituteTeacher: { type: mongoose.Schema.Types.ObjectId, refPath: 'substituteModel', default: null },
   substituteModel: { type: String, enum: ['User', 'ExternalSubstitute'], default: null },
   status: { type: String, enum: ['pending', 'accepted'], default: 'pending' },
+  checked: { type: Boolean, default: false },
   formLink: { type: String },
   reason: { type: String },
   response: {

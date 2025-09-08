@@ -13,8 +13,20 @@ const externalSubstituteSchema = new mongoose.Schema({
   },
   email: { type: String, required: true },
   phone: { type: String },
-  subjects: [{ type: String }], // המקצועות שהוא יכול ללמד
-  availability: [{ date: Date, time: String }] // שעות זמינות
+  subjects: {
+  type: [{ type: String }],
+  default: []
+  }, // המקצועות שהוא יכול ללמד
+  availability: {
+  type: [{//שעות זמינות
+    date: { type: Date, default: null },
+    startTime: { type: String, default: '00:00' },
+    endTime: { type: String, default: '23:59' }
+  }],
+  default: [
+    { date: null, startTime: '00:00', endTime: '23:59' }
+  ]
+}
 }, { timestamps: true });
 
 export default mongoose.model('ExternalSubstitute', externalSubstituteSchema);

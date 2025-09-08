@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import express from "express";
 import cors from "cors";
+import cron from 'node-cron';
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -9,6 +10,10 @@ import corsOptions from "./config/corsOption.js";
 import UserRouter from './routes/UserRouter.js';
 import SubstituteRequestRouter from './routes/SubstituteRequestRouter.js';
 import ClassRouter from './routes/ClassRouter.js';
+import ScheduleRouter from './routes/ScheduleRouter.js';
+import EventRouter from './routes/EventRouter.js';
+import ExternalSubstituteRouter from './routes/ExternalSubstituteRouter.js';
+import { checkPendingSubstituteRequests } from './Jobs/substituteJob.js';
 
 const server = express();
 
@@ -34,6 +39,9 @@ server.get("/", (req, res) => {
 server.use('/api/users', UserRouter);
 server.use('/api/substitute-requests', SubstituteRequestRouter);
 server.use('/api/classes', ClassRouter);
+server.use('/api/schedule', ScheduleRouter);
+server.use('/api/events', EventRouter);
+server.use('/api/external-substitutes', ExternalSubstituteRouter);
 
 // מאזינים לאירועים של מסד הנתונים
 mongoose.connection.once("open", () => {
@@ -42,6 +50,11 @@ mongoose.connection.once("open", () => {
     console.log(`Server is up and running on port ${PORT}`);
   });
 });
+
+cron.schedule('0 * * * *', () => {
+    console.log('Checking pending requests...');
+    checkPendingSubstituteRequests();
+  });
 
 mongoose.connection.on("error", (error) => {
   console.error("********** MongoDB connection error **********");
