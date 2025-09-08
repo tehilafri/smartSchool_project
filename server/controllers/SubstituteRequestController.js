@@ -5,114 +5,51 @@ import { sendEmail } from '../utils/email.js';
 import { generateCode } from '../utils/generatedCode.js';
 import Class from '../models/Class.js';
 import ExternalSubstitute from '../models/ExternalSubstitute.js';
-
+import { handleReportAbsence, handleApproveReplacement } from '../services/SubstituteService.js';
 
 export const reportAbsence = async (req, res) => {
   try {
     const { date, startTime, endTime, subject, className, reason } = req.body;
 
-    const teacher = await User.findById(req.id);
-    if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
-
-    const schoolClass = await Class.findOne({
-      name: className,
-      $or: [
-        { homeroomTeacher: teacher._id },
-        { teachers: teacher._id }
-      ]
-    });
-
-    if (!schoolClass) {
-      return res.status(403).json({ message: 'You are not assigned to this class' });
-    }
-
-    const absenceCode = generateCode();
-
-    const absence = new SubstituteRequest({
-      originalTeacherId: teacher._id,
+    const absenceCode = await handleReportAbsence({
+      teacherId: req.id,
       date,
       startTime,
       endTime,
       subject,
-      classId: schoolClass._id,
-      reason,
-      status: 'pending',
-      absenceCode
+      className,
+      reason
     });
 
-    await absence.save();
-    res.status(201).json({ message: 'Absence reported', code: absenceCode });
+    res.status(201).json({ message: 'Absence reported successfully', code: absenceCode });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(400).json({ message: err.message });
   }
 };
+
 
 export const approveReplacement = async (req, res) => {
   try {
     const { absenceCode, firstName, lastName, email, notes, identityNumber } = req.body;
 
-    // חיפוש בקשת ההיעדרות לפי הקוד
-    const absence = await SubstituteRequest.findOne({ absenceCode });
-    if (!absence) return res.status(404).json({ message: "Absence not found" });
-    console.log("Found absence:", absence);
-    console.log("Requesting user ID:", req.id);
-    // רק מי שיצר את הבקשה יכול לאשר אותה
-    if (absence.originalTeacherId.toString() !== req.id) {
-      return res.status(403).json({ message: "You are not allowed to approve this request" });
-    }
-
-    if (absence.status === "accepted") {
-      return res.json({ message: "Replacement already approved" });
-    }
-
-    // נזהה אם מדובר במורה פנימי או ממלא מקום חיצוני לפי ת"ז
-    let substitute = await User.findOne({ userId: identityNumber });
-    let substituteType = "User";
-
-    if (!substitute) {
-      substitute = await ExternalSubstitute.findOne({ identityNumber });
-      substituteType = "ExternalSubstitute";
-    }
-
-    if (!substitute) {
-      return res.status(404).json({ message: "Substitute with this identity number not found" });
-    }
-
-    // עדכון השדות של הבקשה
-    absence.substituteTeacher = substitute._id;
-    absence.substituteModel = substituteType;
-    absence.status = "accepted";
-    absence.response = {
+    const result = await handleApproveReplacement({
+      absenceCode,
+      approverId: req.id,
       firstName,
       lastName,
-      identityNumber,
       email,
       notes,
-    };
+      identityNumber
+    });
 
-    await absence.save();
-
-    // שולחים מייל למי שאישר (המשתמש הנוכחי)
-    const approver = await User.findById(req.id);
-    console.log("Approver:", approver);
-    if (approver && approver.email) {
-      await sendEmail(
-        approver.email,
-        "Replacement Approved",
-        `Hi ${approver.firstName} ${approver.lastName},\n\nThe replacement request code: **${absenceCode}** was successfully approved.\n\n
-        Substitute Request to Notify: ${absence.response.notes}\n\n
-        To view the substitute's details, please enter the absence code on the website under the tab: Absences -> Absence Confirmation Details.\n\n
-        Have a great day!\n\nsmartSchool Team`
-      );
-    }
-
-    res.json({ message: "Replacement approved", absence });
+    res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(400).json({ message: err.message });
   }
 };
+
 
 export const getSubstituteRequests = async (req, res) => {
   try {
