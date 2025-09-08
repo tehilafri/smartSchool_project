@@ -76,6 +76,14 @@ export const createSchedule = async (req, res) => {
       }
     }
 
+     // הוספת המורות למערך המורות של הכיתה
+    for (const teacherId of teachers) {
+      if (!classDoc.teachers.includes(teacherId)) {
+        classDoc.teachers.push(teacherId);
+      }
+    }
+    await classDoc.save();
+
     res.json({ message: "מערכת נשמרה בהצלחה", schedule });
 
   } catch (err) {
@@ -127,7 +135,14 @@ export const updateScheduleDay = async (req, res) => {
         await teacher.save();
       }
     }
-    
+    // הוספת המורים למערך המורים של הכיתה
+     for (const teacherId of teachers) {
+      if (!classDoc.teachers.includes(teacherId)) {
+        classDoc.teachers.push(teacherId);
+      }
+    }
+    await classDoc.save();
+
     res.json({ message: `המערכת ליום ${day} עודכנה בהצלחה`, schedule });
 
   } catch (err) {
