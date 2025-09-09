@@ -4,7 +4,7 @@ import { generateCode } from '../utils/generatedCode.js';
 
 export const createSchool = async (req, res) => {
   try {
-    const { name, principalId, address, phone, email, website, description } = req.body;
+    const { name, principalId, address, phone, email, website, description, scheduleHours } = req.body;
 
     // מאתרים את המנהלת לפי ת"ז
     const admin = await User.findOne({ userId: principalId, role: 'admin' });
@@ -23,7 +23,8 @@ export const createSchool = async (req, res) => {
       email,
       website,
       description,
-      schoolCode
+      schoolCode, 
+      scheduleHours: scheduleHours || []
     });
 
     await school.save();
