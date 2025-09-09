@@ -5,6 +5,7 @@ import { addEvent,
          updateEvent,
          deleteEvent } from '../controllers/EventController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
+import Event from '../models/Event.js';
 
 const router = express.Router();
 

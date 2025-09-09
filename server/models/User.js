@@ -4,6 +4,7 @@ import crypto from 'crypto';
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
+  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true, default: null },
   userName: { type: String, unique: true }, 
   gender: { type: String, enum: ['male', 'female'], required: true },
   userId: { type: String,  required: true, unique: true,

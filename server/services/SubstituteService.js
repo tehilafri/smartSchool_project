@@ -18,13 +18,14 @@ export const findCandidates = async (substituteRequest) => {
   // --- פנימיות ---
   const internalCandidates = await User.find({
     role: 'teacher',
+    schoolId: substituteRequest.schoolId,
     _id: { $ne: substituteRequest.originalTeacherId }
   });
 
   const availableInternal = [];
 
   for (const teacher of internalCandidates) {
-    const schedules = await Schedule.find({ 'classId': { $in: teacher.classes } });
+    const schedules = await Schedule.find({ 'classId': { $in: teacher.classes }, schoolId: substituteRequest.schoolId });
 
     let free = true; // מניחים שהמורה פנויה
 
@@ -59,7 +60,7 @@ export const findCandidates = async (substituteRequest) => {
         startTime: { $lte: startTime }, // התחלת הזמינות לפני או בשעה של השיעור
         endTime: { $gte: startTime }    // סיום הזמינות אחרי או בשעה של השיעור
       }
-    }
+    , schoolId: substituteRequest.schoolId }
   });
 
   return { availableInternal, availableExternal };
@@ -84,35 +85,29 @@ export async function handleReportAbsence({ teacherId, date, startTime, endTime,
   const teacher = await User.findById(teacherId);
   if (!teacher) throw new Error('Teacher not found');
 
-  const schoolClass = await Class.findOne({ name: className });
+  const schoolClass = await Class.findOne({ name: className , schoolId: teacher.schoolId });
   if (!schoolClass) throw new Error('Class not found');
 
-  const schedule = await Schedule.findOne({ classId: schoolClass._id });
+  const schedule = await Schedule.findOne({ classId: schoolClass._id , schoolId: teacher.schoolId });
   if (!schedule) throw new Error('Schedule not found');
 
   const dayName = getDayName(date);
   const lessons = schedule.weekPlan[dayName] || [];
 
   const matchingLesson = findMatchingLesson(lessons, teacher._id, subject, startTime, endTime);
-  console.log('Teacher:', teacher);
-  console.log('Class:', schoolClass);
-  console.log('Schedule:', schedule);
-  console.log('Day Name:', dayName);
-  console.log('Lessons:', lessons);
-  console.log('Matching Lesson:', matchingLesson);
-
   if (!matchingLesson) throw new Error('You are not assigned to this subject at this time in this class');
 
   const absenceCode = generateCode();
 
   const absence = new SubstituteRequest({
     originalTeacherId: teacher._id,
+    schoolId: schoolClass.schoolId,
     date,
     startTime,
     endTime,
     subject,
     classId: schoolClass._id,
-    reason,
+    reason, 
     status: 'pending',
     absenceCode
   });
@@ -124,10 +119,14 @@ export async function handleReportAbsence({ teacherId, date, startTime, endTime,
 /**
  * אישור בקשת היעדרות והוספת ממלא מקום
  */
-export async function handleApproveReplacement({ absenceCode, approverId, firstName, lastName, email, notes, identityNumber }) {
+export async function handleApproveReplacement({ absenceCode, approverId, firstName, lastName, email, notes, identityNumber }, schoolId) {
   // חיפוש בקשת ההיעדרות
-  const absence = await SubstituteRequest.findOne({ absenceCode });
+  const absence = await SubstituteRequest.findOne({ absenceCode});
   if (!absence) throw new Error('Absence not found');
+
+  if (absence.schoolId.toString() !== schoolId.toString()) {
+    throw new Error('Access denied: wrong school');
+  }
 
   // רק מי שיצר את הבקשה יכול לאשר
   if (absence.originalTeacherId.toString() !== approverId) {

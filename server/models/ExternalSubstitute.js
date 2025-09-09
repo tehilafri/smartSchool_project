@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const externalSubstituteSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
+  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true, default: null },
   identityNumber: { type: String, required: true, unique: true,
     validate: {
       validator: function(v) {

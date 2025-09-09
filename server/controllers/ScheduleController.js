@@ -2,8 +2,8 @@ import Schedule from '../models/Schedule.js';
 import Class from '../models/Class.js';
 import User from '../models/User.js';
 
-const addSubjectToTeacher = async (teacherId, subject) => {
-  const teacher = await User.findById(teacherId);
+const addSubjectToTeacher = async (teacherId, subject, schoolId) => {
+  const teacher = await User.findOne({ _id: teacherId, schoolId });
   if (!teacher) throw new Error("מורה לא נמצאה");
 
   if (!teacher.subjects.includes(subject)) {
@@ -17,7 +17,7 @@ export const createSchedule = async (req, res) => {
     const { className, weekPlan } = req.body;
 
     // חיפוש הכיתה
-    const classDoc = await Class.findOne({ name: className });
+    const classDoc = await Class.findOne({ name: className , schoolId: req.schoolId});
     if (!classDoc) return res.status(404).json({ error: "כיתה לא נמצאה" });
 
     // בדיקה אם המשתמש מורה – מורה יכול להוסיף רק בכיתה שהוא מחנך שלה
@@ -41,7 +41,7 @@ export const createSchedule = async (req, res) => {
           const teacher = await User.findOne({ userId: lesson.teacherId });
           if (!teacher) throw new Error(`מורה עם ת"ז ${lesson.teacherId} לא נמצא`);
            // הוספה לסל ידע
-          await addSubjectToTeacher(teacher._id, lesson.subject);
+          await addSubjectToTeacher(teacher._id, lesson.subject, req.schoolId);
           return { ...lesson, teacherId: teacher._id };
         })
       );
@@ -49,9 +49,9 @@ export const createSchedule = async (req, res) => {
 
     // שמירת המערכת או עדכון קיימת
     const schedule = await Schedule.findOneAndUpdate(
-      { classId: classDoc._id },
+      { classId: classDoc._id , schoolId: req.schoolId },
       { weekPlan: weekPlanWithDefaults },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     // הוספה למערך ה-schedule של הכיתה (אם עוד לא קיים)
@@ -69,7 +69,7 @@ export const createSchedule = async (req, res) => {
     }
 
     for (const teacherId of teachers) {
-      const teacher = await User.findById(teacherId);
+      const teacher = await User.findOne({ _id: teacherId, schoolId: req.schoolId });
       if (!teacher.classes.includes(classDoc._id)) {
         teacher.classes.push(classDoc._id);
         await teacher.save();
@@ -82,6 +82,7 @@ export const createSchedule = async (req, res) => {
         classDoc.teachers.push(teacherId);
       }
     }
+    classDoc.schoolId = req.schoolId;
     await classDoc.save();
 
     res.json({ message: "מערכת נשמרה בהצלחה", schedule });
@@ -97,7 +98,7 @@ export const updateScheduleDay = async (req, res) => {
     const { className, day, lessons } = req.body;
 
     // למצוא את הכיתה
-    const classDoc = await Class.findOne({ name: className });
+    const classDoc = await Class.findOne({ name: className , schoolId: req.schoolId});
     if (!classDoc) return res.status(404).json({ error: "כיתה לא נמצאה" });
 
     // בדיקה אם המשתמש מורה – מורה יכול להוסיף רק בכיתה שהוא מחנך שלה
@@ -110,7 +111,7 @@ export const updateScheduleDay = async (req, res) => {
     // המרת ת"ז של המורים ל-ObjectId
     const lessonsWithIds = await Promise.all(
       lessons.map(async (lesson) => {
-        const teacher = await User.findOne({ userId: lesson.teacherId });
+        const teacher = await User.findOne({ userId: lesson.teacherId , schoolId: req.schoolId});
         if (!teacher) throw new Error(`מורה עם ת"ז ${lesson.teacherId} לא נמצא`);
         // הוספה לסל ידע
         await addSubjectToTeacher(teacher._id, lesson.subject);
@@ -120,8 +121,8 @@ export const updateScheduleDay = async (req, res) => {
 
     // עדכון רק יום אחד
     const schedule = await Schedule.findOneAndUpdate(
-      { classId: classDoc._id },
-      { $set: { [`weekPlan.${day}`]: lessonsWithIds } },
+      { classId: classDoc._id , schoolId: req.schoolId},
+      { $set: { [`weekPlan.${day}`]: lessonsWithIds} },
       { new: true, upsert: true }
     );
 
@@ -129,7 +130,7 @@ export const updateScheduleDay = async (req, res) => {
     const teachers = new Set(lessonsWithIds.map(l => l.teacherId.toString()));
 
     for (const teacherId of teachers) {
-      const teacher = await User.findById(teacherId);
+      const teacher = await User.findOne({ _id: teacherId, schoolId: schedule.schoolId });
       if (!teacher.classes.includes(classDoc._id)) {
         teacher.classes.push(classDoc._id);
         await teacher.save();
@@ -153,14 +154,14 @@ export const updateScheduleDay = async (req, res) => {
 export const getNextLessonForStudent = async (req, res) => {
   try {
     const studentId = req.id; // מזהה סטודנט
-    const user = await User.findById(studentId);
+    const user = await User.findOne({ _id: studentId, schoolId: req.schoolId });
     if (!user) return res.status(404).json({ error: "סטודנט לא נמצא" });
 
     // למצוא את הכיתה שלו (לפי classes שהן ObjectId)
-    const classDoc = await Class.findOne({ _id: { $in: user.classes } });
+    const classDoc = await Class.findOne({ _id: { $in: user.classes }, schoolId: req.schoolId });
     if (!classDoc) return res.status(404).json({ error: "סטודנט לא נמצא בכיתה" });
 
-    const schedule = await Schedule.findOne({ classId: classDoc._id });
+    const schedule = await Schedule.findOne({ classId: classDoc._id, schoolId: req.schoolId });
     if (!schedule) return res.status(404).json({ error: "מערכת השיעורים לא קיימת" });
 
     const now = new Date();
@@ -199,14 +200,14 @@ export const getNextLessonForStudent = async (req, res) => {
 export const getNextLessonForTeacher = async (req, res) => {
   try {
     const teacherId = req.id; // מזהה המורה
-    const teacher = await User.findById(teacherId);
+    const teacher = await User.findOne({ _id: teacherId, schoolId: req.schoolId });
     if (!teacher) return res.status(404).json({ error: "מורה לא נמצא" });
 
     const classes = teacher.classes; // מערך ObjectId
     if (!classes || classes.length === 0)
       return res.status(404).json({ error: "המורה לא מלמד בכיתות כלשהן" });
 
-    const schedules = await Schedule.find({ classId: { $in: classes } });
+    const schedules = await Schedule.find({ classId: { $in: classes }, schoolId: req.schoolId });
     if (!schedules || schedules.length === 0)
       return res.status(404).json({ error: "לא נמצאו מערכות שיעורים" });
 

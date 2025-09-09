@@ -1,11 +1,11 @@
 import SubstituteRequest from '../models/SubstituteRequest.js';
-import { findCandidates } from '../services/SubstituteService2.js';
+import { findCandidates } from '../services/SubstituteService.js';
 import { sendEmail } from '../utils/email.js'; 
 import Class from '../models/Class.js';
 
 const sendSubstituteEmail = async (teacher, request, formattedDate) => {
   // מוצאים את הכיתה לפי ID
-  const classInfo = await Class.findById(request.classId);
+  const classInfo = await Class.findOne({ _id: request.classId , schoolId: request.schoolId });
 
   const className = classInfo ? classInfo.name : 'Unknown Class';
 
@@ -25,7 +25,7 @@ Thank you!`
 export const checkPendingSubstituteRequests = async () => {
   const now = new Date();
 
-  const pendingRequests = await SubstituteRequest.find({ status: 'pending', checked: false });
+  const pendingRequests = await SubstituteRequest.find({ status: 'pending', checked: false , schoolId: request.schoolId });
 
   for (const request of pendingRequests) {
     const weekBefore = new Date(request.date);

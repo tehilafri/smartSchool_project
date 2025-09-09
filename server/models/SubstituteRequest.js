@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 
 const substituteRequestSchema = new mongoose.Schema({
   originalTeacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true, default: null },
   absenceCode: { type: String, required: true, unique: true },
   classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
   date: { type: Date, required: true },

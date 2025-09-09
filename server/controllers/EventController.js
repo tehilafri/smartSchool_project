@@ -34,7 +34,7 @@ export const addEvent = async (req, res) => {
     }
 
     // המרה משמות כיתות ל־ObjectIds
-    const foundClasses = await Class.find({ name: { $in: classes } });
+    const foundClasses = await Class.find({ name: { $in: classes } , schoolId: req.schoolId });
 
     if (type === 'trip' || type === 'activity') 
       {
@@ -48,7 +48,7 @@ export const addEvent = async (req, res) => {
         if(!req.body.subject)
           return res.status(400).json({ message: 'Missing subject for exam event' });
         //למצוא את המורה בטבלת users באמצעות req.id
-        const teacher = await User.findById(req.id);
+        const teacher = await User.findOne({ _id: req.id, schoolId: req.schoolId });
         console.log(teacher.userName);
         //אם לא מלמדת את המקצוע הזה- שגיאה אלא אם כן היא מחנכת
         if(!teacher.ishomeroom && (!teacher.subjects || !teacher.subjects.includes(req.body.subject)))
@@ -77,6 +77,7 @@ export const addEvent = async (req, res) => {
     // יצירת האירוע במסד
     const event = new Event({
       eventId,
+      schoolId: req.schoolId,
       type,
       title,
       date,
@@ -104,7 +105,7 @@ export const addEvent = async (req, res) => {
 
 export const getEvents = async (req, res) => {
   try {
-    const events = await Event.find()
+    const events = await Event.find({ schoolId: req.schoolId })
       .populate('classes', 'name')
       .sort({ date: 1 });
 
@@ -118,7 +119,7 @@ export const getEvents = async (req, res) => {
 export const getEventById = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const event = await Event.findOne({ eventId }).populate('classes', 'name');
+    const event = await Event.findOne({ eventId, schoolId: req.schoolId }).populate('classes', 'name');
 
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -137,7 +138,7 @@ export const updateEvent = async (req, res) => {
     const { type, date, classes, startTime, endTime, title } = req.body;
 
     // שליפת האירוע
-    const event = await Event.findOne({ eventId }).populate('classes', 'name');
+    const event = await Event.findOne({ _id: event._id , schoolId: req.schoolId }).populate('classes', 'name');
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -158,7 +159,7 @@ export const updateEvent = async (req, res) => {
     let classIds = event.classes.map(c => c._id); // ברירת מחדל - הכיתות הקיימות
 
     if (classes && classes.length > 0) {
-      const foundClasses = await Class.find({ name: { $in: classes } });
+      const foundClasses = await Class.find({ name: { $in: classes } , schoolId: req.schoolId });
       if (foundClasses.length !== classes.length) {
         return res.status(400).json({ message: 'One or more classes not found' });
       }
@@ -199,7 +200,7 @@ export const updateEvent = async (req, res) => {
 export const deleteEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const event = await Event.findOne({ eventId });
+    const event = await Event.findOne({ eventId , schoolId: req.schoolId });
 
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });

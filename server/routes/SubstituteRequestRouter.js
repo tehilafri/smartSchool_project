@@ -5,11 +5,12 @@ import {
   getSubstituteRequests
 } from '../controllers/SubstituteRequestController.js';
 import { jwtMiddleware, requireRole} from '../Middlewares.js';
+import SubstituteRequest from '../models/SubstituteRequest.js';
 
 const router = express.Router();
 
 // כל ה־routes כאן מוגנים ב־JWT
-router.post('/report', jwtMiddleware, requireRole('teacher', 'admin'), reportAbsence);
+router.post('/report', jwtMiddleware , requireRole('teacher'), reportAbsence);
 router.post('/approve', jwtMiddleware, requireRole('teacher'), approveReplacement);
 router.get('/', jwtMiddleware, requireRole('admin', 'teacher'), getSubstituteRequests);
 

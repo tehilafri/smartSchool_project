@@ -10,8 +10,15 @@ import {
   resetPassword
 } from '../controllers/UserController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
+import User from '../models/User.js';
 
 const router = express.Router();
+//
+//
+//חשוב מאד!!!
+//עדיין לא עשינו אופציה של הוספה של מנהלת בצורה נכונה וחכמה...
+//
+//
 
 // --- Auth routes (לא צריכים middleware) ---
 router.post('/register', jwtMiddleware, requireRole('admin', 'secretary'), register);
@@ -25,5 +32,6 @@ router.get('/:id', jwtMiddleware, getUserById);
 router.put('/:id', jwtMiddleware, updateUser);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:token', resetPassword);
+
 
 export default router;

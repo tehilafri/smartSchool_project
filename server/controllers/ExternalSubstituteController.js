@@ -8,6 +8,7 @@ export const addExternalSubstitute = async (req, res) => {
     const newSub = new ExternalSubstitute({
       firstName,
       lastName,
+      schoolId: req.schoolId,
       identityNumber,
       email,
       phone,
@@ -27,7 +28,7 @@ export const addExternalSubstitute = async (req, res) => {
 export const deleteExternalSubstitute = async (req, res) => {
   try {
     const { idNumber } = req.params;
-    const deleted = await ExternalSubstitute.findOneAndDelete({ idNumber });
+    const deleted = await ExternalSubstitute.findOneAndDelete({ idNumber , schoolId: req.schoolId });
     if (!deleted) return res.status(404).json({ message: "External substitute not found" });
     res.json({ message: "External substitute deleted successfully" });
   } catch (err) {
@@ -43,7 +44,7 @@ export const updateExternalSubstitute = async (req, res) => {
     const updates = req.body;
 
     const updated = await ExternalSubstitute.findOneAndUpdate(
-      { identityNumber },
+      { identityNumber, schoolId: req.schoolId },
       { $set: updates },
       { new: true } // מחזיר את המסמך אחרי העדכון
     );
@@ -59,7 +60,9 @@ export const updateExternalSubstitute = async (req, res) => {
 // קבלת כל ממלאי המקום
 export const getAllExternalSubstitutes = async (req, res) => {
   try {
-    const subs = await ExternalSubstitute.find();
+    console.log('school:', req.schoolId);
+    console.log(req.id);
+    const subs = await ExternalSubstitute.find({ schoolId: req.schoolId });
     res.json(subs);
   } catch (err) {
     console.error('Error fetching substitutes:', err);
@@ -71,7 +74,7 @@ export const getAllExternalSubstitutes = async (req, res) => {
 export const getExternalSubstituteByIdNumber = async (req, res) => {
   try {
     const { identityNumber } = req.params;
-    const substitute = await ExternalSubstitute.findOne({ identityNumber });
+    const substitute = await ExternalSubstitute.findOne({ identityNumber , schoolId: req.schoolId });
     if (!substitute) return res.status(404).json({ message: "External substitute not found" });
     res.json(substitute);
   } catch (err) {

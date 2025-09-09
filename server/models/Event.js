@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const eventSchema = new mongoose.Schema({
   eventId: { type: String, required: true, unique: true }, // Unique identifier for the event
+  schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true, default: null },
   type: { type: String, enum: ['exam','trip','activity'], required: true },
   subject: { type: String },
   title: { type: String, required: true },

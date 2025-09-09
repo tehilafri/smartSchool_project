@@ -7,6 +7,7 @@ import {
   getExternalSubstituteByIdNumber
 } from '../controllers/ExternalSubstituteController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
+import ExternalSubstitute from '../models/ExternalSubstitute.js';
 
 const router = express.Router();
 

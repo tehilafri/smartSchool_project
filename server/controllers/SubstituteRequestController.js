@@ -1,10 +1,5 @@
 import mongoose from 'mongoose';
 import SubstituteRequest from '../models/SubstituteRequest.js';
-import User from '../models/User.js';
-import { sendEmail } from '../utils/email.js';
-import { generateCode } from '../utils/generatedCode.js';
-import Class from '../models/Class.js';
-import ExternalSubstitute from '../models/ExternalSubstitute.js';
 import { handleReportAbsence, handleApproveReplacement } from '../services/SubstituteService.js';
 
 export const reportAbsence = async (req, res) => {
@@ -41,7 +36,7 @@ export const approveReplacement = async (req, res) => {
       email,
       notes,
       identityNumber
-    });
+    }, req.schoolId);
 
     res.json(result);
   } catch (err) {
@@ -53,11 +48,11 @@ export const approveReplacement = async (req, res) => {
 
 export const getSubstituteRequests = async (req, res) => {
   try {
-    const requests = await SubstituteRequest.find()
+    const requests = await SubstituteRequest.find({ schoolId: req.schoolId })
       .populate('originalTeacherId', 'firstName lastName email')
-      .populate('substituteTeacher', 'firstName lastName email'); // תיקון מ-substituteTeacherId
-
-    res.json(requests);
+      .populate('substituteTeacher', 'firstName lastName email'); 
+    
+    res.json({ requests });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

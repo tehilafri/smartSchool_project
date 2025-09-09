@@ -13,6 +13,7 @@ import ClassRouter from './routes/ClassRouter.js';
 import ScheduleRouter from './routes/ScheduleRouter.js';
 import EventRouter from './routes/EventRouter.js';
 import ExternalSubstituteRouter from './routes/ExternalSubstituteRouter.js';
+import SchoolRouter from './routes/SchoolRouter.js';
 import { checkPendingSubstituteRequests } from './Jobs/substituteJob.js';
 
 const server = express();
@@ -42,6 +43,7 @@ server.use('/api/classes', ClassRouter);
 server.use('/api/schedule', ScheduleRouter);
 server.use('/api/events', EventRouter);
 server.use('/api/external-substitutes', ExternalSubstituteRouter);
+server.use('/api/schools', SchoolRouter);
 
 // מאזינים לאירועים של מסד הנתונים
 mongoose.connection.once("open", () => {

@@ -6,7 +6,7 @@ import { createClass,
          addStudentToClass,
         } from '../controllers/ClassController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
-
+import Class from '../models/Class.js';
 const router = express.Router();
 
 router.post('/createClass', jwtMiddleware, requireRole('admin'), createClass);

@@ -1,9 +1,12 @@
 import User from '../models/User.js';
+import School from '../models/School.js';
+import Class from '../models/Class.js';
+
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import Class from '../models/Class.js';
 import {sendEmail} from '../utils/email.js';
+
 
 export const register = async (req, res) => {
   try {
@@ -11,10 +14,14 @@ export const register = async (req, res) => {
 
     // לבדוק מי המשתמש שמבצע את הבקשה
     const currentUser = await User.findById(req.id);
+    console.log(currentUser);
+    console.log(req.id);
     if (!currentUser) {
       return res.status(403).json({ message: 'Unauthorized: user not found' });
     }
-
+    console.log(currentUser);
+    console.log(req.id);
+    console.log(req.schoolId);
     // אם המשתמש הוא secretary והוא מנסה ליצור secretary אחר – אסור
     if (currentUser.role === 'secretary' && role === 'secretary') {
       return res.status(403).json({ message: 'Secretaries cannot create other secretaries' });
@@ -32,6 +39,14 @@ export const register = async (req, res) => {
       validClasses = existingClasses.map(c => c._id);
     }
 
+    // בדיקת ייחודיות userId/email
+    const existingUser = await User.findOne({
+      $or: [{ userId }, { email }]
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this ID or email already exists' });
+    }
+
     // הצפנת סיסמה
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -39,6 +54,7 @@ export const register = async (req, res) => {
     const newUser = new User({
       firstName,
       lastName,
+      schoolId: req.schoolId,
       userName: `${firstName}${lastName}`,
       gender,
       userId,
@@ -52,6 +68,17 @@ export const register = async (req, res) => {
     });
 
     await newUser.save();
+
+    if (role === 'student' && validClasses.length > 0) {
+          for (const classId of validClasses) {
+            const classDoc = await Class.findById(classId);
+            if (classDoc && !classDoc.students.includes(newUser._id)) {
+              classDoc.students.push(newUser._id);
+              await classDoc.save();
+            }
+          }
+        }
+
     res.status(201).json({ message: 'User registered successfully' });
 
   } catch (err) {
@@ -60,26 +87,98 @@ export const register = async (req, res) => {
   }
 };
 
+
 export const login = async (req, res) => {
   try {
-    const { userName, password } = req.body;
-    const user = await User.findOne({ userName });
-    if (!user) return res.status(401).json({ message: 'Invalid credentials of user' });
+    const { userName, password, schoolCode } = req.body;
 
+    // שליפת בית ספר לפי קוד
+    const school = await School.findOne({ schoolCode });
+    if (!school) {
+      return res.status(401).json({ message: 'Invalid school code' });
+    }
+
+    // מציאת המשתמש לפי userName ושיוך לבית ספר
+    const user = await User.findOne({ userName, schoolId: school._id });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials of user' });
+    }
+
+    // בדיקת סיסמה
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials of password' });
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials of password' });
+    }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, user: { id: user._id, username: user.userName, role: user.role } });
+    // יצירת JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role, schoolId: school._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.userName,
+        role: user.role,
+        schoolCode: school.schoolCode
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+// export const login = async (req, res) => {
+//   try {
+//     const { userName, password } = req.body;
+
+//     // // שליפת בית ספר לפי קוד
+//     // const school = await School.findOne({ schoolCode });
+//     // if (!school) {
+//     //   return res.status(401).json({ message: 'Invalid school code' });
+//     // }
+
+//     // מציאת המשתמש לפי userName
+//     const user = await User.findOne({ userName });
+//     if (!user) {
+//       return res.status(401).json({ message: 'Invalid credentials of user' });
+//     }
+
+//     // בדיקת סיסמה
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(401).json({ message: 'Invalid credentials of password' });
+//     }
+
+//     // יצירת JWT
+//     const token = jwt.sign(
+//       { id: user._id, role: user.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: '1h' }
+//     );
+
+//     res.json({
+//       token,
+//       user: {
+//         id: user._id,
+//         username: user.userName,
+//         role: user.role
+//       }
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// };
+
+
 export const getAllTeachers = async (req, res) => {
   try {
-    const teachers = await User.find({ role: 'teacher' }).select('-password');
+    const teachers = await User.find({ role: 'teacher', schoolId: req.schoolId }).select('-password');
     res.json(teachers);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -88,7 +187,7 @@ export const getAllTeachers = async (req, res) => {
 
 export const getAllStudents = async (req, res) => {
   try {
-    const students = await User.find({ role: 'student' }).select('-password');
+    const students = await User.find({ role: 'student', schoolId: req.schoolId }).select('-password');
     res.json(students);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -97,7 +196,7 @@ export const getAllStudents = async (req, res) => {
 
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findOne({ userId: req.params.id }).select('-password');
+    const user = await User.findById(req.params.id, { schoolId: req.schoolId }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
@@ -113,8 +212,7 @@ export const updateUser = async (req, res) => {
     const currentUser = await User.findById(req.id);
     if (!currentUser) return res.status(403).json({ message: 'Unauthorized: user not found' });
 
-    // המשתמש שמנסים לעדכן
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id, {schoolId: req.schoolId});
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // בדיקות הרשאות
@@ -184,9 +282,9 @@ export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   // 1. לבדוק אם משתמש עם המייל הזה קיים
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email , schoolId: req.schoolId });
   if (!user) {
-    return res.status(404).json({ message: 'User not found with this email' });
+    return res.status(404).json({ message: 'User not found with this email/ in this school' });
   }
 
   // 2. ליצור טוקן
@@ -219,10 +317,7 @@ export const resetPassword = async (req, res) => {
     .update(req.params.token)
     .digest('hex');
 
-  const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() }
-  });
+  const user = await User.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() }, schoolId: req.schoolId });
 
   if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
 
