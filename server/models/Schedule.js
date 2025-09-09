@@ -3,8 +3,9 @@ import mongoose from 'mongoose'
 const lessonSchema = new mongoose.Schema({
   teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   subject: { type: String, required: true },
-  startTime: { type: String, required: true }, // "08:30"
-  endTime: { type: String, required: true },   // "09:15"
+  lessonNumber: { type: Number, required: true }, // מספר שיעור לפי ה-school
+  startTime: { type: String }, // "08:30"
+  endTime: { type: String },   // "09:15"
   substitute: { type: mongoose.Schema.Types.ObjectId, refPath: 'substituteModel', default: null },
   substituteModel: { type: String, enum: ['User', 'ExternalSubstitute'], default: null },
   status: { type: String, enum: ['normal','cancelled','replaced'], default: 'normal' },

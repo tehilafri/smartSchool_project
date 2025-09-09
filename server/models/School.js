@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const ScheduleHourSchema = new mongoose.Schema({
-  number: { type: Number, required: true },
+  number: { type: Number},
   start: { type: String, required: true },
   end: { type: String, required: true }
 }, { _id: false });

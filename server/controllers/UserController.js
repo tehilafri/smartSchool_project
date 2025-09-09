@@ -14,8 +14,6 @@ export const register = async (req, res) => {
 
     // לבדוק מי המשתמש שמבצע את הבקשה
     const currentUser = await User.findById(req.id);
-    console.log(currentUser);
-    console.log(req.id);
     if (!currentUser) {
       return res.status(403).json({ message: 'Unauthorized: user not found' });
     }
@@ -116,6 +114,8 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
+    //הדפסת  _id של בית הספר לפי הקוד
+    console.log(school._id);
 
     res.json({
       token,
