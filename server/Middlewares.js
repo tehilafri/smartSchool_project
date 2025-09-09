@@ -1,10 +1,13 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 dotenv.config();
 
 export const jwtMiddleware = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
+  if (!authHeader) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
 
   // בדיקה אם מתחיל ב-Bearer
   const parts = authHeader.split(' ');
@@ -17,8 +20,12 @@ export const jwtMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, secret);
-    req.id = decoded.id; 
-    req.role = decoded.role;
+
+    // נשמרים הנתונים מתוך ה־JWT
+    req.id = decoded.id;          // מזהה המשתמש
+    req.role = decoded.role;      // תפקיד (מורה/מנהלת/תלמיד)
+    req.schoolId = decoded.schoolId; // מזהה בית ספר אמיתי של מונגו
+
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
@@ -44,3 +51,7 @@ export const requireRole = (...allowedRoles) => {
     next();
   };
 };
+
+
+
+
