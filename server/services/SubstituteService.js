@@ -14,7 +14,6 @@ import { sendEmail } from '../utils/email.js';
  */
 export const findCandidates = async (substituteRequest) => {
   const { date, startTime, endTime, subject } = substituteRequest;
-
   // --- פנימיות ---
   const internalCandidates = await User.find({
     role: 'teacher',
@@ -48,20 +47,21 @@ export const findCandidates = async (substituteRequest) => {
       availableInternal.push(teacher);
     }
   }
-
   // --- חיצוניים ---
-  const availableExternal = await ExternalSubstitute.find({
-    availability: {
-      $elemMatch: {
-        $or: [
-          { date: null }, // זמינות תמידית (ברירת מחדל)
-          { date: date }  // זמינות ספציפית ליום
-        ],
-        startTime: { $lte: startTime }, // התחלת הזמינות לפני או בשעה של השיעור
-        endTime: { $gte: startTime }    // סיום הזמינות אחרי או בשעה של השיעור
-      }
-    , schoolId: substituteRequest.schoolId }
-  });
+ const availableExternal = await ExternalSubstitute.find({
+  schoolId: substituteRequest.schoolId,  
+  availability: {
+    $elemMatch: {
+      $or: [
+        { date: null },
+        { date: date }
+      ],
+      startTime: { $lte: startTime },
+      endTime: { $gte: startTime }
+    }
+  }
+});
+
 
   return { availableInternal, availableExternal };
 };
@@ -112,6 +112,11 @@ export async function handleReportAbsence({ teacherId, date, startTime, endTime,
     absenceCode
   });
 
+   // --- כאן יוצרים את הקישור ל-Google Form ---
+  const formBaseUrl = 'https://docs.google.com/forms/d/e/1FAIpQLSeO337WglTzh5-IXXVxyzA7MthOGBPGIVha3u_FmuWzZ-HLvg/viewform';
+  const formLink = `${formBaseUrl}?usp=pp_url&entry.915764786=${absenceCode}`;
+  absence.formLink = formLink;
+  console.log('Form Link:', formLink);
   await absence.save();
   return absenceCode;
 }

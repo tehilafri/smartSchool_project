@@ -21,16 +21,15 @@ Thank you!`
   );
 };
 
-
 export const checkPendingSubstituteRequests = async () => {
   const now = new Date();
 
-  const pendingRequests = await SubstituteRequest.find({ status: 'pending', checked: false , schoolId: request.schoolId });
+  const pendingRequests = await SubstituteRequest.find({ status: 'pending', checked: false });
 
   for (const request of pendingRequests) {
     const weekBefore = new Date(request.date);
     weekBefore.setDate(weekBefore.getDate() - 7);
-
+   
     if (now >= weekBefore) {
       const { availableInternal, availableExternal } = await findCandidates(request);
 
