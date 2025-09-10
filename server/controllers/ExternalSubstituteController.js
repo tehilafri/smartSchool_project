@@ -5,6 +5,12 @@ export const addExternalSubstitute = async (req, res) => {
   try {
     const { firstName, lastName, identityNumber, email, phone, subjects, availability } = req.body;
 
+    //  בדיקה אם כבר קיים ממלא מקום עם אותה ת"ז באותו בית ספר
+    const existing = await ExternalSubstitute.findOne({ identityNumber, schoolId: req.schoolId });
+    if (existing) {
+      return res.status(400).json({ message: 'Substitute with this ID already exists in this school' });
+    }
+
     const newSub = new ExternalSubstitute({
       firstName,
       lastName,

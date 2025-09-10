@@ -17,18 +17,16 @@ export const register = async (req, res) => {
     if (!currentUser) {
       return res.status(403).json({ message: 'Unauthorized: user not found' });
     }
-    console.log(currentUser);
-    console.log(req.id);
-    console.log(req.schoolId);
+
     // אם המשתמש הוא secretary והוא מנסה ליצור secretary אחר – אסור
     if (currentUser.role === 'secretary' && role === 'secretary') {
       return res.status(403).json({ message: 'Secretaries cannot create other secretaries' });
     }
 
-    // בדיקת הכיתות שהוזנו
+    // בדיקת כיתות שהוזנו
     let validClasses = [];
     if (classes && classes.length > 0) {
-      const existingClasses = await Class.find({ name: { $in: classes } });
+      const existingClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
       if (existingClasses.length !== classes.length) {
         const existingNames = existingClasses.map(c => c.name);
         const invalidNames = classes.filter(c => !existingNames.includes(c));
@@ -37,10 +35,21 @@ export const register = async (req, res) => {
       validClasses = existingClasses.map(c => c._id);
     }
 
-    // בדיקת ייחודיות userId/email
-    const existingUser = await User.findOne({
-      $or: [{ userId }, { email }]
-    });
+    // בדיקות ייחודיות בהתאם ל-role
+    let existingUser = null;
+    if (['teacher', 'secretary'].includes(role)) {
+      existingUser = await User.findOne({
+        $or: [
+          { userId, schoolId: req.schoolId },
+          { email, schoolId: req.schoolId }
+        ]
+      });
+    } else if (['student', 'admin'].includes(role)) {
+      existingUser = await User.findOne({
+        $or: [{ userId }, { email }]
+      });
+    }
+
     if (existingUser) {
       return res.status(400).json({ message: 'User with this ID or email already exists' });
     }
@@ -67,24 +76,24 @@ export const register = async (req, res) => {
 
     await newUser.save();
 
+    // אם תלמיד – לעדכן את הכיתה
     if (role === 'student' && validClasses.length > 0) {
-          for (const classId of validClasses) {
-            const classDoc = await Class.findById(classId);
-            if (classDoc && !classDoc.students.includes(newUser._id)) {
-              classDoc.students.push(newUser._id);
-              await classDoc.save();
-            }
-          }
+      for (const classId of validClasses) {
+        const classDoc = await Class.findById(classId);
+        if (classDoc && !classDoc.students.includes(newUser._id)) {
+          classDoc.students.push(newUser._id);
+          await classDoc.save();
         }
+      }
+    }
 
     res.status(201).json({ message: 'User registered successfully' });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-
 
 export const login = async (req, res) => {
   try {
