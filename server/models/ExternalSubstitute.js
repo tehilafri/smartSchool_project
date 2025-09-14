@@ -19,16 +19,6 @@ const externalSubstituteSchema = new mongoose.Schema({
   subjects: {
     type: [{ type: String }],
     default: []
-  },
-  availability: {
-    type: [{
-      date: { type: Date, default: null },
-      startTime: { type: String, default: '00:00' },
-      endTime: { type: String, default: '23:59' }
-    }],
-    default: [
-      { date: null, startTime: '00:00', endTime: '23:59' }
-    ]
   }
 }, { timestamps: true });
 

@@ -14,7 +14,10 @@ import ScheduleRouter from './routes/ScheduleRouter.js';
 import EventRouter from './routes/EventRouter.js';
 import ExternalSubstituteRouter from './routes/ExternalSubstituteRouter.js';
 import SchoolRouter from './routes/SchoolRouter.js';
-import { checkPendingSubstituteRequests } from './Jobs/substituteJob.js';
+import { resetPastSubstitutes } from './Jobs/substituteJob.js';
+import { checkPendingSubstituteRequests, startCheckJob } from './Jobs/substituteJob.js';
+import formRoutes from "./routes/formRouter.js";
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const server = express();
 
@@ -44,6 +47,7 @@ server.use('/api/schedule', ScheduleRouter);
 server.use('/api/events', EventRouter);
 server.use('/api/external-substitutes', ExternalSubstituteRouter);
 server.use('/api/schools', SchoolRouter);
+server.use("/form", formRoutes);
 
 // מאזינים לאירועים של מסד הנתונים
 mongoose.connection.once("open", () => {
@@ -53,10 +57,19 @@ mongoose.connection.once("open", () => {
   });
 });
 
-cron.schedule('0 * * * *', () => {
-    console.log('Checking pending requests...');
-    checkPendingSubstituteRequests();
-  });
+// כל שעה – בדיקת בקשות ממתינות
+cron.schedule('44 * * * *', async () => {
+  console.log('Checking pending requests...');
+  await checkPendingSubstituteRequests();
+});
+
+// פעם ביום אחרי שעות הלימודים – איפוס שיעורים שעברו
+cron.schedule('0 16 * * *', async () => {
+  console.log('Resetting past substitutes...');
+  await resetPastSubstitutes();
+});
+
+startCheckJob(); // מפעיל את הג'וב ברקע
 
 mongoose.connection.on("error", (error) => {
   console.error("********** MongoDB connection error **********");

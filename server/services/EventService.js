@@ -98,6 +98,7 @@ const EventService = {
       }
     }
   },
+  
   revertEventImpact: async (event) => {
   const { classes, date, startTime, endTime } = event;
 

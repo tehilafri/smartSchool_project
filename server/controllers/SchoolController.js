@@ -68,7 +68,7 @@ export const getSchoolById = async (req, res) => {
 
 export const updateSchool = async (req, res) => {
   try {
-    const { schoolId } = req.user;
+    const schoolId = req.schoolId;
     const { id } = req.params;
 
     if (schoolId !== id) {
@@ -76,9 +76,15 @@ export const updateSchool = async (req, res) => {
     }
 
     const updates = req.body;
-    const school = await School.findByIdAndUpdate(id, updates, { new: true });
 
+    const school = await School.findById(id);
     if (!school) return res.status(404).json({ message: 'School not found' });
+
+    // עדכון השדות מהבקשה
+    Object.assign(school, updates);
+
+    // שמירה - כאן pre('save') ירוץ וימלא את number ב-scheduleHours
+    await school.save();
 
     res.json({ message: 'School updated successfully', school });
   } catch (err) {

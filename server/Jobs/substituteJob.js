@@ -1,7 +1,66 @@
 import SubstituteRequest from '../models/SubstituteRequest.js';
+import Class from '../models/Class.js';
+import Schedule from '../models/Schedule.js';
+import cron from "node-cron";
 import { findCandidates } from '../services/SubstituteService.js';
 import { sendEmail } from '../utils/email.js'; 
-import Class from '../models/Class.js';
+import { handleApproveReplacement } from "../services/SubstituteService.js";
+import { readSheet, updateSheetCell, batchUpdate, markRowsProcessedByAbsenceCode } from "../utils/googleSheets.js";
+
+const SHEET_ID = process.env.SHEET_ID;
+const SHEET_TAB = process.env.SHEET_TAB_NAME || "Responses";
+const SHEET_RANGE =`'${SHEET_TAB}'!A:Z`; // מספיק רחב כדי לכלול את העמודה החדשה 'התייחסו'
+
+export const resetPastSubstitutes = async () => {// רץ כל שעה ומחזיר את הסטטוס של שיעורים שהיו מוחלפים אם התאריך והזמן עברו
+  try {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    const schedules = await Schedule.find({
+      $or: [
+        { 'weekPlan.sunday.status': 'replaced' },
+        { 'weekPlan.monday.status': 'replaced' },
+        { 'weekPlan.tuesday.status': 'replaced' },
+        { 'weekPlan.wednesday.status': 'replaced' },
+        { 'weekPlan.thursday.status': 'replaced' },
+        { 'weekPlan.friday.status': 'replaced' }
+      ]
+    });
+
+    for (const schedule of schedules) {
+      let updated = false;
+
+      for (const [day, lessons] of Object.entries(schedule.weekPlan)) {
+        for (const lesson of lessons) {
+          if (lesson.status === 'replaced' && lesson.replacementDate) {
+            const lessonDateStr = lesson.replacementDate.toISOString().split('T')[0];
+
+            const isPastDate = lessonDateStr < todayStr;
+            const isTodayPastTime = lessonDateStr === todayStr && lesson.endTime <= currentTime;
+
+            if (isPastDate || isTodayPastTime) {
+              lesson.status = 'normal';
+              lesson.substitute = null;
+              lesson.substituteModel = null;
+              lesson.replacementDate = null;
+              updated = true;
+            }
+          }
+        }
+      }
+
+      if (updated) {
+        await schedule.save();
+        console.log(`Updated schedule for class ${schedule.classId}`);
+      }
+    }
+
+    console.log('Reset past substitutes job completed.');
+  } catch (err) {
+    console.error('Error in resetPastSubstitutes job:', err);
+  }
+};
 
 const sendSubstituteEmail = async (teacher, request, formattedDate) => {
   // מוצאים את הכיתה לפי ID
@@ -54,3 +113,121 @@ export const checkPendingSubstituteRequests = async () => {
     }
   }
 };
+
+// יריץ כל 5 דקות (*/5 * * * *)
+export function startCheckJob() {
+  cron.schedule("*/1 * * * *", async () => {
+    console.log("Checking Google Sheet for new substitutes...");
+    try {
+      const rows = await readSheet(SHEET_ID, SHEET_RANGE);
+      if (!rows || rows.length < 2) {
+        console.log("No rows in sheet");
+        return;
+      }
+
+      const header = rows[0].map(h => (h || "").toString());
+      let processedColIndex = header.findIndex(h => /התייחסו|processed/i.test(h));
+      if (processedColIndex === -1) {
+        // הוספת כותרת עמודה אוטומטית (עמודה הבאה)
+        processedColIndex = header.length;
+        const colLetter = columnToLetter(processedColIndex + 1);
+        await updateSheetCell(SHEET_ID, `${SHEET_TAB}!${colLetter}1`, "התייחסו");
+        console.log("Added 'התייחסו' header at", colLetter + "1");
+      }
+
+      const updates = []; // נקבץ עדכונים לשליחה בבת אחת
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const sheetRowNumber = i + 1;
+        const processedCell = row[processedColIndex];
+        if (processedCell && processedCell.toString().trim() !== "") continue; // כבר טופל
+
+        // העמודות לפי התיאור שלך:
+        const timestamp = row[0];
+        const email = row[1];
+        const idNumber = row[2];
+        const phone = row[3];
+        const notes = row[4];
+        const absenceCode = row[5];
+        const firstName = row[6];
+        const lastName = row[7];
+
+        if (!absenceCode) {
+          // סמני כ'no_code' כדי למנוע ניסיון חוזר
+          const colLetter = columnToLetter(processedColIndex + 1);
+          updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["אין קוד"]] });
+          continue;
+        }
+
+        const request = await SubstituteRequest.findOne({ absenceCode });
+        if (!request) {
+          const colLetter = columnToLetter(processedColIndex + 1);
+          updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["בקשה לא קיימת"]] });
+          continue;
+        }
+
+        if (request.status === "accepted") {
+          const colLetter = columnToLetter(processedColIndex + 1);
+          updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["טופל"]] });
+          continue;
+        }
+
+        // עודכן ב-DB (לשם תיעוד) - אופציונלי: שומרים את התשובה האחרונה
+        request.response = { firstName, lastName, identityNumber: idNumber, email, notes, phone, timestamp };
+        await request.save();
+
+        // שליחת מייל למורה שביקשה את ההיעדרות
+        await request.populate("originalTeacherId");
+        const teacherEmail = request.originalTeacherId?.email;
+        if (teacherEmail) {
+          const subject = `ממלא/ת מקום חדש/ה לבקשה: ${absenceCode}`;
+          const text = `שלום ${request.originalTeacherId.firstName} ${request.originalTeacherId.lastName},
+
+נרשם מועמד/ת חדש/ה למלא מקום:
+שם: ${firstName} ${lastName}
+ת\"ז: ${idNumber || "-"}
+אימייל: ${email || "-"}
+טלפון: ${phone || "-"}
+הערות: ${notes || "-"}
+
+אם את/ה רוצה לאשר את המחליף/ת, הכנס/י לקוד ההיעדרות במערכת: ${absenceCode}
+
+המערכת, smartSchool.`;
+
+          try {
+            await sendEmail(teacherEmail, subject, text);
+            const colLetter = columnToLetter(processedColIndex + 1);
+            updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["נשלח למורה"]] });
+            console.log(`Notified teacher ${teacherEmail} for absence ${absenceCode}`);
+          } catch (e) {
+            console.error("Failed to send notification email:", e);
+            const colLetter = columnToLetter(processedColIndex + 1);
+            updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["שגיאת שליחה"]] });
+          }
+        } else {
+          const colLetter = columnToLetter(processedColIndex + 1);
+          updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["אין אימייל למורה"]] });
+        }
+      } // end for
+
+      if (updates.length) {
+        await batchUpdate(SHEET_ID, updates);
+        console.log("Updated sheet processed cells:", updates.length);
+      }
+    } catch (err) {
+      console.error("Error in check job:", err);
+    }
+  });
+}
+
+function columnToLetter(col) {
+  let temp;
+  let letter = "";
+  while (col > 0) {
+    temp = (col - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    col = Math.floor((col - temp - 1) / 26);
+  }
+  return letter;
+}

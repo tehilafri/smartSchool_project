@@ -3,7 +3,7 @@ import ExternalSubstitute from '../models/ExternalSubstitute.js';
 // הוספת ממלא מקום חדש
 export const addExternalSubstitute = async (req, res) => {
   try {
-    const { firstName, lastName, identityNumber, email, phone, subjects, availability } = req.body;
+    const { firstName, lastName, identityNumber, email, phone, subjects } = req.body;
 
     //  בדיקה אם כבר קיים ממלא מקום עם אותה ת"ז באותו בית ספר
     const existing = await ExternalSubstitute.findOne({ identityNumber, schoolId: req.schoolId });
@@ -18,8 +18,7 @@ export const addExternalSubstitute = async (req, res) => {
       identityNumber,
       email,
       phone,
-      subjects,
-      availability
+      subjects
     });
 
     await newSub.save();

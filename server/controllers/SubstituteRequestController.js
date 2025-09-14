@@ -1,22 +1,20 @@
 import mongoose from 'mongoose';
 import SubstituteRequest from '../models/SubstituteRequest.js';
-import { handleReportAbsence, handleApproveReplacement } from '../services/SubstituteService.js';
+import { handleTeacherAbsences, handleApproveReplacement } from '../services/SubstituteService.js';
 
 export const reportAbsence = async (req, res) => {
   try {
-    const { date, startTime, endTime, subject, className, reason } = req.body;
+    const { date, startTime, endTime, reason } = req.body;
 
-    const absenceCode = await handleReportAbsence({
+    const absenceCodes = await handleTeacherAbsences({
       teacherId: req.id,
       date,
       startTime,
       endTime,
-      subject,
-      className,
       reason
     });
 
-    res.status(201).json({ message: 'Absence reported successfully', code: absenceCode });
+    res.status(201).json({ message: 'Absence reported successfully', codes: absenceCodes });
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: err.message });
