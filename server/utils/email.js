@@ -3,6 +3,12 @@ import { google } from "googleapis";
 
 export const sendEmail = async (to, subject, text) => {
   try {
+    console.log("Preparing to send email to❤️🏅👧:", to);
+    console.log("Using EMAIL_USER:", process.env.EMAIL_USER);
+    console.log("Using GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
+    console.log("Using GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
+    console.log("Using GOOGLE_REDIRECT_URI:", process.env.GOOGLE_REDIRECT_URI);
+    console.log("Using GOOGLE_REFRESH_TOKEN:", process.env.GOOGLE_REFRESH_TOKEN ? "Exists" : "Not Set");
     // יוצרים את ה‑OAuth2Client בתוך הפונקציה
     const oAuth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -53,3 +59,4 @@ export const sendEmail = async (to, subject, text) => {
     throw err;
   }
 };
+

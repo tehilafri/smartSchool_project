@@ -114,11 +114,14 @@ export const checkPendingSubstituteRequests = async () => {
   }
 };
 
-// יריץ כל 5 דקות (*/5 * * * *)
+// יריץ כל דקה (*/1 * * * *)
 export function startCheckJob() {
   cron.schedule("*/1 * * * *", async () => {
     console.log("Checking Google Sheet for new substitutes...");
     try {
+      console.log("Reading sheet...");
+      console.log("SHEET_ID:", SHEET_ID);
+      console.log("SHEET_RANGE:", SHEET_RANGE);
       const rows = await readSheet(SHEET_ID, SHEET_RANGE);
       if (!rows || rows.length < 2) {
         console.log("No rows in sheet");
@@ -135,15 +138,14 @@ export function startCheckJob() {
         console.log("Added 'התייחסו' header at", colLetter + "1");
       }
 
-      const updates = []; // נקבץ עדכונים לשליחה בבת אחת
+      const updates = [];
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
         const sheetRowNumber = i + 1;
         const processedCell = row[processedColIndex];
-        if (processedCell && processedCell.toString().trim() !== "") continue; // כבר טופל
 
-        // העמודות לפי התיאור שלך:
+        // העמודות לפי המבנה שלך
         const timestamp = row[0];
         const email = row[1];
         const idNumber = row[2];
@@ -154,7 +156,7 @@ export function startCheckJob() {
         const lastName = row[7];
 
         if (!absenceCode) {
-          // סמני כ'no_code' כדי למנוע ניסיון חוזר
+          // אין קוד → לא נמשיך
           const colLetter = columnToLetter(processedColIndex + 1);
           updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["אין קוד"]] });
           continue;
@@ -167,17 +169,23 @@ export function startCheckJob() {
           continue;
         }
 
+        // אם הבקשה כבר אושרה → נסמן "טופל"
         if (request.status === "accepted") {
           const colLetter = columnToLetter(processedColIndex + 1);
-          updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["טופל"]] });
+          if (processedCell !== "טופל") {
+            updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["טופל"]] });
+          }
           continue;
         }
 
-        // עודכן ב-DB (לשם תיעוד) - אופציונלי: שומרים את התשובה האחרונה
+        // אם כבר יש ערך אחר בעמודה (כמו "נשלח למורה") → לא נדרוס
+        if (processedCell && processedCell.toString().trim() !== "") continue;
+
+        // נעדכן את ה־DB עם פרטי התגובה
         request.response = { firstName, lastName, identityNumber: idNumber, email, notes, phone, timestamp };
         await request.save();
 
-        // שליחת מייל למורה שביקשה את ההיעדרות
+        // שליחת מייל למורה המקורית
         await request.populate("originalTeacherId");
         const teacherEmail = request.originalTeacherId?.email;
         if (teacherEmail) {
@@ -186,7 +194,7 @@ export function startCheckJob() {
 
 נרשם מועמד/ת חדש/ה למלא מקום:
 שם: ${firstName} ${lastName}
-ת\"ז: ${idNumber || "-"}
+ת"ז: ${idNumber || "-"}
 אימייל: ${email || "-"}
 טלפון: ${phone || "-"}
 הערות: ${notes || "-"}
@@ -220,6 +228,7 @@ export function startCheckJob() {
     }
   });
 }
+
 
 function columnToLetter(col) {
   let temp;

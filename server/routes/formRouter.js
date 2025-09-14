@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
     }
 
     if (request.status === "accepted") {
-      return res.send("<h2>העניין טופל, תודה רבה!</h2>");
+      return res.send("<h2 style='color:red'>העניין טופל, תודה רבה!</h2>");
     }
 
     // מפנים לטופס Google המקורי (עם פרמטר הקוד). החלק הזה ישמור על הפרמטר entry.XXXXX

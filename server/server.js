@@ -17,7 +17,7 @@ import SchoolRouter from './routes/SchoolRouter.js';
 import { resetPastSubstitutes } from './Jobs/substituteJob.js';
 import { checkPendingSubstituteRequests, startCheckJob } from './Jobs/substituteJob.js';
 import formRoutes from "./routes/formRouter.js";
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const server = express();
 
@@ -58,7 +58,7 @@ mongoose.connection.once("open", () => {
 });
 
 // כל שעה – בדיקת בקשות ממתינות
-cron.schedule('44 * * * *', async () => {
+cron.schedule('06 * * * *', async () => {
   console.log('Checking pending requests...');
   await checkPendingSubstituteRequests();
 });
