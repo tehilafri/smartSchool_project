@@ -35,9 +35,6 @@ const Footer = () => {
               <li>
                 <a href="#testimonials">המלצות</a>
               </li>
-              <li>
-                <a href="#pricing">מחירים</a>
-              </li>
             </ul>
           </div>
 
@@ -64,7 +61,7 @@ const Footer = () => {
             <div className="contact-info">
               <p>📧 info@smartschool.co.il</p>
               <p>📱 03-1234567</p>
-              <p>📍 תל אביב, ישראל</p>
+              <p>🌍 תל אביב, ישראל</p>
             </div>
             <div className="newsletter">
               <h5>הירשמו לעדכונים</h5>

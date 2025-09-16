@@ -15,7 +15,7 @@ const Hero = () => {
           </p>
           <div className="hero-actions">
             <a href="#signup" className="btn btn-primary btn-large">
-              התחילו עכשיו בחינם
+              התחילו עכשיו
             </a>
           </div>
           <div className="hero-stats">
