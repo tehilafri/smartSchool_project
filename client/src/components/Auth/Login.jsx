@@ -1,16 +1,47 @@
 import { useState } from "react"
 import { loginUser } from "../../services/userService"
-import "./Auth.css"
 import { useNavigate } from "react-router-dom"
+import "./Auth.css"
 
-const Login = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
+const Login = () => {
+
+  const navigate = useNavigate();
+  // פונקציה אחרי התחברות מוצלחת
+  const onLogin = (role) => {
+    // ניווט לפי תפקיד
+    if (role === "admin") {
+      console.log("Navigating to admin dashboard");
+      navigate("/dashboard/admin");
+    } else if (role === "teacher") {
+      console.log("Navigating to teacher dashboard");
+      navigate("/dashboard/teacher");
+    } else if (role === "student") {
+      console.log("Navigating to student dashboard");
+      navigate("/dashboard/student");
+    } else if (role === "secretary") {
+      console.log("Navigating to secretary dashboard");
+      navigate("/dashboard/secretary");
+    } else {
+      navigate("/");
+    }
+  };
+
+  // מעבר לדף הרשמה
+  const onSwitchToRegister = () => {
+    navigate("/register");
+  };
+
+  // מעבר לדף איפוס סיסמה
+  const onForgotPassword = () => {
+    navigate("/forgot-password");
+  };
+
   const [formData, setFormData] = useState({
     userName: "",
     password: "",
     schoolCode: "",
   })
   const [error, setError] = useState("")
-  const navigate = useNavigate()
 
   const handleChange = (e) => {
     setFormData({
@@ -18,7 +49,7 @@ const Login = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
       [e.target.name]: e.target.value,
     })
   }
-
+  console.log("Form Data:", formData) // בדיקת נתוני הטופס
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
@@ -31,12 +62,12 @@ const Login = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
       )
       // שמירת JWT
       localStorage.setItem("token", response.data.token)
-
+      localStorage.setItem("user", JSON.stringify(response.data.user)) //שמירת המידע של המשתמש
+      const role = response.data.user.role;
+      console.log("Login successful, user role:", role)
       // קריאה לפונקציית ההצלחה
-      onLogin(response.data.user.role)
-
-      // ניווט למסך המתאים לפי תפקיד
-      navigate("/dashboard") 
+      onLogin(role)
+      
     } catch (err) {
       setError(err.response?.data?.message || "שגיאה בשרת, נסה שוב")
     }

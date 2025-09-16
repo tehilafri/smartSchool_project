@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import { createSchool } from "../../services/schoolService"
 import "./Auth.css"

@@ -21,7 +21,6 @@ export const reportAbsence = async (req, res) => {
   }
 };
 
-
 export const approveReplacement = async (req, res) => {
   try {
     const { absenceCode, firstName, lastName, email, notes, identityNumber } = req.body;
@@ -43,17 +42,26 @@ export const approveReplacement = async (req, res) => {
   }
 };
 
-
 export const getSubstituteRequests = async (req, res) => {
   try {
-    const requests = await SubstituteRequest.find({ schoolId: req.schoolId })
+    let filter = { schoolId: req.schoolId };
+
+    // אם המשתמש הוא מורה → סינון לפי המורה המחובר
+    if (req.role === 'teacher') {
+      filter.originalTeacherId = req.id;
+    }
+
+    // אם המשתמש מנהלת → אין צורך להוסיף סינון נוסף (היא רואה את כולם)
+
+    const requests = await SubstituteRequest.find(filter)
       .populate('originalTeacherId', 'firstName lastName email')
-      .populate('substituteTeacher', 'firstName lastName email'); 
-    
+      .populate('substituteTeacher', 'firstName lastName email');
+
     res.json({ requests });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
