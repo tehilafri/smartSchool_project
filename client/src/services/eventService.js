@@ -39,3 +39,19 @@ export const deleteEvent = async (eventId, token) => {
   });
   return response.data;
 };
+
+// קבלת המבחן הבא של התלמיד
+export const getNextExam = async (token) => {
+  const response = await api.get("/events/nextExam", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+// קבלת כל המבחנים הקרובים של התלמיד
+export const getUpcomingExams = async (token) => {
+  const response = await api.get("/events/upcomingExams", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};

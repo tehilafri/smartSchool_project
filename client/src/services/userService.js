@@ -1,8 +1,8 @@
 import api from './api';
 
 // Authentication
-export const loginUser = (username, password) => {
-  return api.post('/users/login', { username, password });
+export const loginUser = (userName, password, schoolCode) => {
+  return api.post('/users/login', { userName, password, schoolCode });
 };
 
 export const registerUser = (userData, token) => {
@@ -44,3 +44,16 @@ export const forgotPassword = (email) => {
 export const resetPassword = (token, newPassword) => {
   return api.put(`/users/reset-password/${token}`, { newPassword });
 };
+
+export const getMe = (token) => {
+  return api.get('/users/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+//getAllSecretaries
+export const getAllSecretaries = (token) => {
+  return api.get('/users/secretaries', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

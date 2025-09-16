@@ -39,3 +39,11 @@ export const updateScheduleDay = async (updateData, token) => {
   });
   return response.data;
 };
+
+// קבלת מערכת שעות לתלמיד
+export const getScheduleForStudent = async (token) => {
+  const response = await api.get('/schedule/getScheduleForStudent', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};

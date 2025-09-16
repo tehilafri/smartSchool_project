@@ -7,7 +7,9 @@ import {
   getUserById,
   updateUser,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  getMe,
+  getAllSecretaries
 } from '../controllers/UserController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
 import User from '../models/User.js';
@@ -26,12 +28,16 @@ router.post('/login', login);
 
 
 // --- Protected routes ---
+router.get('/me', jwtMiddleware, getMe);
 router.get('/teachers', jwtMiddleware, getAllTeachers);
 router.get('/students', jwtMiddleware, getAllStudents);
 router.get('/:id', jwtMiddleware, getUserById);
 router.put('/:id', jwtMiddleware, updateUser);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:token', resetPassword);
+router.get('/secretaries', jwtMiddleware, getAllSecretaries);
+
+
 
 
 export default router;

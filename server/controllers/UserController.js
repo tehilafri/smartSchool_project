@@ -130,7 +130,7 @@ export const login = async (req, res) => {
       token,
       user: {
         id: user._id,
-        username: user.userName,
+        userName: user.userName,
         role: user.role,
         schoolCode: school.schoolCode
       }
@@ -174,7 +174,7 @@ export const login = async (req, res) => {
 //       token,
 //       user: {
 //         id: user._id,
-//         username: user.userName,
+//         userName: user.userName,
 //         role: user.role
 //       }
 //     });
@@ -184,6 +184,32 @@ export const login = async (req, res) => {
 //   }
 // };
 
+export const getMe = async (req, res) => {
+  try {
+    const userId = req.id;
+
+    const user = await User.findById(userId)
+      .select("-password")
+      .populate({
+        path: "classes",
+        select: "name homeroomTeacher", // שדות שאת רוצה להחזיר
+        populate: { path: "homeroomTeacher", select: "firstName lastName" } 
+      })
+      .populate({
+        path: "schoolId", 
+        select: "name scheduleHours address" // שדות שרוצים להחזיר
+      });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 export const getAllTeachers = async (req, res) => {
   try {
@@ -203,6 +229,15 @@ export const getAllStudents = async (req, res) => {
   }
 };
 
+export const getAllSecretaries = async (req, res) => {
+  try {
+    const secretaries = await User.find({ role: 'secretary', schoolId: req.schoolId }).select('-password');
+    res.json(secretaries);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id, { schoolId: req.schoolId }).select('-password');
@@ -215,7 +250,7 @@ export const getUserById = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, birthDate, role, classes, subjects, ishomeroom, password } = req.body;
+    const { firstName, lastName, email, birthDate, classes, subjects, ishomeroom } = req.body;
 
     // המשתמש שמבצע את הבקשה
     const currentUser = await User.findById(req.id);
@@ -243,7 +278,6 @@ export const updateUser = async (req, res) => {
     if (lastName) user.lastName = lastName;
     if (email) user.email = email;
     if (birthDate) user.birthDate = birthDate;
-    if (role && currentUser.role === 'admin') user.role = role;
     if (typeof ishomeroom !== 'undefined' && (currentUser.role === 'secretary' || currentUser.role === 'admin')) {
       user.ishomeroom = ishomeroom;
     }
@@ -291,9 +325,9 @@ export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   // 1. לבדוק אם משתמש עם המייל הזה קיים
-  const user = await User.findOne({ email , schoolId: req.schoolId });
+  const user = await User.findOne({ email });
   if (!user) {
-    return res.status(404).json({ message: 'User not found with this email/ in this school' });
+    return res.status(404).json({ message: 'User not found with this email' });
   }
 
   // 2. ליצור טוקן

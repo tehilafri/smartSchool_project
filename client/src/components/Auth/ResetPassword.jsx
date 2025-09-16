@@ -1,4 +1,3 @@
-// client/src/components/auth/ResetPassword.jsx
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { resetPassword as resetPasswordAPI} from "../../services/userService";

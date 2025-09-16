@@ -222,3 +222,59 @@ export const deleteEvent = async (req, res) => {
   }
 };
 
+export const getUpcomingExams = async (req, res) => {
+  try {
+    // 1. מציאת התלמיד והכיתות שלו
+    const student = await User.findById(req.id).populate('classes');
+    if (!student || !student.classes.length) {
+      return res.status(404).json({ message: "Student or student's classes not found" });
+    }
+
+    const classIds = student.classes.map(c => c._id);
+
+    // 2. שליפת כל אירועי המבחן הקרובים לכיתות שלו
+    const exams = await Event.find({
+      type: 'exam',
+      classes: { $in: classIds },
+      date: { $gte: new Date() } // רק מבחנים מהיום והלאה
+    })
+    .populate('classes', 'name')
+    .populate('createdBy', 'firstName lastName')
+    .sort({ date: 1, startTime: 1 });
+
+    res.status(200).json(exams);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching upcoming exams', error });
+  }
+};
+
+export const getNextExam = async (req, res) => {
+  try {
+    const student = await User.findById(req.id).populate('classes');
+    if (!student || !student.classes.length) {
+      return res.status(404).json({ message: "Student or student's classes not found" });
+    }
+
+    const classIds = student.classes.map(c => c._id);
+
+    // שליפת המבחן הקרוב ביותר
+    const nextExam = await Event.findOne({
+      type: 'exam',
+      classes: { $in: classIds },
+      date: { $gte: new Date() }
+    })
+    .populate('classes', 'name')
+    .populate('createdBy', 'firstName lastName')
+    .sort({ date: 1, startTime: 1 });
+
+    if (!nextExam) {
+      return res.status(404).json({ message: 'No upcoming exams found' });
+    }
+
+    res.status(200).json(nextExam);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching next exam', error });
+  }
+};

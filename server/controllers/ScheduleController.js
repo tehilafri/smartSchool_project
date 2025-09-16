@@ -383,3 +383,40 @@ export const getScheduleByTeacher = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+export const getScheduleForStudent = async (req, res) => {
+  try {
+    // 1. שליפת המשתמש מתוך ה־DB לפי ה־id מה־token
+    const user = await User.findById(req.id).populate("classes");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 2. לוודא שיש לו כיתות
+    if (!user.classes || user.classes.length === 0) {
+      return res.status(400).json({ message: "User has no classes assigned" });
+    }
+
+    // אם יש יותר מכיתה אחת – ניקח את הראשונה (אפשר לשפר בהמשך)
+    const classId = user.classes[0]._id;
+
+    // 3. שליפת המערכת של הכיתה הזו
+    const schedule = await Schedule.findOne({ classId })
+      .populate("weekPlan.sunday.teacherId", "firstName lastName")
+      .populate("weekPlan.monday.teacherId", "firstName lastName")
+      .populate("weekPlan.tuesday.teacherId", "firstName lastName")
+      .populate("weekPlan.wednesday.teacherId", "firstName lastName")
+      .populate("weekPlan.thursday.teacherId", "firstName lastName")
+      .populate("weekPlan.friday.teacherId", "firstName lastName")
+      .populate("classId", "name");
+
+    if (!schedule) {
+      return res.status(404).json({ message: "Schedule not found for this class" });
+    }
+
+    res.status(200).json(schedule);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching schedule", error });
+  }
+};

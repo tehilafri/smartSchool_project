@@ -1,7 +1,6 @@
 import express from 'express';
-import {getNextLessonForStudent, getNextLessonForTeacher , getScheduleByTeacher, createSchedule, updateScheduleDay} from '../controllers/ScheduleController.js';
+import {getNextLessonForStudent, getNextLessonForTeacher , getScheduleByTeacher, createSchedule, updateScheduleDay,getScheduleForStudent} from '../controllers/ScheduleController.js';
 import { jwtMiddleware ,requireRole} from '../Middlewares.js';
-import Schedule from '../models/Schedule.js';
 
 const router = express.Router();
 
@@ -10,5 +9,6 @@ router.get('/nextLesson', jwtMiddleware, requireRole('student'), getNextLessonFo
 router.get('/nextLessonForTeacher', jwtMiddleware, requireRole('teacher'), getNextLessonForTeacher);
 router.get('/ScheduleByTeacher', jwtMiddleware, requireRole('teacher', 'admin'), getScheduleByTeacher);
 router.put('/updateDay', jwtMiddleware, requireRole('teacher', 'admin'), updateScheduleDay);
+router.get('/getScheduleForStudent', jwtMiddleware, requireRole('student'), getScheduleForStudent);
 
 export default router;
