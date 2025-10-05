@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import "./Dashboard.css";
+import DashboardHeader from "./DashboardHeader";
+import SchoolDirectionsButton from "../SchoolDirectionsButton";
 
 import { getMe } from "../../services/userService";
 import { getScheduleByTeacher, getNextLessonForTeacher, updateScheduleDay, createSchedule, getHomeroomClassSchedule } from "../../services/scheduleService"; 
@@ -177,7 +179,7 @@ const TeacherDashboard = ({ onLogout }) => {
         setLoadingMe(true);
         const meRes = await getMe();
         fetchedMe=meRes;
-        if (!cancelled) setMe(meRes?.data);
+        if (!cancelled) setMe(meRes);
       } catch (err) {
         console.error("getMe error", err);
         if (!cancelled) setError((e) => e || "שגיאה בטעינת משתמש");
@@ -969,7 +971,7 @@ const renderScheduleTable = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-sidebar">
-        <div className="sidebar-header">
+        <div className="sidebar-header" style={{marginTop: 70}}>
           <h2>Smart School</h2>
           <p>פאנל מורה</p>
         </div>
@@ -1005,12 +1007,14 @@ const renderScheduleTable = () => {
         </div>
       </div>
 
-      <div className="dashboard-main">
+      <div className="dashboard-main" style={{paddingTop: 60}}>
+        {me?.schoolId && <DashboardHeader schoolId={me.schoolId._id} onLogout={onLogout} />}
         <div className="dashboard-header">
           <h1>{me?.gender=="female"?"ברוכה הבאה": "ברוך הבא"}, המורה {loadingMe ? "טוען..." : (me?.firstName )} {me?.lastName}</h1>
           <div className="header-actions">
             <button className="btn btn-outline">הודעות</button>
             <button className="btn btn-primary">צ'אט</button>
+            {me?.schoolId?.address && <SchoolDirectionsButton schoolAddress={me.schoolId.address} />}
           </div>
         </div>
 

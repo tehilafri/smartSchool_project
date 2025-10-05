@@ -1,20 +1,52 @@
 import { useState, useEffect, useState as useState2 } from "react"
+import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
-import { getMe } from "../../services/userService";
+import SchoolDirectionsButton from "../SchoolDirectionsButton";
+import { getMe, getAllStudents, updateUser, deleteUser } from "../../services/userService";
+import { getAllClasses, addStudentToClass, removeStudentFromClass, updateHomeroomTeacher } from "../../services/classService";
+import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/eventService";
+import { getAllExternalSubstitutes, addExternalSubstitute, deleteExternalSubstitute, updateExternalSubstitute } from "../../services/externalSubstituteService";
 import "./Dashboard.css"
 
 const SecretaryDashboard = ({ onLogout }) => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("overview")
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState("")
+  const [modalData, setModalData] = useState(null)
+  const [formData, setFormData] = useState({})
   const [me, setMe] = useState2(null);
+  const [students, setStudents] = useState([])
+  const [classes, setClasses] = useState([])
+  const [events, setEvents] = useState([])
+  const [substitutes, setSubstitutes] = useState([])
+
+  const fetchAllData = async () => {
+    try {
+      const [meRes, studentsRes, classesRes, eventsRes, substitutesRes] = await Promise.all([
+        getMe(),
+        getAllStudents(),
+        getAllClasses(),
+        getEvents(),
+        getAllExternalSubstitutes()
+      ]);
+      setMe(meRes?.data);
+      setStudents(studentsRes?.data || []);
+      setClasses(classesRes || []);
+      setEvents(eventsRes || []);
+      setSubstitutes(substitutesRes || []);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+    }
+  };
+
   useEffect(() => {
-    getMe().then(res => setMe(res.data)).catch(() => setMe(null));
+    fetchAllData();
   }, []);
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "students", label: "ניהול תלמידים", icon: "👨‍🎓" },
+    { id: "students", label: "ניהול תלמידים", icon: "👨🎓" },
     { id: "events", label: "ניהול אירועים", icon: "🎉" },
     { id: "classes", label: "ניהול כיתות", icon: "🏫" },
     { id: "substitutes", label: "ממלאי מקום", icon: "🔄" },
@@ -22,15 +54,252 @@ const SecretaryDashboard = ({ onLogout }) => {
     { id: "reports", label: "דוחות", icon: "📈" },
   ]
 
-  const openModal = (type) => {
+  const openModal = (type, data = null) => {
+    if (data?.date) {
+      data.date = new Date(data.date).toISOString().split("T")[0];
+    }
+    if (data?.startTime) {
+      data.startTime = data.startTime.slice(0,5);
+    }
+    if (data?.endTime) {
+      data.endTime = data.endTime.slice(0,5);
+    }
+    if (data?.classes) {
+      data.classes = data.classes.map(c => c._id);
+    }
     setModalType(type)
+    setModalData(data)
+    setFormData(data || {})
     setShowModal(true)
   }
 
   const closeModal = () => {
     setShowModal(false)
     setModalType("")
+    setModalData(null)
+    setFormData({})
   }
+
+  const handleDeleteUser = async (id) => {
+    await deleteUser(id);
+    fetchAllData();
+  };
+
+  const handleUpdateUser = async (id) => {
+    await updateUser(id, formData);
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleAddEvent = async () => {
+    await addEvent(formData);
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleUpdateEvent = async (id) => {
+    await updateEvent(id, formData);
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleDeleteEvent = async (id) => {
+    await deleteEvent(id);
+    fetchAllData();
+  };
+
+  const handleAddExternalSubstitute = async () => {
+    await addExternalSubstitute(formData);
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleUpdateExternalSubstitute = async (id) => {
+    await updateExternalSubstitute(id, formData);
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleDeleteExternalSubstitute = async (identityNumber) => {
+    await deleteExternalSubstitute(identityNumber);
+    fetchAllData();
+  };
+
+  const handleAddStudentToClass = async (className, studentId) => {
+    await addStudentToClass({className, studentId});
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleRemoveStudentFromClass = async (className, studentId) => {
+    await removeStudentFromClass({className, studentId});
+    closeModal();
+    fetchAllData();
+  };
+
+  const handleUpdateHomeroomTeacher = async (className, teacherId) => {
+    await updateHomeroomTeacher({className, teacherId});
+    closeModal();
+    fetchAllData();
+  };
+
+  const renderModalForm = () => {
+    if (modalType === "editStudent") {
+      return (
+        <form onSubmit={e => {
+          e.preventDefault();
+          handleUpdateUser(modalData._id);
+        }}>
+          <input
+            type="text"
+            placeholder="שם פרטי"
+            value={formData.firstName || ""}
+            onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="שם משפחה"
+            value={formData.lastName || ""}
+            onChange={e => setFormData({ ...formData, lastName: e.target.value })}
+          />
+          <input
+            type="email"
+            placeholder="אימייל"
+            value={formData.email || ""}
+            onChange={e => setFormData({ ...formData, email: e.target.value })}
+          />
+          <input
+            type="tel"
+            placeholder="טלפון"
+            value={formData.phone || ""}
+            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+          />
+          <button className="btn btn-primary" type="submit">שמור</button>
+        </form>
+      );
+    }
+    if (modalType === "addEvent" || modalType === "editEvent") {
+      return (
+        <form onSubmit={e => {
+          e.preventDefault();
+          modalType === "addEvent" ? handleAddEvent() : handleUpdateEvent(modalData._id);
+        }}>
+          <select
+            value={formData.type || ""}
+            onChange={e => setFormData({ ...formData, type: e.target.value })}
+            required
+          >
+            <option value="">בחר סוג אירוע</option>
+            <option value="trip">טיול</option>
+            <option value="activity">פעילות</option>
+          </select>
+          <input
+            type="text"
+            placeholder="כותרת"
+            value={formData.title || ""}
+            onChange={e => setFormData({ ...formData, title: e.target.value })}
+            required
+          />
+          <textarea
+            placeholder="הערות מיוחדות"
+            value={formData.description || ""}
+            onChange={e => setFormData({ ...formData, description: e.target.value })}
+          />
+          <input
+            type="date"
+            value={formData.date || ""}
+            onChange={e => setFormData({ ...formData, date: e.target.value })}
+            required
+          />
+          <input
+            type="time"
+            value={formData.startTime || ""}
+            onChange={e => setFormData({ ...formData, startTime: e.target.value })}
+            required
+          />
+          <input
+            type="time"
+            value={formData.endTime || ""}
+            onChange={e => setFormData({ ...formData, endTime: e.target.value })}
+            required
+          />
+          <div className="checkbox-group">
+            <label>בחר כיתות:</label>
+            {classes.map(cls => (
+              <div key={cls._id}>
+                <input
+                  type="checkbox"
+                  checked={formData.classes?.includes(cls._id) || false}
+                  onChange={e => {
+                    let updated = formData.classes || [];
+                    if (e.target.checked) {
+                      updated = [...updated, cls._id];
+                    } else {
+                      updated = updated.filter(id => id !== cls._id);
+                    }
+                    setFormData({ ...formData, classes: updated });
+                  }}
+                />
+                <span>{cls.name}</span>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-primary" type="submit">שמור</button>
+        </form>
+      );
+    }
+    if (modalType === "addSubstitute" || modalType === "editSubstitute") {
+      return (
+        <form onSubmit={e => {
+          e.preventDefault();
+          modalType === "addSubstitute" ? handleAddExternalSubstitute() : handleUpdateExternalSubstitute(modalData.identityNumber);
+        }}>
+          <input
+            type="text"
+            placeholder="שם פרטי"
+            value={formData.firstName || ""}
+            onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+            required
+          />
+          <input
+            type="text"
+            placeholder="שם משפחה"
+            value={formData.lastName || ""}
+            onChange={e => setFormData({ ...formData, lastName: e.target.value })}
+            required
+          />
+          <input
+            type="text"
+            placeholder="תעודת זהות"
+            value={formData.identityNumber || ""}
+            onChange={e => setFormData({ ...formData, identityNumber: e.target.value })}
+            required
+          />
+          <input
+            type="email"
+            placeholder="אימייל"
+            value={formData.email || ""}
+            onChange={e => setFormData({ ...formData, email: e.target.value })}
+            required
+          />
+          <input
+            type="tel"
+            placeholder="טלפון"
+            value={formData.phone || ""}
+            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="מקצועות (מופרדים בפסיקים)"
+            value={formData.subjects ? formData.subjects.join(", ") : ""}
+            onChange={e => setFormData({ ...formData, subjects: e.target.value.split(",").map(s => s.trim()) })}
+          />
+          <button className="btn btn-primary" type="submit">שמור</button>
+        </form>
+      );
+    }
+    return <p>טופס זה יפותח בקרוב...</p>;
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -40,30 +309,31 @@ const SecretaryDashboard = ({ onLogout }) => {
             <h2>סקירה כללית</h2>
             <div className="stats-grid">
               <div className="stat-card">
-                <div className="stat-icon">👨‍🎓</div>
+                <div className="stat-icon">👨🎓</div>
                 <div className="stat-info">
-                  <h3>320</h3>
+                  <h3>{students.length}</h3>
                   <p>תלמידים</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">🏫</div>
                 <div className="stat-info">
-                  <h3>12</h3>
+                  <h3>{classes.length}</h3>
                   <p>כיתות</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">🎉</div>
                 <div className="stat-info">
-                  <h3>5</h3>
-                  <p>אירועים השבוע</p>
+                  <h3>{events.length}</h3>
+                  <p>אירועים</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">🔄</div>
                 <div className="stat-info">
-                  <h3>8</h3>
+                  <h3>{substitutes.length}</h3>
+                  {console.log(substitutes)}
                   <p>ממלאי מקום</p>
                 </div>
               </div>
@@ -72,8 +342,8 @@ const SecretaryDashboard = ({ onLogout }) => {
             <div className="secretary-quick-actions">
               <h3>פעולות מהירות</h3>
               <div className="quick-actions-grid">
-                <button className="quick-action-card" onClick={() => openModal("addStudent")}>
-                  <span className="action-icon">👨‍🎓</span>
+                <button className="quick-action-card" onClick={() => navigate("/register_user?role=student")}>
+                  <span className="action-icon">👨🎓</span>
                   <span className="action-text">הוסף תלמיד</span>
                 </button>
                 <button className="quick-action-card" onClick={() => openModal("addEvent")}>
@@ -94,18 +364,12 @@ const SecretaryDashboard = ({ onLogout }) => {
             <div className="recent-activities">
               <h3>פעילות אחרונה</h3>
               <div className="activity-list">
-                <div className="activity-item">
-                  <span className="activity-time">לפני 20 דקות</span>
-                  <span className="activity-text">נוסף תלמיד חדש לכיתה ג'</span>
-                </div>
-                <div className="activity-item">
-                  <span className="activity-time">לפני שעה</span>
-                  <span className="activity-text">נוסף אירוע טיול לכיתה ה'</span>
-                </div>
-                <div className="activity-item">
-                  <span className="activity-time">לפני 3 שעות</span>
-                  <span className="activity-text">עודכנה מחנכת כיתה ב'</span>
-                </div>
+                {events.slice(0, 3).map((event, idx) => (
+                  <div className="activity-item" key={event._id || idx}>
+                    <span className="activity-time">{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "לא ידוע"}</span>
+                    <span className="activity-text">{event.title || event.description || "אירוע"} - כיתות: {event.classes?.map(c => c.name).join(", ") || "לא צוין"}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -116,28 +380,9 @@ const SecretaryDashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <div className="section-header">
               <h2>ניהול תלמידים</h2>
-              <button className="btn btn-primary" onClick={() => openModal("addStudent")}>
-                הוסף תלמיד חדש
+              <button className="btn btn-primary" onClick={() => navigate("/register_user?role=student")}>
+                הוסף תלמיד
               </button>
-            </div>
-
-            <div className="students-filters">
-              <div className="filter-group">
-                <label>סינון לפי כיתה:</label>
-                <select>
-                  <option value="">כל הכיתות</option>
-                  <option value="א">כיתה א'</option>
-                  <option value="ב">כיתה ב'</option>
-                  <option value="ג">כיתה ג'</option>
-                  <option value="ד">כיתה ד'</option>
-                  <option value="ה">כיתה ה'</option>
-                  <option value="ו">כיתה ו'</option>
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>חיפוש:</label>
-                <input type="text" placeholder="חפש תלמיד..." />
-              </div>
             </div>
 
             <div className="data-table">
@@ -147,48 +392,25 @@ const SecretaryDashboard = ({ onLogout }) => {
                     <th>שם התלמיד</th>
                     <th>כיתה</th>
                     <th>תעודת זהות</th>
-                    <th>הורים</th>
+                    <th>אימייל</th>
                     <th>טלפון</th>
                     <th>פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>יוסי כהן</td>
-                    <td>כיתה ה'</td>
-                    <td>123456789</td>
-                    <td>דוד ושרה כהן</td>
-                    <td>050-1234567</td>
-                    <td>
-                      <button className="btn-small btn-outline">עריכה</button>
-                      <button className="btn-small btn-secondary">העבר כיתה</button>
-                      <button className="btn-small btn-danger">מחק</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>מיכל לוי</td>
-                    <td>כיתה ו'</td>
-                    <td>987654321</td>
-                    <td>אבי ורחל לוי</td>
-                    <td>052-9876543</td>
-                    <td>
-                      <button className="btn-small btn-outline">עריכה</button>
-                      <button className="btn-small btn-secondary">העבר כיתה</button>
-                      <button className="btn-small btn-danger">מחק</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>דני אברהם</td>
-                    <td>כיתה ד'</td>
-                    <td>456789123</td>
-                    <td>משה ויעל אברהם</td>
-                    <td>054-4567891</td>
-                    <td>
-                      <button className="btn-small btn-outline">עריכה</button>
-                      <button className="btn-small btn-secondary">העבר כיתה</button>
-                      <button className="btn-small btn-danger">מחק</button>
-                    </td>
-                  </tr>
+                  {students.map((student) => (
+                    <tr key={student._id}>
+                      <td>{student.firstName} {student.lastName}</td>
+                      <td>{student.classes ? student.classes.map(cls => cls.name).join(", ") : "-"}</td>
+                      <td>{student.userId}</td>
+                      <td>{student.email || "-"}</td>
+                      <td>{student.phone || "-"}</td>
+                      <td>
+                        <button className="btn-small btn-outline" onClick={() => openModal("editStudent", student)}>✏️</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(student._id)}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -201,85 +423,44 @@ const SecretaryDashboard = ({ onLogout }) => {
             <div className="section-header">
               <h2>ניהול אירועים</h2>
               <button className="btn btn-primary" onClick={() => openModal("addEvent")}>
-                הוסף אירוע חדש
+                הוסף אירוע
               </button>
             </div>
 
-            <div className="events-grid">
-              <div className="event-card upcoming">
-                <div className="event-header">
-                  <h4>טיול לגן החיות</h4>
-                  <span className="event-date">20/03/2024</span>
-                </div>
-                <div className="event-details">
-                  <p>
-                    <strong>כיתות:</strong> ה', ו'
-                  </p>
-                  <p>
-                    <strong>שעה:</strong> 08:00 - 16:00
-                  </p>
-                  <p>
-                    <strong>מקום:</strong> גן החיות התנכי
-                  </p>
-                  <p>
-                    <strong>מלווים:</strong> רחל כהן, שרה לוי
-                  </p>
-                </div>
-                <div className="event-actions">
-                  <button className="btn-small btn-outline">עריכה</button>
-                  <button className="btn-small btn-secondary">פרטים</button>
-                  <button className="btn-small btn-danger">ביטול</button>
-                </div>
-              </div>
-
-              <div className="event-card today">
-                <div className="event-header">
-                  <h4>מבחן מתמטיקה</h4>
-                  <span className="event-date">היום</span>
-                </div>
-                <div className="event-details">
-                  <p>
-                    <strong>כיתות:</strong> ה'
-                  </p>
-                  <p>
-                    <strong>שעה:</strong> 09:00 - 10:30
-                  </p>
-                  <p>
-                    <strong>מקום:</strong> כיתה 15
-                  </p>
-                  <p>
-                    <strong>מורה:</strong> רחל כהן
-                  </p>
-                </div>
-                <div className="event-actions">
-                  <button className="btn-small btn-outline">עריכה</button>
-                  <button className="btn-small btn-secondary">פרטים</button>
-                </div>
-              </div>
-
-              <div className="event-card past">
-                <div className="event-header">
-                  <h4>יום ספורט</h4>
-                  <span className="event-date">10/03/2024</span>
-                </div>
-                <div className="event-details">
-                  <p>
-                    <strong>כיתות:</strong> כל בית הספר
-                  </p>
-                  <p>
-                    <strong>שעה:</strong> 08:30 - 14:00
-                  </p>
-                  <p>
-                    <strong>מקום:</strong> מגרש בית הספר
-                  </p>
-                  <p>
-                    <strong>סטטוס:</strong> הסתיים בהצלחה
-                  </p>
-                </div>
-                <div className="event-actions">
-                  <button className="btn-small btn-outline">צפה</button>
-                </div>
-              </div>
+            <div className="data-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>סוג</th>
+                    <th>כותרת</th>
+                    <th>תאריך</th>
+                    <th>שעת התחלה</th>
+                    <th>שעת סיום</th>
+                    <th>כיתות</th>
+                    <th>פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event) => (
+                    <tr key={event._id}>
+                      <td>{event.type}</td>
+                      <td>{event.title}</td>
+                      <td>{new Date(event.date).toLocaleDateString('he-IL')}</td>
+                      <td>{event.startTime}</td>
+                      <td>{event.endTime}</td>
+                      <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
+                      <td>
+                        {event.type !== "exam" && (
+                          <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
+                        )}
+                        {event.type !== "exam" && (
+                          <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )
@@ -289,87 +470,105 @@ const SecretaryDashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <h2>ניהול כיתות</h2>
 
-            <div className="classes-management">
-              <div className="class-management-card">
-                <div className="class-header">
-                  <h3>כיתה א'</h3>
-                  <span className="student-count">28 תלמידים</span>
-                </div>
-                <div className="class-info">
+            <div className="classes-grid">
+              {classes.map((cls) => (
+                <div className="class-card" key={cls._id}>
+                  <h3>{cls.name}</h3>
                   <p>
-                    <strong>מחנכת:</strong> מרים דוד
+                    <strong>מחנכת:</strong>{" "}
+                    {cls.homeroomTeacher
+                      ? `${cls.homeroomTeacher.firstName} ${cls.homeroomTeacher.lastName}`
+                      : "-"}
                   </p>
                   <p>
-                    <strong>כיתת לימוד:</strong> כיתה 5
+                    <strong>מספר תלמידים:</strong>{" "}
+                    {cls.students ? cls.students.length : 0}
                   </p>
-                </div>
-                <div className="class-management-actions">
-                  <button className="btn-small btn-primary" onClick={() => openModal("changeTeacher")}>
-                    שנה מחנכת
-                  </button>
-                  <button className="btn-small btn-secondary" onClick={() => openModal("addStudentToClass")}>
-                    הוסף תלמיד
-                  </button>
-                  <button className="btn-small btn-outline" onClick={() => openModal("removeStudentFromClass")}>
-                    הסר תלמיד
-                  </button>
-                  <button className="btn-small btn-danger">מחק כיתה</button>
-                </div>
-              </div>
 
-              <div className="class-management-card">
-                <div className="class-header">
-                  <h3>כיתה ב'</h3>
-                  <span className="student-count">26 תלמידים</span>
-                </div>
-                <div className="class-info">
-                  <p>
-                    <strong>מחנכת:</strong> יעל אברהם
-                  </p>
-                  <p>
-                    <strong>כיתת לימוד:</strong> כיתה 8
-                  </p>
-                </div>
-                <div className="class-management-actions">
-                  <button className="btn-small btn-primary" onClick={() => openModal("changeTeacher")}>
-                    שנה מחנכת
-                  </button>
-                  <button className="btn-small btn-secondary" onClick={() => openModal("addStudentToClass")}>
-                    הוסף תלמיד
-                  </button>
-                  <button className="btn-small btn-outline" onClick={() => openModal("removeStudentFromClass")}>
-                    הסר תלמיד
-                  </button>
-                  <button className="btn-small btn-danger">מחק כיתה</button>
-                </div>
-              </div>
+                  <div className="form-inline">
+                    <input
+                      type="text"
+                      placeholder="ת״ז מחנכת חדשה"
+                      value={formData[cls._id]?.homeroomTeacher || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [cls._id]: {
+                            ...formData[cls._id],
+                            homeroomTeacher: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                    <button
+                      className="btn-small btn-primary"
+                      onClick={() =>
+                        handleUpdateHomeroomTeacher(
+                          cls.name,
+                          formData[cls._id]?.homeroomTeacher
+                        )
+                      }
+                    >
+                     ✏️
+                    </button>
+                  </div>
+                  <div className="form-inline">
+                    <input
+                      type="text"
+                      placeholder="ת״ז תלמיד להוספה"
+                      value={formData[cls._id]?.newStudentId || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [cls._id]: {
+                            ...formData[cls._id],
+                            newStudentId: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                    <button
+                      className="btn-small btn-primary"
+                      onClick={() =>
+                        handleAddStudentToClass(
+                          cls.name,
+                          formData[cls._id]?.newStudentId
+                        )
+                      }
+                    >
+                     ➕ 
+                    </button>
+                  </div>
 
-              <div className="class-management-card">
-                <div className="class-header">
-                  <h3>כיתה ג'</h3>
-                  <span className="student-count">30 תלמידים</span>
+                  <div className="form-inline">
+                    <input
+                      type="text"
+                      placeholder="ת״ז תלמיד למחיקה"
+                      value={formData[cls._id]?.removeStudentId || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [cls._id]: {
+                            ...formData[cls._id],
+                            removeStudentId: e.target.value,
+                          },
+                        })
+                      }
+                    />
+                    <button
+                      className="btn-small btn-danger"
+                      onClick={() =>
+                        handleRemoveStudentFromClass(
+                          cls.name,
+                          formData[cls._id]?.removeStudentId
+                        )
+                      }
+                    >
+                      ➖
+                    </button>
+                  </div>
                 </div>
-                <div className="class-info">
-                  <p>
-                    <strong>מחנכת:</strong> דנה גולד
-                  </p>
-                  <p>
-                    <strong>כיתת לימוד:</strong> כיתה 12
-                  </p>
-                </div>
-                <div className="class-management-actions">
-                  <button className="btn-small btn-primary" onClick={() => openModal("changeTeacher")}>
-                    שנה מחנכת
-                  </button>
-                  <button className="btn-small btn-secondary" onClick={() => openModal("addStudentToClass")}>
-                    הוסף תלמיד
-                  </button>
-                  <button className="btn-small btn-outline" onClick={() => openModal("removeStudentFromClass")}>
-                    הסר תלמיד
-                  </button>
-                  <button className="btn-small btn-danger">מחק כיתה</button>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )
@@ -384,83 +583,34 @@ const SecretaryDashboard = ({ onLogout }) => {
               </button>
             </div>
 
-            <div className="substitutes-grid">
-              <div className="substitute-card available">
-                <div className="substitute-header">
-                  <h4>דנה גולד</h4>
-                  <span className="availability-badge available">זמינה</span>
-                </div>
-                <div className="substitute-details">
-                  <p>
-                    <strong>מקצועות:</strong> מתמטיקה, מדעים
-                  </p>
-                  <p>
-                    <strong>כיתות:</strong> ד'-ו'
-                  </p>
-                  <p>
-                    <strong>טלפון:</strong> 050-1111111
-                  </p>
-                  <p>
-                    <strong>אימייל:</strong> dana@email.com
-                  </p>
-                </div>
-                <div className="substitute-actions">
-                  <button className="btn-small btn-primary">הזמן</button>
-                  <button className="btn-small btn-outline">עריכה</button>
-                  <button className="btn-small btn-danger">מחק</button>
-                </div>
-              </div>
-
-              <div className="substitute-card busy">
-                <div className="substitute-header">
-                  <h4>אורי שמש</h4>
-                  <span className="availability-badge busy">עסוק</span>
-                </div>
-                <div className="substitute-details">
-                  <p>
-                    <strong>מקצועות:</strong> עברית, היסטוריה
-                  </p>
-                  <p>
-                    <strong>כיתות:</strong> א'-ה'
-                  </p>
-                  <p>
-                    <strong>טלפון:</strong> 052-2222222
-                  </p>
-                  <p>
-                    <strong>עסוק עד:</strong> 20/03/2024
-                  </p>
-                </div>
-                <div className="substitute-actions">
-                  <button className="btn-small btn-outline">עריכה</button>
-                  <button className="btn-small btn-danger">מחק</button>
-                </div>
-              </div>
-
-              <div className="substitute-card available">
-                <div className="substitute-header">
-                  <h4>מיכל רוזן</h4>
-                  <span className="availability-badge available">זמינה</span>
-                </div>
-                <div className="substitute-details">
-                  <p>
-                    <strong>מקצועות:</strong> אנגלית, אמנות
-                  </p>
-                  <p>
-                    <strong>כיתות:</strong> א'-ו'
-                  </p>
-                  <p>
-                    <strong>טלפון:</strong> 054-3333333
-                  </p>
-                  <p>
-                    <strong>אימייל:</strong> michal@email.com
-                  </p>
-                </div>
-                <div className="substitute-actions">
-                  <button className="btn-small btn-primary">הזמן</button>
-                  <button className="btn-small btn-outline">עריכה</button>
-                  <button className="btn-small btn-danger">מחק</button>
-                </div>
-              </div>
+            <div className="data-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>שם</th>
+                    <th>ת"ז</th>
+                    <th>טלפון</th>
+                    <th>אימייל</th>
+                    <th>מקצועות</th>
+                    <th>פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {substitutes.map((substitute) => (
+                    <tr key={substitute._id}>
+                      <td>{substitute.firstName} {substitute.lastName}</td>
+                      <td>{substitute.identityNumber}</td>
+                      <td>{substitute.phone || "-"}</td>
+                      <td>{substitute.email}</td>
+                      <td>{substitute.subjects ? substitute.subjects.join(", ") : "-"}</td>
+                      <td>
+                        <button className="btn-small btn-outline" onClick={() => openModal("editSubstitute", substitute)}>✏️</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDeleteExternalSubstitute(substitute.identityNumber)}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )
@@ -504,12 +654,13 @@ const SecretaryDashboard = ({ onLogout }) => {
       </div>
 
       <div className="dashboard-main" style={{paddingTop: 60}}>
-        {me?.schoolId && <DashboardHeader schoolId={me.schoolId} />}
+        {me?.schoolId && <DashboardHeader schoolId={me.schoolId._id || me.schoolId} onLogout={onLogout} />}
         <div className="dashboard-header">
           <h1>ברוכה הבאה, {me?.firstName || "..."} {me?.lastName || ""}</h1>
           <div className="header-actions">
             <button className="btn btn-outline">הודעות</button>
             <button className="btn btn-primary">צ'אט</button>
+            {me?.schoolId?.address && <SchoolDirectionsButton schoolAddress={me.schoolId.address} />}
           </div>
         </div>
         {renderContent()}
@@ -520,12 +671,11 @@ const SecretaryDashboard = ({ onLogout }) => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                {modalType === "addStudent" && "הוספת תלמיד חדש"}
+                {modalType === "editStudent" && "עריכת תלמיד"}
                 {modalType === "addEvent" && "הוספת אירוע חדש"}
+                {modalType === "editEvent" && "עריכת אירוע"}
                 {modalType === "addSubstitute" && "הוספת ממלא מקום"}
-                {modalType === "changeTeacher" && "שינוי מחנכת"}
-                {modalType === "addStudentToClass" && "הוספת תלמיד לכיתה"}
-                {modalType === "removeStudentFromClass" && "הסרת תלמיד מכיתה"}
+                {modalType === "editSubstitute" && "עריכת ממלא מקום"}
               </h3>
               <button className="modal-close" onClick={closeModal}>
                 ×
@@ -533,155 +683,7 @@ const SecretaryDashboard = ({ onLogout }) => {
             </div>
 
             <div className="modal-body">
-              {modalType === "addStudent" && (
-                <div className="student-form">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>שם פרטי</label>
-                      <input type="text" placeholder="הכנס שם פרטי" />
-                    </div>
-                    <div className="form-group">
-                      <label>שם משפחה</label>
-                      <input type="text" placeholder="הכנס שם משפחה" />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>תעודת זהות</label>
-                      <input type="text" placeholder="הכנס תעודת זהות" />
-                    </div>
-                    <div className="form-group">
-                      <label>כיתה</label>
-                      <select>
-                        <option>בחר כיתה</option>
-                        <option>כיתה א'</option>
-                        <option>כיתה ב'</option>
-                        <option>כיתה ג'</option>
-                        <option>כיתה ד'</option>
-                        <option>כיתה ה'</option>
-                        <option>כיתה ו'</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>שם האב</label>
-                      <input type="text" placeholder="הכנס שם האב" />
-                    </div>
-                    <div className="form-group">
-                      <label>שם האם</label>
-                      <input type="text" placeholder="הכנס שם האם" />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>טלפון</label>
-                      <input type="tel" placeholder="הכנס מספר טלפון" />
-                    </div>
-                    <div className="form-group">
-                      <label>אימייל</label>
-                      <input type="email" placeholder="הכנס כתובת אימייל" />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>כתובת</label>
-                    <input type="text" placeholder="הכנס כתובת מגורים" />
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-primary">הוסף תלמיד</button>
-                    <button className="btn btn-outline" onClick={closeModal}>
-                      ביטול
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {modalType === "addEvent" && (
-                <div className="event-form">
-                  <div className="form-group">
-                    <label>שם האירוע</label>
-                    <input type="text" placeholder="הכנס שם האירוע" />
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>תאריך</label>
-                      <input type="date" />
-                    </div>
-                    <div className="form-group">
-                      <label>שעה</label>
-                      <input type="time" />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>כיתות משתתפות</label>
-                    <select multiple>
-                      <option>כיתה א'</option>
-                      <option>כיתה ב'</option>
-                      <option>כיתה ג'</option>
-                      <option>כיתה ד'</option>
-                      <option>כיתה ה'</option>
-                      <option>כיתה ו'</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>מקום</label>
-                    <input type="text" placeholder="הכנס מקום האירוע" />
-                  </div>
-                  <div className="form-group">
-                    <label>תיאור</label>
-                    <textarea placeholder="תיאור האירוע" rows="3"></textarea>
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-primary">הוסף אירוע</button>
-                    <button className="btn btn-outline" onClick={closeModal}>
-                      ביטול
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {modalType === "addSubstitute" && (
-                <div className="substitute-form">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>שם פרטי</label>
-                      <input type="text" placeholder="הכנס שם פרטי" />
-                    </div>
-                    <div className="form-group">
-                      <label>שם משפחה</label>
-                      <input type="text" placeholder="הכנס שם משפחה" />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>טלפון</label>
-                      <input type="tel" placeholder="הכנס מספר טלפון" />
-                    </div>
-                    <div className="form-group">
-                      <label>אימייל</label>
-                      <input type="email" placeholder="הכנס כתובת אימייל" />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>מקצועות</label>
-                    <input type="text" placeholder="הכנס מקצועות (מופרדים בפסיק)" />
-                  </div>
-                  <div className="form-group">
-                    <label>כיתות</label>
-                    <input type="text" placeholder="הכנס כיתות (לדוגמה: א'-ו')" />
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-primary">הוסף ממלא מקום</button>
-                    <button className="btn btn-outline" onClick={closeModal}>
-                      ביטול
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {(modalType === "changeTeacher" ||
-                modalType === "addStudentToClass" ||
-                modalType === "removeStudentFromClass") && <p>טופס זה יפותח בקרוב...</p>}
+              {renderModalForm()}
             </div>
           </div>
         </div>

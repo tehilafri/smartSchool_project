@@ -2,7 +2,8 @@ import { useState } from "react"
 import { createSchool } from "../../services/schoolService"
 import "./Auth.css"
 
-const RegisterSchool = ({ onRegister, onSwitchToLogin }) => {
+
+const RegisterSchool = ({ onRegister }) => {
   const [formData, setFormData] = useState({
     schoolName: "",
     principalId: "", // ת"ז המנהלת
@@ -15,6 +16,10 @@ const RegisterSchool = ({ onRegister, onSwitchToLogin }) => {
     description: "",
   })
   const [logo, setLogo] = useState(null);
+
+  const onSwitchToLogin = function() {
+    window.location.href = "/login";
+  }
 
   const [scheduleHours, setScheduleHours] = useState([
     { start: "", end: "" }

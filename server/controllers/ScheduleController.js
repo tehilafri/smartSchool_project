@@ -341,7 +341,7 @@ export const getNextLessonForTeacher = async (req, res) => {
 
 export const getScheduleByTeacher = async (req, res) => {
   try {
-    const teacherId = req.id;
+    const teacherId = req.params.teacherId || req.id;
 
     if (!teacherId) {
       return res.status(400).json({ error: "Teacher ID not provided" });
@@ -436,28 +436,35 @@ export const getScheduleForStudent = async (req, res) => {
 
 export const getHomeroomClassSchedule = async (req, res) => {
   try {
-    const teacherId = req.id;
-    const teacher = await User.findById(teacherId).populate('classes');
+    let classId = req.params.classId;
     
-    if (!teacher) {
-      return res.status(404).json({ error: "מורה לא נמצא" });
-    }
-    
-    if (!teacher.ishomeroom) {
-      return res.status(403).json({ error: "רק מחנכים יכולים לגשת למערכת הכיתה" });
-    }
-    
-    // מציאת כיתת החינוך
-    const homeroomClass = teacher.classes.find(cls => 
-      cls.homeroomTeacher && cls.homeroomTeacher.toString() === teacherId.toString()
-    );
-    
-    if (!homeroomClass) {
-      return res.status(404).json({ error: "לא נמצאה כיתת חינוך" });
+    if (!classId) {
+      // אם לא ניתן classId, אז זה מורה שמבקש את כיתת החינוך שלו
+      const teacherId = req.id;
+      const teacher = await User.findById(teacherId).populate('classes');
+      
+      if (!teacher) {
+        return res.status(404).json({ error: "מורה לא נמצא" });
+      }
+      
+      if (!teacher.ishomeroom) {
+        return res.status(403).json({ error: "רק מחנכים יכולים לגשת למערכת הכיתה" });
+      }
+      
+      // מציאת כיתת החינוך
+      const homeroomClass = teacher.classes.find(cls => 
+        cls.homeroomTeacher && cls.homeroomTeacher.toString() === teacherId.toString()
+      );
+      
+      if (!homeroomClass) {
+        return res.status(404).json({ error: "לא נמצאה כיתת חינוך" });
+      }
+      
+      classId = homeroomClass._id;
     }
     
     // שליפת מערכת הכיתה
-    const schedule = await Schedule.findOne({ classId: homeroomClass._id, schoolId: req.schoolId })
+    const schedule = await Schedule.findOne({ classId: classId, schoolId: req.schoolId })
       .populate("weekPlan.sunday.teacherId", "firstName lastName")
       .populate("weekPlan.monday.teacherId", "firstName lastName")
       .populate("weekPlan.tuesday.teacherId", "firstName lastName")

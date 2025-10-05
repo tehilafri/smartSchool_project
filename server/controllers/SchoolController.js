@@ -27,12 +27,16 @@ export const createSchool = async (req, res) => {
     // טיפול בתמונה
     let imageUrl = '';
     if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`;
-      console.log('✔️ קובץ תמונה התקבל:', req.file.filename);
-      console.log('✔️ imageUrl שישמר:', imageUrl);
+    // בונה URL מלא על בסיס הבקשה בפועל
+    const protocol = req.protocol; // ייתן 'http'
+    const host = req.get('host');  // ייתן 'localhost:1000'
+    imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+
+      console.log('✔️ full imageUrl שנשמר:', imageUrl);
     } else {
       console.log('❌ לא התקבל קובץ תמונה בהרשמה');
     }
+
 
     // יצירת בית ספר
     const school = new School({
@@ -73,18 +77,12 @@ export const createSchool = async (req, res) => {
 
 export const getSchoolById = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized: user not found in request (JWT missing or invalid)' });
-    }
-    const { schoolId } = req.user; // מה־JWT
     const { id } = req.params;
-
-    if (schoolId !== id) {
-      return res.status(403).json({ message: 'Access denied: unauthorized school' });
-    }
-
-    const school = await School.findById(id).populate('admin', 'firstName lastName email');
+    const school = await School.findOne({ schoolCode: id });
     if (!school) return res.status(404).json({ message: 'School not found' });
+    if (school && school.imageUrl && school.imageUrl.startsWith('/uploads/')) {
+      school.imageUrl = `${req.protocol}://${req.get('host')}${school.imageUrl}`;
+    }
 
     res.json(school);
   } catch (err) {

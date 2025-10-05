@@ -1,0 +1,14 @@
+.layout-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-with-header {
+  flex: 1;
+  padding-top: 60px;
+}
+
+.main-without-header {
+  flex: 1;
+}

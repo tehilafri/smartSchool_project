@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import "./Dashboard.css";
+import DashboardHeader from "./DashboardHeader";
+import SchoolDirectionsButton from "../SchoolDirectionsButton";
 import {
   getNextLessonForStudent,
   getScheduleForStudent
@@ -413,7 +415,7 @@ const StudentDashboard = ({ onLogout }) => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-sidebar">
-        <div className="sidebar-header">
+        <div className="sidebar-header" style={{marginTop: 70}}>
           <h2>Smart School</h2>
           <p>פאנל תלמיד</p>
         </div>
@@ -436,9 +438,13 @@ const StudentDashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      <div className="dashboard-main">
+      <div className="dashboard-main" style={{paddingTop: 60}}>
+        {studentInfo?.schoolId && <DashboardHeader schoolId={studentInfo.schoolId._id} onLogout={onLogout} />}
         <div className="dashboard-header">
           <h1>{studentInfo?.gender=="female"?"ברוכה הבאה": "ברוך הבא"}, {studentInfo?.firstName} {studentInfo?.lastName}</h1>
+          <div className="header-actions">
+            {studentInfo?.schoolId?.address && <SchoolDirectionsButton schoolAddress={studentInfo.schoolId.address} />}
+          </div>
         </div>
         {renderContent()}
       </div>

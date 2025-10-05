@@ -198,7 +198,7 @@ export const getMe = async (req, res) => {
       })
       .populate({
         path: "schoolId", 
-        select: "_id name scheduleHours address" // שדות שרוצים להחזיר
+        select: "_id name scheduleHours address phone email description website schoolCode" // שדות שרוצים להחזיר
       });
 
     if (!user) {

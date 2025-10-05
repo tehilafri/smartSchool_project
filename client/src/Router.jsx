@@ -17,6 +17,7 @@ import ResetPassword from "./components/Auth/ResetPassword";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import HomePage from "./components/HomePage";
 import ScrollToTop from "./components/ScrollToTop";
+import Layout from "./components/Layout/Layout";
 
 function onLogout() {
   localStorage.removeItem("token");
@@ -32,14 +33,21 @@ function Router() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/features" element={<Features />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/testimonials" element={<Testimonials />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register_user" element={<RegisterUser />} />
-        <Route path="/register_school" element={<RegisterSchool />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/features" element={<Layout showHeader={false}><Features /></Layout>} />
+        <Route path="/about" element={<Layout showHeader={false}><About /></Layout>} />
+        <Route path="/testimonials" element={<Layout showHeader={false}><Testimonials /></Layout>} />
+        <Route path="/login" element={<Layout showHeader={false}><Login /></Layout>} />
+        <Route
+          path="/register_user"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "secretary"]}>
+              <RegisterUser />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/register_school" element={<Layout showHeader={false}><RegisterSchool /></Layout>} />
+        <Route path="/forgot-password" element={<Layout showHeader={false}><ForgotPassword /></Layout>} />
+        <Route path="/reset-password/:token" element={<Layout showHeader={false}><ResetPassword /></Layout>} />
         <Route
           path="/dashboard/admin"
           element={
@@ -74,7 +82,6 @@ function Router() {
         />
         <Route path="*" element={<Hero />} />
       </Routes>
-      <Footer />
     </BrowserRouter>
   );
 }

@@ -1,0 +1,370 @@
+/* Admin Dashboard specific styles */
+
+/* Compact button styles for section headers */
+.section-header .btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  width: auto;
+  min-width: auto;
+  min-height: auto;
+}
+.school-info-display {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.info-card {
+  padding: 30px;
+}
+
+.info-card h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #667eea;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border-right: 4px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.info-item:hover {
+  background: #edf2f7;
+  transform: translateX(-2px);
+}
+
+.info-item label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.info-item span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #4a5568;
+  text-align: left;
+}
+
+/* Modal form improvements */
+.modal-content {
+  max-width: 600px;
+}
+
+.modal-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-body .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-body label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.modal-body input:focus,
+.modal-body select:focus,
+.modal-body textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modal-body textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.checkbox-group {
+  background: #f7fafc;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.checkbox-group label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.checkbox-group > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.checkbox-group > div:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-group span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+/* Form inline styles for class management */
+.form-inline {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 15px;
+}
+
+.form-inline input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-inline input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-inline button {
+  white-space: nowrap;
+  background: white;
+}
+
+/* Students list in class details */
+.students-list {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.students-list h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #667eea;
+}
+
+.students-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.students-list li {
+  padding: 12px 15px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+/* Schedule hours management */
+.schedule-hours-section {
+  margin-top: 25px;
+  padding: 20px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.schedule-hours-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.schedule-hours-section h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
+}
+
+.schedule-hours-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-hour-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.hour-number {
+  font-weight: 600;
+  color: #2d3748;
+  min-width: 80px;
+  font-size: 14px;
+}
+
+.schedule-hour-item input[type="time"] {
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 120px;
+}
+
+.schedule-hour-item input[type="time"]:focus {
+  border-color: #667eea;
+}
+
+.schedule-hour-item span {
+  color: #4a5568;
+  font-weight: 600;
+}
+
+/* Schedule tabs */
+.schedule-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.tab-button {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #4a5568;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+  color: #667eea;
+}
+
+.tab-button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.teacher-selector,
+.class-selector {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.teacher-selector label,
+.class-selector label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 10px;
+}
+
+.teacher-selector select,
+.class-selector select {
+  width: 300px;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 16px;
+  background: white;
+}
+
+.teacher-selector select:focus,
+.class-selector select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .modal-content {
+    max-width: 95%;
+    margin: 20px;
+  }
+  
+  .schedule-hour-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .hour-number {
+    min-width: 100%;
+    text-align: center;
+  }
+}

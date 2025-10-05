@@ -1,8 +1,14 @@
-import { useState } from "react";
-import { registerUser } from "../../services/userService"; // הפונקציה שלך שמדברת עם השרת
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { registerUser, getMe } from "../../services/userService";
+import DashboardHeader from "../Dashboard/DashboardHeader";
 import "./RegisterUser.css"; 
 
 const RegisterUser = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const roleParam = searchParams.get('role') || '';
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -12,13 +18,35 @@ const RegisterUser = () => {
     phone: "",
     birthDate: "",
     password: "",
-    role: "",
+    role: roleParam,
     classes: "",
     subjects: "",
     ishomeroom: false,
   });
 
   const [message, setMessage] = useState("");
+  const [me, setMe] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await getMe();
+        setMe(userData?.data);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    if (roleParam) {
+      setFormData(prev => ({ ...prev, role: roleParam }));
+    }
+  }, [roleParam]);
 
   // שינוי ערכים בטופס
   const handleChange = (e) => {
@@ -29,11 +57,9 @@ const RegisterUser = () => {
     });
   };
 
-  // שליחה לשרת
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // המרה של classes ו-subjects לרשימות
       const payload = {
         ...formData,
         classes: formData.classes
@@ -55,7 +81,7 @@ const RegisterUser = () => {
         phone: "",
         birthDate: "",
         password: "",
-        role: "",
+        role: roleParam,
         classes: "",
         subjects: "",
         ishomeroom: false,
@@ -66,113 +92,220 @@ const RegisterUser = () => {
     }
   };
 
+  const getRoleDisplayName = (role) => {
+    const roleNames = {
+      teacher: 'מורה',
+      student: 'תלמיד',
+      secretary: 'מזכירה',
+      admin: 'מנהל'
+    };
+    return roleNames[role] || 'משתמש';
+  };
+
+  const getDashboardPath = () => {
+    const userRole = me?.role;
+    return `/dashboard/${userRole}`;
+  };
+
+  if (loading) {
+    return <div className="loading-container">טוען...</div>;
+  }
+
   return (
-    <div className="register-container">
-      <h2>הוספת משתמש חדש</h2>
-      {message && <p className="register-message">{message}</p>}
-      <form className="register-form" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="firstName"
-          placeholder="שם פרטי"
-          value={formData.firstName}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="text"
-          name="lastName"
-          placeholder="שם משפחה"
-          value={formData.lastName}
-          onChange={handleChange}
-          required
-        />
-        <select
-          name="gender"
-          value={formData.gender}
-          onChange={handleChange}
-          required
-        >
-          <option value="">בחר מין</option>
-          <option value="male">זכר</option>
-          <option value="female">נקבה</option>
-        </select>
-        <input
-          type="text"
-          name="userId"
-          placeholder="תעודת זהות"
-          value={formData.userId}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="אימייל"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="tel"
-          name="phone"
-          placeholder="טלפון"
-          value={formData.phone}
-          onChange={handleChange}
-        />
-        <input
-          type="date"
-          name="birthDate"
-          value={formData.birthDate}
-          onChange={handleChange}
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="סיסמה"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        <select
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          required
-        >
-          <option value="">בחר תפקיד</option>
-          <option value="student">תלמיד</option>
-          <option value="teacher">מורה</option>
-          <option value="secretary">מזכירה</option>
-          <option value="admin">מנהל</option>
-        </select>
-        <input
-          type="text"
-          name="classes"
-          placeholder="כיתות (מופרדות בפסיקים)"
-          value={formData.classes}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="subjects"
-          placeholder="מקצועות (מופרדים בפסיקים)"
-          value={formData.subjects}
-          onChange={handleChange}
-        />
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            name="ishomeroom"
-            checked={formData.ishomeroom}
-            onChange={handleChange}
-          />
-          מחנכת כיתה
-        </label>
-        <button type="submit" className="register-button">
-          צור משתמש
-        </button>
-      </form>
+    <div className="register-page">
+      {me?.schoolId && <DashboardHeader schoolId={me.schoolId._id} />}
+      
+      <div className="register-container">
+        <div className="register-header">
+          <button 
+            className="back-button"
+            onClick={() => navigate(getDashboardPath())}
+          >
+            ← חזרה לדשבורד
+          </button>
+          <h2>הוספת {getRoleDisplayName(formData.role)} חדש</h2>
+        </div>
+
+        {message && (
+          <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
+            {message}
+            {message.includes('✅') && (
+              <button 
+                className="btn-link"
+                onClick={() => navigate(getDashboardPath())}
+              >
+                חזרה לדשבורד
+              </button>
+            )}
+          </div>
+        )}
+
+        <form className="register-form" onSubmit={handleSubmit}>
+          <div className="form-row">
+            <div className="form-group">
+              <label>שם פרטי *</label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>שם משפחה *</label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>מין *</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                required
+              >
+                <option value="">בחר מין</option>
+                <option value="male">זכר</option>
+                <option value="female">נקבה</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>תעודת זהות *</label>
+              <input
+                type="text"
+                name="userId"
+                value={formData.userId}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>אימייל *</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>טלפון</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>תאריך לידה</label>
+              <input
+                type="date"
+                name="birthDate"
+                value={formData.birthDate}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group">
+              <label>סיסמה *</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          {!roleParam && (
+            <div className="form-group">
+              <label>תפקיד *</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                required
+              >
+                <option value="">בחר תפקיד</option>
+                <option value="student">תלמיד</option>
+                <option value="teacher">מורה</option>
+                <option value="secretary">מזכירה</option>
+                <option value="admin">מנהל</option>
+              </select>
+            </div>
+          )}
+
+          {(formData.role === 'teacher' || formData.role === 'student') && (
+            <div className="form-group">
+              <label>כיתות (מופרדות בפסיקים)</label>
+              <input
+                type="text"
+                name="classes"
+                placeholder="לדוגמה: א1, ב2, ג3"
+                value={formData.classes}
+                onChange={handleChange}
+              />
+            </div>
+          )}
+
+          {formData.role === 'teacher' && (
+            <>
+              <div className="form-group">
+                <label>מקצועות (מופרדים בפסיקים)</label>
+                <input
+                  type="text"
+                  name="subjects"
+                  placeholder="לדוגמה: מתמטיקה, פיזיקה, כימיה"
+                  value={formData.subjects}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="ishomeroom"
+                    checked={formData.ishomeroom}
+                    onChange={handleChange}
+                  />
+                  <span className="checkmark"></span>
+                  מחנכת כיתה
+                </label>
+              </div>
+            </>
+          )}
+
+          <div className="form-actions">
+            <button type="submit" className="btn-primary">
+              צור {getRoleDisplayName(formData.role)}
+            </button>
+            <button 
+              type="button" 
+              className="btn-secondary"
+              onClick={() => navigate(getDashboardPath())}
+            >
+              ביטול
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

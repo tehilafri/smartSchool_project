@@ -5,6 +5,7 @@ import Features from "./Features/Features";
 import About from "./About/About";
 import Testimonials from "./Testimonials/Testimonials";
 import Header from "./Header/Header";
+import Footer from "./Footer/Footer";
 
 function HomePage() {
   const location = useLocation();
@@ -34,6 +35,7 @@ function HomePage() {
       <div id="testimonials">
         <Testimonials />
       </div>
+      <Footer />
     </>
   );
 }

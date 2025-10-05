@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import "./Dashboard.css";
+import "./AdminDashboard.css";
 import { getAllTeachers, getAllStudents, getAllSecretaries, getMe, updateUser,registerUser, deleteUser } from "../../services/userService";
 import { getAllClasses, createClass, addStudentToClass,getStudentsByName, removeStudentFromClass, deleteClass, updateHomeroomTeacher } from "../../services/classService";
 import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/eventService";
 import { getSubstituteRequests } from "../../services/substituteRequestsSercive";
 // import { getSchoolSchedule } from "../../services/scheduleService";
 import { getSchoolById, updateSchool, deleteSchool } from "../../services/schoolService";
+import { getScheduleByTeacher, getHomeroomClassSchedule } from "../../services/scheduleService";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
+import SchoolDirectionsButton from "../SchoolDirectionsButton";
 
 const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -36,6 +39,11 @@ const AdminDashboard = ({ onLogout }) => {
   const [loadingMe, setLoadingMe] = useState(true);
   const [schoolInfo, setSchoolInfo] = useState(null);
   const [schedule, setSchedule] = useState([]);
+  const [activeScheduleTab, setActiveScheduleTab] = useState('teachers');
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [selectedTeacherSchedule, setSelectedTeacherSchedule] = useState(null);
+  const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
 
   // טען נתונים מהשרת
   const fetchAllData = async () => {
@@ -183,19 +191,61 @@ const AdminDashboard = ({ onLogout }) => {
     fetchAllData();
   };
 
-  // // מחיקת בית ספר
-  // const handleDeleteSchool = async () => {
-  //   await deleteSchool(schoolInfo._id);
-  //   closeModal();
-  //   onLogout();
-  // };
+  // עדכון הגדרות בית ספר
+  const handleUpdateSchool = async () => {
+    await updateSchool(me.schoolId._id, formData);
+    closeModal();
+    fetchAllData();
+  };
 
-  // // עדכון הגדרות בית ספר
-  // const handleUpdateSchool = async () => {
-  //   await updateSchool(schoolInfo._id, formData);
-  //   closeModal();
-  //   fetchAllData();
-  // };
+  // מחיקת בית ספר
+  const handleDeleteSchool = async () => {
+    await deleteSchool(me.schoolId._id);
+    closeModal();
+    onLogout();
+  };
+
+  // טעינת מערכת שעות של מורה
+  const loadTeacherSchedule = async (teacherId) => {
+    try {
+      const scheduleData = await getScheduleByTeacher(teacherId);
+      const formattedSchedule = formatSchedule(scheduleData);
+      setSelectedTeacherSchedule(formattedSchedule);
+    } catch (err) {
+      console.error('Error loading teacher schedule:', err);
+    }
+  };
+
+  // טעינת מערכת שעות של כיתה
+  const loadClassSchedule = async (classId) => {
+    try {
+      const scheduleData = await getHomeroomClassSchedule(classId);
+      const formattedSchedule = formatSchedule(scheduleData);
+      setSelectedClassSchedule(formattedSchedule);
+    } catch (err) {
+      console.error('Error loading class schedule:', err);
+    }
+  };
+
+  // פורמט מערכת שעות
+  const formatSchedule = (teacherSchedule) => {
+    const weekPlan = {
+      sunday: [],
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+    };
+
+    teacherSchedule.forEach(dayObj => {
+      const { day, lessons } = dayObj;
+      const sortedLessons = lessons.sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+      weekPlan[day] = sortedLessons;
+    });
+
+    return { weekPlan };
+  };
 
 
   // טופס דינמי למודאל
@@ -368,49 +418,115 @@ const AdminDashboard = ({ onLogout }) => {
       );
 }
     if (modalType === "editSchool") {
+      const scheduleHours = formData.scheduleHours || me?.schoolId?.scheduleHours || [];
+      
+      const addScheduleHour = () => {
+        const newHours = [...scheduleHours, { start: "08:00", end: "08:45" }];
+        setFormData({ ...formData, scheduleHours: newHours });
+      };
+      
+      const updateScheduleHour = (index, field, value) => {
+        const newHours = [...scheduleHours];
+        newHours[index] = { ...newHours[index], [field]: value };
+        setFormData({ ...formData, scheduleHours: newHours });
+      };
+      
+      const removeScheduleHour = (index) => {
+        const newHours = scheduleHours.filter((_, i) => i !== index);
+        setFormData({ ...formData, scheduleHours: newHours });
+      };
+      
       return (
         <form onSubmit={e => {
           e.preventDefault();
           handleUpdateSchool();
         }}>
-          <input
-            type="text"
-            placeholder="שם בית הספר"
-            value={formData.schoolName || ""}
-            onChange={e => setFormData({ ...formData, schoolName: e.target.value })}
-            required
-          />
-          <input
-            type="text"
-            placeholder="כתובת"
-            value={formData.address || ""}
-            onChange={e => setFormData({ ...formData, address: e.target.value })}
-          />
-          <input
-            type="tel"
-            placeholder="טלפון"
-            value={formData.phone || ""}
-            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-          />
-          <input
-            type="email"
-            placeholder="אימייל"
-            value={formData.email || ""}
-            onChange={e => setFormData({ ...formData, email: e.target.value })}
-          />
-          <input
-            type="time"
-            placeholder="שעת התחלה"
-            value={formData.startHour || ""}
-            onChange={e => setFormData({ ...formData, startHour: e.target.value })}
-          />
-          <input
-            type="time"
-            placeholder="שעת סיום"
-            value={formData.endHour || ""}
-            onChange={e => setFormData({ ...formData, endHour: e.target.value })}
-          />
-          <button className="btn btn-primary" type="submit" onClick={handleUpdateSchool}>שמור</button>
+          <div className="form-group">
+            <label>שם בית הספר</label>
+            <input
+              type="text"
+              value={formData.name || ""}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>תיאור בית הספר</label>
+            <textarea
+              value={formData.description || ""}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>כתובת</label>
+            <input
+              type="text"
+              value={formData.address || ""}
+              onChange={e => setFormData({ ...formData, address: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>טלפון</label>
+            <input
+              type="tel"
+              value={formData.phone || ""}
+              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>אתר</label>
+            <input
+              type="text"
+              value={formData.website || ""}
+              onChange={e => setFormData({ ...formData, website: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>אימייל</label>
+            <input
+              type="email"
+              value={formData.email || ""}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
+          
+          <div className="schedule-hours-section">
+            <div className="section-header">
+              <h4>מערכת שעות</h4>
+              <button type="button" className="btn-small btn-primary" onClick={addScheduleHour}>
+                הוסף שיעור
+              </button>
+            </div>
+            <div className="schedule-hours-list">
+              {scheduleHours.map((hour, index) => (
+                <div key={index} className="schedule-hour-item">
+                  <span className="hour-number">שיעור {index + 1}</span>
+                  <input
+                    type="time"
+                    value={hour.start || ""}
+                    onChange={e => updateScheduleHour(index, 'start', e.target.value)}
+                    placeholder="התחלה"
+                  />
+                  <span>-</span>
+                  <input
+                    type="time"
+                    value={hour.end || ""}
+                    onChange={e => updateScheduleHour(index, 'end', e.target.value)}
+                    placeholder="סיום"
+                  />
+                  <button
+                    type="button"
+                    className="btn-small btn-danger"
+                    onClick={() => removeScheduleHour(index)}
+                  >
+                    מחק
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <button className="btn btn-primary" type="submit">שמור</button>
         </form>
       );
     }
@@ -482,8 +598,8 @@ const AdminDashboard = ({ onLogout }) => {
               <div className="activity-list">
                 {events.slice(0, 3).map((event, idx) => (
                   <div className="activity-item" key={event._id || idx}>
-                    <span className="activity-time">{event.date || "לא ידוע"}</span>
-                    <span className="activity-text">{event.title || event.description || "אירוע"}</span>
+                    <span className="activity-time">{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "לא ידוע"}</span>
+                    <span className="activity-text">{event.title || event.description || "אירוע"} - כיתות: {event.classes?.map(c => c.name).join(", ") || "לא צוין"}</span>
                   </div>
                 ))}
               </div>
@@ -496,8 +612,8 @@ const AdminDashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <div className="section-header">
               <h2>ניהול מורות</h2>
-              <button className="btn btn-primary" onClick={() => navigate("/register_user")}>
-                הוסף מורה חדשה
+              <button className="btn btn-primary" onClick={() => navigate("/register_user?role=teacher")}>
+                הוסף מורה
               </button>
             </div>
             <div className="data-table">
@@ -521,8 +637,8 @@ const AdminDashboard = ({ onLogout }) => {
                       <td>{teacher.email || "-"}</td>
                       <td>{teacher.phone || "-"}</td>
                       <td>
-                        <button className="btn-small btn-outline" onClick={() => openModal("editTeacher", teacher)}>עריכה</button>
-                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(teacher._id)}>מחיקה</button>
+                        <button className="btn-small btn-outline" onClick={() => openModal("editTeacher", teacher)}>✏️</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(teacher._id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -537,8 +653,8 @@ const AdminDashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <div className="section-header">
               <h2>ניהול מזכירות</h2>
-              <button className="btn btn-primary" onClick={() => navigate("/register_user")}>
-                הוסף מזכירה חדשה
+              <button className="btn btn-primary" onClick={() => navigate("/register_user?role=secretary")}>
+                הוסף מזכירה
               </button>
             </div>
             <div className="data-table">
@@ -558,8 +674,8 @@ const AdminDashboard = ({ onLogout }) => {
                       <td>{sec.phone || "-"}</td>
                       <td>{sec.email || "-"}</td>
                       <td>
-                        <button className="btn-small btn-outline" onClick={() => openModal("editSecretary", sec)}>עריכה</button>
-                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(sec._id)}>מחיקה</button>
+                        <button className="btn-small btn-outline" onClick={() => openModal("editSecretary", sec)}>✏️</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(sec._id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -574,8 +690,8 @@ const AdminDashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <div className="section-header">
               <h2>ניהול תלמידים</h2>
-              <button className="btn btn-primary" onClick={() => navigate("/register_user")}>
-                הוסף תלמיד חדש
+              <button className="btn btn-primary" onClick={() => navigate("/register_user?role=student")}>
+                הוסף תלמיד
               </button>
             </div>
             <div className="data-table">
@@ -597,8 +713,8 @@ const AdminDashboard = ({ onLogout }) => {
                       <td>{student.phone || "-"}</td>
                       <td>{student.email || "-"}</td>
                       <td>
-                        <button className="btn-small btn-outline" onClick={() => openModal("editStudent", student)}>עריכה</button>
-                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(student._id)}>מחיקה</button>
+                        <button className="btn-small btn-outline" onClick={() => openModal("editStudent", student)}>✏️</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(student._id)}>🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -658,7 +774,7 @@ const AdminDashboard = ({ onLogout }) => {
                         )
                       }
                     >
-                      עדכן מחנכת
+                     ✏️
                     </button>
                   </div>
 
@@ -687,7 +803,7 @@ const AdminDashboard = ({ onLogout }) => {
                         )
                       }
                     >
-                      הוסף תלמיד
+                      ➕
                     </button>
                   </div>
 
@@ -716,7 +832,7 @@ const AdminDashboard = ({ onLogout }) => {
                         )
                       }
                     >
-                      מחק תלמיד
+                     🗑️
                     </button>
                   </div>
 
@@ -770,38 +886,67 @@ const AdminDashboard = ({ onLogout }) => {
         return (
           <div className="dashboard-content">
             <h2>מערכת שעות</h2>
-            <div className="schedule-container">
-              <div className="schedule-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>שעה</th>
-                      <th>ראשון</th>
-                      <th>שני</th>
-                      <th>שלישי</th>
-                      <th>רביעי</th>
-                      <th>חמישי</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.isArray(schedule) && schedule.length > 0 ? (
-                      schedule.map((row, idx) => (
-                        <tr key={idx}>
-                          <td className="time-slot">{row.time}</td>
-                          {row.days.map((cls, i) => (
-                            <td key={i} className={`class-slot${cls ? "" : " empty"}`}>{cls || "הפסקה"}</td>
-                          ))}
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6}>אין מערכת שעות זמינה</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            
+            <div className="schedule-tabs">
+              <button 
+                className={`tab-button ${activeScheduleTab === 'teachers' ? 'active' : ''}`}
+                onClick={() => setActiveScheduleTab('teachers')}
+              >
+                מערכת מורות
+              </button>
+              <button 
+                className={`tab-button ${activeScheduleTab === 'classes' ? 'active' : ''}`}
+                onClick={() => setActiveScheduleTab('classes')}
+              >
+                מערכת כיתות
+              </button>
             </div>
+            
+            {activeScheduleTab === 'teachers' && (
+              <div className="teachers-schedule-section">
+                <div className="teacher-selector">
+                  <label>בחר מורה:</label>
+                  <select 
+                    value={selectedTeacherId} 
+                    onChange={(e) => {
+                      setSelectedTeacherId(e.target.value);
+                      if (e.target.value) loadTeacherSchedule(e.target.value);
+                    }}
+                  >
+                    <option value="">בחר מורה...</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.firstName} {teacher.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedTeacherSchedule && renderTeacherSchedule()}
+              </div>
+            )}
+            
+            {activeScheduleTab === 'classes' && (
+              <div className="classes-schedule-section">
+                <div className="class-selector">
+                  <label>בחר כיתה:</label>
+                  <select 
+                    value={selectedClassId} 
+                    onChange={(e) => {
+                      setSelectedClassId(e.target.value);
+                      if (e.target.value) loadClassSchedule(e.target.value);
+                    }}
+                  >
+                    <option value="">בחר כיתה...</option>
+                    {classes.map(cls => (
+                      <option key={cls._id} value={cls._id}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedClassSchedule && renderClassSchedule()}
+              </div>
+            )}
           </div>
         );
 
@@ -841,12 +986,12 @@ const AdminDashboard = ({ onLogout }) => {
                       <td>
                         {event.type !== "exam" && (
                           <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>
-                            עריכה
+                            ✏️
                           </button>
                         )}
                         {event.type !== "exam" && (
                           <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>
-                            מחיקה
+                            🗑️
                           </button>
                         )}
                         </td>
@@ -913,66 +1058,50 @@ const AdminDashboard = ({ onLogout }) => {
         return (
           <div className="dashboard-content">
             <h2>הגדרות בית ספר</h2>
-            <div className="settings-form">
-              <div className="form-group">
-                <label>שם בית הספר</label>
-                <input
-                  type="text"
-                  value={schoolInfo?.schoolName || ""}
-                  readOnly
-                />
-              </div>
-              <div className="form-group">
-                <label>כתובת</label>
-                <input
-                  type="text"
-                  value={schoolInfo?.address || ""}
-                  readOnly
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>טלפון</label>
-                  <input
-                    type="tel"
-                    value={schoolInfo?.phone || ""}
-                    readOnly
-                  />
+            {me?.schoolId ? (
+              <div className="school-info-display">
+                <div className="info-card">
+                  <h3>פרטי בית הספר</h3>
+                  <div className="info-grid">
+                    <div className="info-item">
+                  {console.log("me.schoolId:", me.schoolId)}
+                      <label>שם בית הספר: </label>
+                      <span>{me.schoolId.name || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>קוד בית ספר: </label>
+                      <span>{me.schoolId.schoolCode || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>כתובת: </label>
+                      <span>{me.schoolId.address || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>טלפון:</label>
+                      <span>{me.schoolId.phone || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>אימייל: </label>
+                      <span>{me.schoolId.email || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>אתר: </label>
+                      <span>{me.schoolId.website || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>תיאור:</label>
+                      <span>{me.schoolId.description || "לא צוין"}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>אימייל</label>
-                  <input
-                    type="email"
-                    value={schoolInfo?.email || ""}
-                    readOnly
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>שעת התחלה</label>
-                  <input
-                    type="time"
-                    value={schoolInfo?.startHour || ""}
-                    readOnly
-                  />
-                </div>
-                <div className="form-group">
-                  <label>שעת סיום</label>
-                  <input
-                    type="time"
-                    value={schoolInfo?.endHour || ""}
-                    readOnly
-                  />
+                <div className="settings-actions">
+                  <button className="btn btn-primary" onClick={() => openModal("editSchool", me.schoolId)}>ערוך פרטים</button>
+                  <button className="btn btn-danger" onClick={() => openModal("deleteSchool")}>מחק בית ספר</button>
                 </div>
               </div>
-              <div className="settings-actions">
-                <button className="btn btn-primary" onClick={() => openModal("editSchool", schoolInfo)}>ערוך</button>
-                <button className="btn btn-danger" onClick={() => openModal("deleteSchool")}>
-                  מחק בית ספר
-                </button>
-              </div>
-            </div>
+            ) : (
+              <p>טוען פרטי בית ספר...</p>
+            )}
           </div>
         );
 
@@ -984,6 +1113,120 @@ const AdminDashboard = ({ onLogout }) => {
           </div>
         );
     }
+  };
+
+  // רנדר מערכת שעות מורה
+  const renderTeacherSchedule = () => {
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday"];
+    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי"];
+    const schoolHours = me?.schoolId?.scheduleHours || [];
+    const maxLessons = schoolHours.length;
+
+    return (
+      <div className="schedule-container">
+        <div className="schedule-table">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
+                const hourInfo = schoolHours[hourIdx];
+                return (
+                  <tr key={hourIdx}>
+                    <td className="time-slot">
+                      <div className="hour-info">
+                        <div className="hour-number">שעה {hourIdx + 1}</div>
+                        {hourInfo && (
+                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                        )}
+                      </div>
+                    </td>
+                    {days.map((day, dayIdx) => {
+                      const lesson = selectedTeacherSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
+                      return (
+                        <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"}`}>
+                          {lesson ? (
+                            <>
+                              <strong>{lesson.subject || "—"}</strong><br />
+                              <small>
+                                {lesson.classId
+                                  ? `כיתה ${lesson.classId.name}` 
+                                  : "—"}
+                              </small>
+                            </>
+                          ) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // רנדר מערכת שעות כיתה
+  const renderClassSchedule = () => {
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday"];
+    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי"];
+    const schoolHours = me?.schoolId?.scheduleHours || [];
+    const maxLessons = schoolHours.length;
+
+    return (
+      <div className="schedule-container">
+        <div className="schedule-table">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
+                const hourInfo = schoolHours[hourIdx];
+                return (
+                  <tr key={hourIdx}>
+                    <td className="time-slot">
+                      <div className="hour-info">
+                        <div className="hour-number">שעה {hourIdx + 1}</div>
+                        {hourInfo && (
+                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                        )}
+                      </div>
+                    </td>
+                    {days.map((day, dayIdx) => {
+                      const lesson = selectedClassSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
+                      return (
+                        <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"}`}>
+                          {lesson ? (
+                            <>
+                              <strong>{lesson.subject || "—"}</strong><br />
+                              <small>
+                                {lesson.teacherId
+                                  ? `${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}`
+                                  : "—"}
+                              </small>
+                            </>
+                          ) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
   // מודאל דינמי
@@ -1043,12 +1286,13 @@ const AdminDashboard = ({ onLogout }) => {
         </div>
       </div>
       <div className="dashboard-main" style={{paddingTop: 60}}>
-        {me?.schoolId && <DashboardHeader schoolId={me.schoolId._id} />}
+        {me?.schoolId && <DashboardHeader schoolId={me.schoolId._id} onLogout={onLogout} />}
         <div className="dashboard-header">
           <h1>{me?.gender=="female"?"ברוכה הבאה": "ברוך הבא"}, {loadingMe ? "טוען..." : (me?.firstName )} {me?.lastName}</h1>
           <div className="header-actions">
             <button className="btn btn-outline">הודעות</button>
             <button className="btn btn-primary">צ'אט</button>
+            {me?.schoolId?.address && <SchoolDirectionsButton schoolAddress={me.schoolId.address} />}
           </div>
         </div> 
         {renderContent()}

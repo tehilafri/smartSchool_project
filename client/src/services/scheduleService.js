@@ -18,15 +18,17 @@ export const getNextLessonForTeacher = async () => {
   return response.data;
 };
 
-export const getHomeroomClassSchedule = async () => {
-  const response = await api.get('/schedule/homeroomClassSchedule');
+export const getHomeroomClassSchedule = async (classId = null) => {
+  const url = classId ? `/schedule/homeroomClassSchedule/${classId}` : '/schedule/homeroomClassSchedule';
+  const response = await api.get(url);
   return response.data;
 };
 
 
 // קבלת מערכת שעות לפי מורה
-export const getScheduleByTeacher = async () => {
-  const response = await api.get('/schedule/ScheduleByTeacher');
+export const getScheduleByTeacher = async (teacherId = null) => {
+  const url = teacherId ? `/schedule/ScheduleByTeacher/${teacherId}` : '/schedule/ScheduleByTeacher';
+  const response = await api.get(url);
   return response.data;
 };
 

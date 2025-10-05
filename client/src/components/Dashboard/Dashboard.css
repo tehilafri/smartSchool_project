@@ -258,7 +258,7 @@
 }
 
 .btn-small.btn-outline {
-  background: transparent;
+  background: white;
   color: #667eea;
   border: 1px solid #667eea;
 }
@@ -269,21 +269,36 @@
 }
 
 .btn-small.btn-danger {
+  background: white;
+  color: #e53e3e;
+  border: 1px solid #e53e3e;
+}
+
+.btn-small.btn-danger:hover {
   background: #e53e3e;
   color: white;
 }
 
-.btn-small.btn-danger:hover {
-  background: #c53030;
+.btn-small.btn-secondary {
+  background: white;
+  color: #764ba2;
+  border: 1px solid #764ba2;
 }
 
-.btn-small.btn-secondary {
+.btn-small.btn-secondary:hover {
   background: #764ba2;
   color: white;
 }
 
-.btn-small.btn-secondary:hover {
-  background: #6b46c1;
+.btn-small.btn-primary {
+  background: white;
+  color: #667eea;
+  border: 1px solid #667eea;
+}
+
+.btn-small.btn-primary:hover {
+  background: #667eea;
+  color: white;
 }
 
 .classes-grid {
