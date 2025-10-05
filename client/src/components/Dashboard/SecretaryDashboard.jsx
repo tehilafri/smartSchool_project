@@ -1,10 +1,16 @@
-import { useState } from "react"
+import { useState, useEffect, useState as useState2 } from "react"
+import DashboardHeader from "./DashboardHeader";
+import { getMe } from "../../services/userService";
 import "./Dashboard.css"
 
 const SecretaryDashboard = ({ onLogout }) => {
   const [activeSection, setActiveSection] = useState("overview")
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState("")
+  const [me, setMe] = useState2(null);
+  useEffect(() => {
+    getMe().then(res => setMe(res.data)).catch(() => setMe(null));
+  }, []);
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
@@ -472,7 +478,7 @@ const SecretaryDashboard = ({ onLogout }) => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-sidebar">
-        <div className="sidebar-header">
+        <div className="sidebar-header" style={{marginTop: 70}}>
           <h2>Smart School</h2>
           <p>פאנל מזכירה</p>
         </div>
@@ -497,15 +503,15 @@ const SecretaryDashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      <div className="dashboard-main">
+      <div className="dashboard-main" style={{paddingTop: 60}}>
+        {me?.schoolId && <DashboardHeader schoolId={me.schoolId} />}
         <div className="dashboard-header">
-          <h1>ברוכה הבאה, לאה דוד</h1>
+          <h1>ברוכה הבאה, {me?.firstName || "..."} {me?.lastName || ""}</h1>
           <div className="header-actions">
             <button className="btn btn-outline">הודעות</button>
             <button className="btn btn-primary">צ'אט</button>
           </div>
         </div>
-
         {renderContent()}
       </div>
 

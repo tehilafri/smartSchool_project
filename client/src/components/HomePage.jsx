@@ -4,6 +4,7 @@ import Hero from "./Hero/Hero";
 import Features from "./Features/Features";
 import About from "./About/About";
 import Testimonials from "./Testimonials/Testimonials";
+import Header from "./Header/Header";
 
 function HomePage() {
   const location = useLocation();
@@ -20,6 +21,7 @@ function HomePage() {
 
   return (
     <>
+      <Header />
       <div id="hero">
         <Hero />
       </div>

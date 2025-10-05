@@ -165,3 +165,24 @@
     justify-content: center;
   }
 }
+
+/* אם הסיידבר פעיל */
+body.sidebar-active .footer {
+  margin-right: 280px; /* רוחב הסיידבר */
+  width: calc(100% - 280px);
+}
+
+/* responsive */
+@media (max-width: 1024px) {
+  body.sidebar-active .footer {
+    margin-right: 250px;
+    width: calc(100% - 250px);
+  }
+}
+
+@media (max-width: 768px) {
+  body.sidebar-active .footer {
+    margin-right: 0;
+    width: 100%;
+  }
+}

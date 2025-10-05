@@ -46,10 +46,10 @@ const Header = () => {
 
           <div className="header-actions">
             <Link to="/login" className="btn btn-outline">
-              התחברות
+              התחברות למערכת
             </Link>
-            <Link to="/register" className="btn btn-primary">
-              הרשמה
+            <Link to="/register_school" className="btn btn-primary">
+              הרשמת בית ספר
             </Link>
           </div>
 

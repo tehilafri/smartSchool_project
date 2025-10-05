@@ -6,6 +6,7 @@ dotenv.config();
 export const jwtMiddleware = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
+    console.log('No Authorization header found');
     return res.status(401).json({ message: 'No token provided' });
   }
 

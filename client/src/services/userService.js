@@ -5,36 +5,30 @@ export const loginUser = (userName, password, schoolCode) => {
   return api.post('/users/login', { userName, password, schoolCode });
 };
 
-export const registerUser = (userData, token) => {
-  return api.post('/users/register', userData, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const registerUser = (userData) => {
+  return api.post('/users/register', userData);
 };
 
 // User CRUD
-export const getAllTeachers = (token) => {
-  return api.get('/users/teachers', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getAllTeachers = () => {
+  return api.get('/users/teachers');
 };
 
-export const getAllStudents = (token) => {
-  return api.get('/users/students', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getAllStudents = () => {
+  return api.get('/users/students');
 };
 
-export const getUserById = (id, token) => {
-  return api.get(`/users/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getUserById = (id) => {
+  return api.get(`/users/${id}`);
 };
 
-export const updateUser = (id, updatedData, token) => {
-  return api.put(`/users/${id}`, updatedData, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const updateUser = (id, updatedData) => {
+  return api.put(`/users/${id}`, updatedData);
 };
+
+export const deleteUser = (id) => {
+  return api.delete(`/users/${id}`);
+}
 
 // Password management
 export const forgotPassword = (email) => {
@@ -42,18 +36,14 @@ export const forgotPassword = (email) => {
 };
 
 export const resetPassword = (token, newPassword) => {
-  return api.put(`/users/reset-password/${token}`, { newPassword });
+  return api.put(`/users/reset-password/${token}`, { password: newPassword });
 };
 
-export const getMe = (token) => {
-  return api.get('/users/me', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+export const getMe = () => {
+  return api.get('/users/me');
+};
 
-//getAllSecretaries
-export const getAllSecretaries = (token) => {
-  return api.get('/users/secretaries', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+// getAllSecretaries
+export const getAllSecretaries = () => {
+  return api.get('/users/secretaries');
+};

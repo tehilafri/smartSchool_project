@@ -10,17 +10,25 @@ import SecretaryDashboard from "./components/Dashboard/SecretaryDashboard";
 import StudentDashboard from "./components/Dashboard/StudentDashboard";
 import TeacherDashboard from "./components/Dashboard/TeacherDashboard";
 import Login from "./components/Auth/Login";
-import Register from "./components/Auth/Register";
+import RegisterSchool from "./components/Auth/RegisterSchool";
+import RegisterUser from "./components/Auth/RegisterUser";
 import ForgotPassword from "./components/Auth/ForgotPassword";
 import ResetPassword from "./components/Auth/ResetPassword";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import HomePage from "./components/HomePage";
 import ScrollToTop from "./components/ScrollToTop";
 
+function onLogout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.removeItem("schoolId");
+  localStorage.removeItem("user");
+  window.location.href = "/";
+}
+
 function Router() {
   return (
     <BrowserRouter>
-      <Header />
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -28,14 +36,15 @@ function Router() {
         <Route path="/about" element={<About />} />
         <Route path="/testimonials" element={<Testimonials />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/register_user" element={<RegisterUser />} />
+        <Route path="/register_school" element={<RegisterSchool />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route
           path="/dashboard/admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
+              <AdminDashboard onLogout={onLogout} />
             </ProtectedRoute>
           }
         />
@@ -43,7 +52,7 @@ function Router() {
           path="/dashboard/secretary"
           element={
             <ProtectedRoute allowedRoles={["secretary"]}>
-              <SecretaryDashboard />
+              <SecretaryDashboard onLogout={onLogout} />
             </ProtectedRoute>
           }
         />
@@ -51,7 +60,7 @@ function Router() {
           path="/dashboard/teacher"
           element={
             <ProtectedRoute allowedRoles={["teacher"]}>
-              <TeacherDashboard />
+              <TeacherDashboard onLogout={onLogout} />
             </ProtectedRoute>
           }
         />
@@ -59,7 +68,7 @@ function Router() {
           path="/dashboard/student"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
-              <StudentDashboard />
+              <StudentDashboard onLogout={onLogout} />
             </ProtectedRoute>
           }
         />

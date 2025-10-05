@@ -4,10 +4,10 @@ import { createClass,
          updateHomeroomTeacher,
          removeStudentFromClass,
          addStudentToClass,
-         deleteClass
+         deleteClass,
+         getStudentsByClass
         } from '../controllers/ClassController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
-import Class from '../models/Class.js';
 const router = express.Router();
 
 router.post('/createClass', jwtMiddleware, requireRole('admin'), createClass);
@@ -16,4 +16,6 @@ router.put('/updateHomeroomTeacher/:className', jwtMiddleware, requireRole('admi
 router.post('/addStudent', jwtMiddleware, requireRole('admin', 'secretary'), addStudentToClass);
 router.post('/removeStudent', jwtMiddleware, requireRole('admin', 'secretary'), removeStudentFromClass);
 router.delete('/:name', jwtMiddleware, requireRole('admin', 'secretary'), deleteClass);
+router.get('/studentsByName/:className', jwtMiddleware, requireRole('admin'), getStudentsByClass);
+
 export default router;

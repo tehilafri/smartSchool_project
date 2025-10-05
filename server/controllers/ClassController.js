@@ -75,12 +75,12 @@ export const createClass = async (req, res) => {
 export const updateHomeroomTeacher = async (req, res) => {
   try {
     const { className } = req.params;
-    const { newHomeroomTeacherId } = req.body;
+    const { teacherId } = req.body;
 
     const classDoc = await Class.findOne({ name: className, schoolId: req.schoolId });
     if (!classDoc) return res.status(404).json({ message: 'Class not found in this school' });
 
-    const newTeacher = await User.findOne({ userId: newHomeroomTeacherId, role: 'teacher', schoolId: req.schoolId });
+    const newTeacher = await User.findOne({ userId: teacherId, role: 'teacher', schoolId: req.schoolId });
     if (!newTeacher) return res.status(404).json({ message: 'Teacher not found in this school' });
 
     const alreadyHomeroom = await Class.findOne({ homeroomTeacher: newTeacher._id, schoolId: req.schoolId });
@@ -206,6 +206,22 @@ export const getAllClasses = async (req, res) => {
       .populate('homeroomTeacher', 'userId firstName lastName')
       .populate('students', 'userId firstName lastName');
     res.json(classes);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getStudentsByClass = async (req, res) => {
+  try {
+    const { className } = req.params;
+    const classObj = await Class.findOne({ name: className, schoolId: req.schoolId })
+      .populate('students', 'userId firstName lastName email');
+    console.log("classObj: ", classObj);
+    if (!classObj) {
+      return res.status(404).json({ message: 'Class not found in this school' });
+    }
+    res.json(classObj.students || []);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

@@ -34,6 +34,12 @@ server.use(express.json());
 
 // הגדרת תיקיית קבצים סטטיים לשרת
 server.use(express.static("public"));
+// הגדרת תיקיית uploads כסטטית כדי לאפשר גישה לתמונות לוגו
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+server.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // מסלול ראשי בסיסי
 server.get("/", (req, res) => {
@@ -58,7 +64,7 @@ mongoose.connection.once("open", () => {
 });
 
 // כל שעה – בדיקת בקשות ממתינות
-cron.schedule('06 * * * *', async () => {
+cron.schedule('43 * * * *', async () => {
   console.log('Checking pending requests...');
   await checkPendingSubstituteRequests();
 });

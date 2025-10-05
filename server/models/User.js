@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
     }
   },
   email: { type: String, required: true },
+  phone: { type: String },
   birthDate: { type: Date },
   password: { type: String, required: true }, // לא ייחודי
   role: { type: String, enum: ['student','teacher','admin','secretary'], required: true },

@@ -3,6 +3,7 @@ import Class from '../models/Class.js';
 import EventService from '../services/EventService.js';
 import { generateCode } from '../utils/generatedCode.js';
 import User from '../models/User.js';
+import { markRowsProcessedByAbsenceCode } from '../utils/googleSheets.js';
 
 export const checkEventOverlap = async ({ date, startTime, endTime, classIds, excludeEventId = null }) => {
   const query = {
@@ -26,15 +27,16 @@ export const checkEventOverlap = async ({ date, startTime, endTime, classIds, ex
 
 export const addEvent = async (req, res) => {
   try {
-    const { type, date, classes, startTime, endTime, title } = req.body;
+    const { type, date, classes, startTime, endTime, title, description } = req.body;
   
     // בדיקות חובה
     if (!type || !date || !classes || classes.length === 0 || !title) {
+      console.log('Missing required fields:');
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
     // המרה משמות כיתות ל־ObjectIds
-    const foundClasses = await Class.find({ name: { $in: classes } , schoolId: req.schoolId });
+    const foundClasses = await Class.find({ _id: { $in: classes }, schoolId: req.schoolId });
 
     if (type === 'trip' || type === 'activity') 
       {
@@ -47,6 +49,7 @@ export const addEvent = async (req, res) => {
           return res.status(403).json({ message: 'רק מורה יכולה ליצור אירועים כאלה' });
         if(!req.body.subject)
           return res.status(400).json({ message: 'Missing subject for exam event' });
+        
         //למצוא את המורה בטבלת users באמצעות req.id
         const teacher = await User.findOne({ _id: req.id, schoolId: req.schoolId });
         console.log(teacher.userName);
@@ -54,8 +57,6 @@ export const addEvent = async (req, res) => {
         if(!teacher.ishomeroom && (!teacher.subjects || !teacher.subjects.includes(req.body.subject)))
           return res.status(403).json({ message: 'מורה יכול ליצור אירוע מבחן רק למקצועות שהוא מלמד' });
         //לבדוק אם השדה classes שלו מכיל objectId את הכיתות במערך שהתקבל מהבקשה
-        console.log(foundClasses);
-        console.log(teacher.classes);
         const inputClassIds = foundClasses.map(c => c._id.toString());
         const teacherClassIds = teacher.classes.map(c => c.toString());
         const canCreate = inputClassIds.every(c => teacherClassIds.includes(c));
@@ -64,6 +65,8 @@ export const addEvent = async (req, res) => {
 
       }
     if (foundClasses.length !== classes.length) {
+      console.log('Requested classes:', foundClasses);
+      console.log('Some classes not found:', classes);
       return res.status(400).json({ message: 'One or more classes not found' });
     }
     const classIds = foundClasses.map(c => c._id);
@@ -72,6 +75,7 @@ export const addEvent = async (req, res) => {
 
     const hasOverlap = await checkEventOverlap({ date, startTime, endTime, classIds });
     if (hasOverlap) {
+      console.log('Event overlap detected for classes:', classes);
       return res.status(400).json({ message: 'אירוע כבר קיים בכיתה אחת או יותר בשעות האלה' });
     }
     // יצירת האירוע במסד
@@ -80,6 +84,7 @@ export const addEvent = async (req, res) => {
       schoolId: req.schoolId,
       type,
       title,
+      description,
       date,
       startTime,
       endTime,
@@ -87,12 +92,14 @@ export const addEvent = async (req, res) => {
       createdBy: req.id
     });
 
-    if(type === 'exam')
+     if(type === 'exam') {
       event.subject = req.body.subject;
-
+      if(req.body.notes) event.notes = req.body.notes;
+      event.targetTeacher = req.body.targetTeacher || req.id; // איתחול ליוצר אם לא הוזן
+    }
     await event.save();
 
-    // 🟢 כאן בדיוק מזמנים את הלוגיקה העסקית
+    //  כאן מזמנים את הלוגיקה העסקית
     await EventService.applyEventImpact(event);
     // await EventService.sendNotifications(event);
 
@@ -135,16 +142,17 @@ export const getEventById = async (req, res) => {
 export const updateEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const { type, date, classes, startTime, endTime, title } = req.body;
+    const { type, date, classes, startTime, endTime, title, description } = req.body;
 
     // שליפת האירוע
-    const event = await Event.findOne({ _id: event._id , schoolId: req.schoolId }).populate('classes', 'name');
+    const event = await Event.findOne({ _id: eventId, schoolId: req.schoolId }).populate("classes", "name");
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
     // בדיקה שרק היוצר יכול לעדכן
     if (event.createdBy.toString() !== req.id) {
+            if (event.type !== 'exam' || !event.targetTeacher.toString() === req.id)
       return res.status(403).json({ message: 'Only the creator can update this event' });
     }
 
@@ -153,40 +161,60 @@ export const updateEvent = async (req, res) => {
     if (type) updateData.type = type;
     if (date) updateData.date = date;
     if (title) updateData.title = title;
+    if (description) updateData.description = description;
     if (startTime) updateData.startTime = startTime;
     if (endTime) updateData.endTime = endTime;
+    if (req.body.subject) updateData.subject = req.body.subject;
+    if (req.body.notes) updateData.notes = req.body.notes;
+    if (req.body.targetTeacher) updateData.targetTeacher = req.body.targetTeacher;
 
-    let classIds = event.classes.map(c => c._id); // ברירת מחדל - הכיתות הקיימות
+    // ברירת מחדל - הכיתות הנוכחיות (array of ObjectId / strings)
+    let classIds = event.classes ? event.classes.map(c => c._id.toString()) : [];
 
-    if (classes && classes.length > 0) {
-      const foundClasses = await Class.find({ name: { $in: classes } , schoolId: req.schoolId });
+    // אם התקבל מערך כיתות בעדכון — אשר/שאילתא נכונה ומעדכן גם classIds
+    if (Array.isArray(classes) && classes.length > 0) {
+      // חשוב: use classes directly (array of ids). קודם הבדק שכולם תקינים מבחינת פורמט (optional)
+      // המופע הבעייתי היה שימוש ב-classes._id -> זה חסר משמעות כש-classes הוא מערך
+      const foundClasses = await Class.find({ _id: { $in: classes }, schoolId: req.schoolId });
+
+      // אם לא נמצאו כל הכיתות — החזרת שגיאה עם לוג מסודר
       if (foundClasses.length !== classes.length) {
-        return res.status(400).json({ message: 'One or more classes not found' });
+        console.log('Requested classes for update:', classes);
+        const foundIds = foundClasses.map(fc => fc._id.toString());
+        const missing = classes.filter(c => !foundIds.includes(c.toString()));
+        console.log('Some classes not found during update:', missing);
+        return res.status(400).json({ message: 'One or more classes not found', missing });
       }
-      classIds = foundClasses.map(c => c._id);
-      updateData.classes = classIds;
+
+      // עדכון הנתונים והכנת classIds לבדיקות חפיפה
+      updateData.classes = foundClasses.map(c => c._id);
+      classIds = foundClasses.map(c => c._id.toString());
     }
 
-    // 🟢 בדיקת חפיפה
-    if ((date || startTime || endTime || classes) && (startTime && endTime && classIds.length > 0)) {
+    // בדיקת חפיפה: רצה רק אם יש זמני התחלה/סיום ולפחות כיתה אחת רלוונטית
+    const shouldCheckOverlap = (startTime || endTime || date || (Array.isArray(classes) && classes.length > 0))
+                               && startTime && endTime && classIds.length > 0;
+
+    if (shouldCheckOverlap) {
       const hasOverlap = await checkEventOverlap({
         date: date || event.date,
         startTime: startTime || event.startTime,
         endTime: endTime || event.endTime,
-        classIds,
+        classIds, // עכשיו זה המערך המעודכן של ids (strings/ObjectIds)
         excludeEventId: event._id // חשוב כדי לא להיתקע על עצמו
       });
 
       if (hasOverlap) {
+        console.log('Event overlap detected during update for classes:', classIds);
         return res.status(400).json({ message: 'אירוע כבר קיים לכיתה אחת או יותר בשעות האלה' });
       }
     }
 
-    // עדכון האירוע
+    // עדכון ושמירה
     Object.assign(event, updateData);
     await event.save();
 
-    // 🟢 זימון הלוגיקה העסקית לאחר עדכון
+    // זימון הלוגיקה העסקית לאחר עדכון
     await EventService.applyEventImpact(event);
     // await EventService.sendNotifications(event);
 
@@ -197,10 +225,11 @@ export const updateEvent = async (req, res) => {
   }
 };
 
+
 export const deleteEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const event = await Event.findOne({ eventId , schoolId: req.schoolId });
+    let event = await Event.findOne({ _id: eventId, schoolId: req.schoolId });
 
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -208,12 +237,13 @@ export const deleteEvent = async (req, res) => {
 
     // בדיקה שרק היוצר יכול למחוק
     if (event.createdBy.toString() !== req.id) {
+              if(event.type!=='exam' || !event.targetTeacher.toString()===req.id)
       return res.status(403).json({ message: 'Only the creator can delete this event' });
     }
 
-    // 🟢 זימון הלוגיקה העסקית לפני המחיקה
+    //  זימון הלוגיקה העסקית לפני המחיקה
     await EventService.revertEventImpact(event);
-    await event.remove();
+    await event.deleteOne({ _id: event._id });
 
     res.json({ message: 'Event deleted' });
   } catch (err) {
@@ -240,6 +270,7 @@ export const getUpcomingExams = async (req, res) => {
     })
     .populate('classes', 'name')
     .populate('createdBy', 'firstName lastName')
+    .populate('targetTeacher', 'firstName lastName')
     .sort({ date: 1, startTime: 1 });
 
     res.status(200).json(exams);

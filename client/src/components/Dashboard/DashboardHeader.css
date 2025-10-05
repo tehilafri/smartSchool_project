@@ -1,0 +1,46 @@
+.dashboard-header-fixed {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 100;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.dashboard-header-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 2rem;
+}
+.dashboard-header-logo-circle {
+  margin-left: 1rem;
+  display: flex;
+  align-items: center;
+}
+.dashboard-logo-img-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  background: #f8f8f8;
+  border: 2px solid #e0e0e0;
+}
+.dashboard-logo-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #e0e0e0;
+}
+.dashboard-header-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  margin-left: auto;
+}

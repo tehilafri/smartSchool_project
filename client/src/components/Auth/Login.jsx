@@ -10,16 +10,12 @@ const Login = () => {
   const onLogin = (role) => {
     // ניווט לפי תפקיד
     if (role === "admin") {
-      console.log("Navigating to admin dashboard");
       navigate("/dashboard/admin");
     } else if (role === "teacher") {
-      console.log("Navigating to teacher dashboard");
       navigate("/dashboard/teacher");
     } else if (role === "student") {
-      console.log("Navigating to student dashboard");
       navigate("/dashboard/student");
     } else if (role === "secretary") {
-      console.log("Navigating to secretary dashboard");
       navigate("/dashboard/secretary");
     } else {
       navigate("/");
@@ -28,7 +24,7 @@ const Login = () => {
 
   // מעבר לדף הרשמה
   const onSwitchToRegister = () => {
-    navigate("/register");
+    navigate("/register_school");
   };
 
   // מעבר לדף איפוס סיסמה
@@ -43,12 +39,13 @@ const Login = () => {
   })
   const [error, setError] = useState("")
 
-  const handleChange = (e) => {
+   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     })
   }
+
   console.log("Form Data:", formData) // בדיקת נתוני הטופס
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -63,8 +60,9 @@ const Login = () => {
       // שמירת JWT
       localStorage.setItem("token", response.data.token)
       localStorage.setItem("user", JSON.stringify(response.data.user)) //שמירת המידע של המשתמש
+      localStorage.setItem("role", response.data.user.role) //שמירת התפקיד של המשתמש
+      localStorage.setItem("schoolCode", response.data.user.schoolCode) //שמירת בית הספר של המשתמש
       const role = response.data.user.role;
-      console.log("Login successful, user role:", role)
       // קריאה לפונקציית ההצלחה
       onLogin(role)
       

@@ -9,6 +9,7 @@ import {
   forgotPassword,
   resetPassword,
   getMe,
+  deleteUser,
   getAllSecretaries
 } from '../controllers/UserController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
@@ -31,11 +32,12 @@ router.post('/login', login);
 router.get('/me', jwtMiddleware, getMe);
 router.get('/teachers', jwtMiddleware, getAllTeachers);
 router.get('/students', jwtMiddleware, getAllStudents);
-router.get('/:id', jwtMiddleware, getUserById);
-router.put('/:id', jwtMiddleware, updateUser);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:token', resetPassword);
 router.get('/secretaries', jwtMiddleware, getAllSecretaries);
+router.get('/:id', jwtMiddleware, getUserById);
+router.put('/:id', jwtMiddleware, updateUser);
+router.delete('/:id', jwtMiddleware, requireRole('admin'),deleteUser);
 
 
 

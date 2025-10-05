@@ -1,10 +1,20 @@
 import School from '../models/School.js';
 import User from '../models/User.js';
 import { generateCode } from '../utils/generatedCode.js';
+import path from 'path';
 
 export const createSchool = async (req, res) => {
   try {
-    const { name, principalId, address, phone, email, website, description, scheduleHours } = req.body;
+    let { name, principalId, address, phone, email, website, description, scheduleHours } = req.body;
+
+    // פענוח scheduleHours אם הוא string (מגיע מ-FormData)
+    if (typeof scheduleHours === "string") {
+      try {
+        scheduleHours = JSON.parse(scheduleHours);
+      } catch (e) {
+        scheduleHours = [];
+      }
+    }
 
     // מאתרים את המנהלת לפי ת"ז
     const admin = await User.findOne({ userId: principalId, role: 'admin' });
@@ -12,7 +22,18 @@ export const createSchool = async (req, res) => {
       return res.status(404).json({ message: 'Admin with this ID not found' });
     }
 
-    const schoolCode = generateCode(); //random code- the user must know it when accessing the web
+    const schoolCode = generateCode();
+
+    // טיפול בתמונה
+    let imageUrl = '';
+    if (req.file) {
+      imageUrl = `/uploads/${req.file.filename}`;
+      console.log('✔️ קובץ תמונה התקבל:', req.file.filename);
+      console.log('✔️ imageUrl שישמר:', imageUrl);
+    } else {
+      console.log('❌ לא התקבל קובץ תמונה בהרשמה');
+    }
+
     // יצירת בית ספר
     const school = new School({
       name,
@@ -23,11 +44,13 @@ export const createSchool = async (req, res) => {
       email,
       website,
       description,
-      schoolCode, 
+      imageUrl,
+      schoolCode,
       scheduleHours: scheduleHours || []
     });
 
     await school.save();
+    console.log('✔️ בית ספר נשמר במסד:', school._id, 'imageUrl:', school.imageUrl);
 
     // עדכון המנהלת לשיוך לבית ספר
     admin.schoolId = school._id;
@@ -38,17 +61,21 @@ export const createSchool = async (req, res) => {
       school: {
         id: school._id,
         name: school.name,
-        schoolCode: school.schoolCode, // קוד אנושי להמשך שימוש
+        schoolCode: school.schoolCode,
+        imageUrl: school.imageUrl
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error('שגיאה ביצירת בית ספר:', err);
     res.status(400).json({ message: err.message });
   }
 };
 
 export const getSchoolById = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: user not found in request (JWT missing or invalid)' });
+    }
     const { schoolId } = req.user; // מה־JWT
     const { id } = req.params;
 

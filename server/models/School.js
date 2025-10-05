@@ -15,6 +15,7 @@ const schoolSchema = new mongoose.Schema({
   email: { type: String, required: true, lowercase: true },
   website: { type: String },
   description: { type: String },
+  imageUrl: { type: String }, // כתובת התמונה של הלוגו
   scheduleHours: [ScheduleHourSchema],
   createdAt: { type: Date, default: Date.now }
 });

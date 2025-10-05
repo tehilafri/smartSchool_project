@@ -1,16 +1,15 @@
 import User from '../models/User.js';
 import School from '../models/School.js';
 import Class from '../models/Class.js';
-
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import {sendEmail} from '../utils/email.js';
-
+import { sendWelcomeEmail } from '../services/UserService.js';
 
 export const register = async (req, res) => {
   try {
-    const { firstName, lastName, gender, userId, email, birthDate, password, role, classes, subjects, ishomeroom } = req.body;
+    const { firstName, lastName, gender, userId, email, phone, birthDate, password, role, classes, subjects, ishomeroom } = req.body;
 
     // לבדוק מי המשתמש שמבצע את הבקשה
     const currentUser = await User.findById(req.id);
@@ -66,6 +65,7 @@ export const register = async (req, res) => {
       gender,
       userId,
       email,
+      phone,
       birthDate,
       password: hashedPassword,
       role,
@@ -86,6 +86,7 @@ export const register = async (req, res) => {
         }
       }
     }
+    sendWelcomeEmail(newUser);
 
     res.status(201).json({ message: 'User registered successfully' });
 
@@ -197,7 +198,7 @@ export const getMe = async (req, res) => {
       })
       .populate({
         path: "schoolId", 
-        select: "name scheduleHours address" // שדות שרוצים להחזיר
+        select: "_id name scheduleHours address" // שדות שרוצים להחזיר
       });
 
     if (!user) {
@@ -213,7 +214,7 @@ export const getMe = async (req, res) => {
 
 export const getAllTeachers = async (req, res) => {
   try {
-    const teachers = await User.find({ role: 'teacher', schoolId: req.schoolId }).select('-password');
+    const teachers = await User.find({ role: 'teacher', schoolId: req.schoolId }).select('-password').populate('classes', 'name');
     res.json(teachers);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -222,7 +223,7 @@ export const getAllTeachers = async (req, res) => {
 
 export const getAllStudents = async (req, res) => {
   try {
-    const students = await User.find({ role: 'student', schoolId: req.schoolId }).select('-password');
+    const students = await User.find({ role: 'student', schoolId: req.schoolId }).select('-password').populate('classes', 'name');
     res.json(students);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -250,13 +251,13 @@ export const getUserById = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, birthDate, classes, subjects, ishomeroom } = req.body;
+    const { firstName, lastName,password, email,phone, birthDate, classes, subjects, ishomeroom } = req.body;
 
     // המשתמש שמבצע את הבקשה
     const currentUser = await User.findById(req.id);
     if (!currentUser) return res.status(403).json({ message: 'Unauthorized: user not found' });
 
-    const user = await User.findById(req.params.id, {schoolId: req.schoolId});
+    const user = await User.findOne({ _id: req.params.id, schoolId: req.schoolId });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // בדיקות הרשאות
@@ -277,32 +278,63 @@ export const updateUser = async (req, res) => {
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (email) user.email = email;
+    if (phone) user.phone = phone;
     if (birthDate) user.birthDate = birthDate;
     if (typeof ishomeroom !== 'undefined' && (currentUser.role === 'secretary' || currentUser.role === 'admin')) {
       user.ishomeroom = ishomeroom;
     }
 
     // עדכון כיתות
-    if (classes) {
-      const existingClasses = await Class.find({ name: { $in: classes } });
-      const existingNames = existingClasses.map(c => c.name);
-      const invalidNames = classes.filter(c => !existingNames.includes(c));
-      if (invalidNames.length > 0) {
-        return res.status(400).json({ message: `These classes do not exist: ${invalidNames.join(', ')}` });
+    // עדכון כיתות
+  if (classes) {
+    console.log("Received classes:", classes);
+
+    // שליפה של כל הכיתות שהוזנו
+    const existingClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
+    console.log("Existing classes found:", existingClasses);
+    const existingNames = existingClasses.map(c => c.name);
+    console.log("Existing class names:", existingNames);
+    const invalidNames = classes.filter(c => !existingNames.includes(c));
+    console.log("Invalid class names:", invalidNames);
+    if (invalidNames.length > 0) {
+      return res.status(400).json({ message: `These classes do not exist: ${invalidNames.join(', ')}` });
+    }
+
+    // בדיקת הרשאות לעדכון
+    if (
+      currentUser.role === 'admin' ||
+      currentUser.role === 'secretary' ||
+      (currentUser.role === 'teacher' && currentUser._id.toString() === user._id.toString())
+    ) {
+      // שמירת הרשימה החדשה ב-user עצמו
+      const newClassIds = existingClasses.map(c => c._id);
+      console.log("New class IDs to set:", newClassIds);
+      console.log("User's current classes:", user.classes);
+      const oldClassIds = user.classes.map(c => c.toString());
+      console.log("Old class IDs:", oldClassIds);
+      user.classes = newClassIds;
+
+      // 1. הוספה – בכיתות החדשות שעדיין לא היה בהן
+      for (const classDoc of existingClasses) {
+        if (!classDoc.teachers.includes(user._id)) {
+          classDoc.teachers.push(user._id);
+          console.log(`Added teacher ${user._id} to class ${classDoc.name}`);
+          await classDoc.save();
+        }
       }
 
-      if (
-        currentUser.role === 'admin' ||
-        currentUser.role === 'secretary' ||
-        (currentUser.role === 'teacher' && currentUser._id.toString() === user._id.toString())
-      ) {
-        user.classes = existingClasses.map(c => c._id);
+      // 2. הסרה – כיתות שהיו בעבר וכבר לא מופיעות עכשיו
+      const removedClasses = await Class.find({ _id: { $in: oldClassIds.filter(id => !newClassIds.includes(id)) } });
+      for (const classDoc of removedClasses) {
+        console.log(`Removing teacher ${user._id} from class ${classDoc.name}`);
+        classDoc.teachers = classDoc.teachers.filter(tid => tid.toString() !== user._id.toString());
+        await classDoc.save();
       }
     }
-    console.log(user.classes);
-    
+  }
+
     // עדכון מקצועות (strings)
-    if (subjects && (currentUser.role === 'secretary' || currentUser.role === 'admin')) {
+    if (subjects && (currentUser.role === 'secretary' || currentUser.role === 'teacher' || currentUser.role === 'admin')) {
       user.subjects = subjects;
     }
 
@@ -355,33 +387,72 @@ export const forgotPassword = async (req, res) => {
 };
 
 export const resetPassword = async (req, res) => {
-  const resetPasswordToken = crypto
-    .createHash('sha256')
-    .update(req.params.token)
-    .digest('hex');
-
-  const user = await User.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() }, schoolId: req.schoolId });
-
-  if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
-
-  const salt = await bcrypt.genSalt(10);
-  user.password = await bcrypt.hash(req.body.password, salt);
-
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-
-  await user.save();
-
-  // שליחת מייל אישור
   try {
-    await sendEmail(
-       user.email,
-       'Password Reset Successful',
-       `Hello ${user.firstName},\n\nYour password has been successfully reset.`
-    );
-  } catch (err) {
-    console.error('Error sending confirmation email:', err);
-  }
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
 
-  res.status(200).json({ message: 'Password reset successful. A confirmation email has been sent.' });
+    const user = await User.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() } });
+
+    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+
+    if (!req.body.password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(req.body.password, salt);
+
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    // שליחת מייל אישור
+    try {
+      await sendEmail(
+         user.email,
+         'Password Reset Successful',
+         Hello ${user.firstName},\n\nYour password has been successfully reset.
+      );
+    } catch (err) {
+      console.error('Error sending confirmation email:', err);
+    }
+
+    res.status(200).json({ message: 'Password reset successful. A confirmation email has been sent.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
+export const deleteUser = async (req, res) => {
+  try {
+    const userIdToDelete = req.params.id;
+    const userToDelete = await User.findById(userIdToDelete);
+    if (!userToDelete) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    // אם המנהל מנסה למחוק את עצמו
+    if (req.id === userIdToDelete) {
+      return res.status(400).json({ message: 'Admins cannot delete themselves' });
+    }
+    // אם המנהלת מנסה למחוק מנהלת אחרת
+    if (req.role === 'secretary' && userToDelete.role === 'secretary') {
+      return res.status(403).json({ message: 'Secretaries cannot delete other secretaries' });
+    }
+    // מחיקת המשתמש
+    await User.findByIdAndDelete(userIdToDelete);
+    // הסרת המשתמש מכל הכיתות בהן הוא רשום
+    await Class.updateMany(
+      { students: userIdToDelete },
+      { $pull: { students: userIdToDelete } }
+    );
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
