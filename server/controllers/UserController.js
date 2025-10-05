@@ -414,7 +414,7 @@ export const resetPassword = async (req, res) => {
       await sendEmail(
          user.email,
          'Password Reset Successful',
-         Hello ${user.firstName},\n\nYour password has been successfully reset.
+         `Hello ${user.firstName},\n\nYour password has been successfully reset.`
       );
     } catch (err) {
       console.error('Error sending confirmation email:', err);
