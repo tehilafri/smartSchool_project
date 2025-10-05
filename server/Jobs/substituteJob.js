@@ -117,11 +117,11 @@ export const checkPendingSubstituteRequests = async () => {
 // יריץ כל דקה (*/1 * * * *)
 export function startCheckJob() {
   cron.schedule("*/1 * * * *", async () => {
-    console.log("Checking Google Sheet for new substitutes...");
+    // console.log("Checking Google Sheet for new substitutes...");
     try {
-      console.log("Reading sheet...");
-      console.log("SHEET_ID:", SHEET_ID);
-      console.log("SHEET_RANGE:", SHEET_RANGE);
+      // console.log("Reading sheet...");
+      // console.log("SHEET_ID:", SHEET_ID);
+      // console.log("SHEET_RANGE:", SHEET_RANGE);
       const rows = await readSheet(SHEET_ID, SHEET_RANGE);
       if (!rows || rows.length < 2) {
         console.log("No rows in sheet");
@@ -199,7 +199,7 @@ export function startCheckJob() {
 טלפון: ${phone || "-"}
 הערות: ${notes || "-"}
 
-אם את/ה רוצה לאשר את המחליף/ת, הכנס/י לקוד ההיעדרות במערכת: ${absenceCode}
+${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה, אנא שמרי את הפרטים של המועמדת הנ"ל במערכת בבקשת היעדרות בעלת הקוד
 
 המערכת, smartSchool.`;
 
@@ -221,7 +221,7 @@ export function startCheckJob() {
 
       if (updates.length) {
         await batchUpdate(SHEET_ID, updates);
-        console.log("Updated sheet processed cells:", updates.length);
+        // console.log("Updated sheet processed cells:", updates.length);
       }
     } catch (err) {
       console.error("Error in check job:", err);

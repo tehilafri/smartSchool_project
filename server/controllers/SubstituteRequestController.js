@@ -23,7 +23,7 @@ export const reportAbsence = async (req, res) => {
 
 export const approveReplacement = async (req, res) => {
   try {
-    const { absenceCode, firstName, lastName, email, notes, identityNumber } = req.body;
+    const { absenceCode, firstName, lastName, email, notes, identityNumber ,phone} = req.body;
 
     const result = await handleApproveReplacement({
       absenceCode,
@@ -32,7 +32,8 @@ export const approveReplacement = async (req, res) => {
       lastName,
       email,
       notes,
-      identityNumber
+      identityNumber,
+      phone
     }, req.schoolId);
 
     res.json(result);

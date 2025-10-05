@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { forgotPassword as forgotPasswordAPI } from "../../services/userService";
 import "./Auth.css";
 
-const ForgotPassword = ({ onBackToLogin, onResetPassword }) => {
+const ForgotPassword = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -16,7 +18,7 @@ const ForgotPassword = ({ onBackToLogin, onResetPassword }) => {
       setIsSubmitted(true);
 
       setTimeout(() => {
-        onResetPassword(); // מעבר למסך איפוס סיסמה
+        navigate("/reset-password"); // מעבר למסך איפוס סיסמה
       }, 2000);
     } catch (err) {
       console.error(err);
@@ -39,7 +41,7 @@ const ForgotPassword = ({ onBackToLogin, onResetPassword }) => {
             <p>בדוק את תיבת האימייל שלך ופעל לפי ההוראות</p>
           </div>
 
-          <button type="button" className="btn btn-primary" onClick={onBackToLogin}>
+          <button type="button" className="btn btn-primary" onClick={() => navigate("/login")}>
             חזור להתחברות
           </button>
         </div>
@@ -76,7 +78,7 @@ const ForgotPassword = ({ onBackToLogin, onResetPassword }) => {
           </button>
 
           <div className="auth-links">
-            <button type="button" className="link-button" onClick={onBackToLogin}>
+            <button type="button" className="link-button" onClick={() => navigate("/login")}>
               חזור להתחברות
             </button>
           </div>

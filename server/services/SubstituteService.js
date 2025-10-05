@@ -151,7 +151,7 @@ export async function handleTeacherAbsences({ teacherId, date, startTime, endTim
 /**
  * אישור בקשת היעדרות והוספת ממלא מקום
  */
-export async function handleApproveReplacement({ absenceCode, approverId, firstName, lastName, email, notes, identityNumber }, schoolId) {
+export async function handleApproveReplacement({ absenceCode, approverId, firstName, lastName, email, notes, identityNumber ,phone}, schoolId) {
   // חיפוש בקשת ההיעדרות
   const absence = await SubstituteRequest.findOne({ absenceCode});
   if (!absence) throw new Error('Absence not found');
@@ -210,6 +210,7 @@ export async function handleApproveReplacement({ absenceCode, approverId, firstN
   absence.response = { firstName, lastName, identityNumber, email, notes };
   await absence.save();
 
+  try{
   // שליחת מייל למי שאישר
   const approver = await User.findById(approverId);
   if (approver?.email) {
@@ -229,6 +230,9 @@ Have a great day!
 smartSchool Team`
     );
   }
+  } catch (err) {
+  console.error("Email sending failed, but replacement was saved:", err);
+}
 
   return { message: 'Replacement approved', absence };
 }

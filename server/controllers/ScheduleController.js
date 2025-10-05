@@ -278,29 +278,29 @@ export const getNextLessonForStudent = async (req, res) => {
 
 export const getNextLessonForTeacher = async (req, res) => {
   try {
-    const teacherId = req.id; // מזהה המורה
+    const teacherId = req.id;
     const teacher = await User.findOne({ _id: teacherId, schoolId: req.schoolId });
     if (!teacher) return res.status(404).json({ error: "מורה לא נמצא" });
 
-    const classes = teacher.classes; // מערך ObjectId
+    const classes = teacher.classes;
     if (!classes || classes.length === 0)
-      return res.status(404).json({ error: "המורה לא מלמד בכיתות כלשהן" });
+      return res.json({});
 
-    const schedules = await Schedule.find({ classId: { $in: classes }, schoolId: req.schoolId });
+    const schedules = await Schedule.find({ classId: { $in: classes }, schoolId: req.schoolId })
+      .populate('classId', 'name');
     if (!schedules || schedules.length === 0)
-      return res.status(404).json({ error: "לא נמצאו מערכות שיעורים" });
+      return res.json({});
 
     const now = new Date();
     const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
-    const todayDay = daysOfWeek[now.getDay()]; // היום בשבוע
+    const todayDay = daysOfWeek[now.getDay()];
 
-    let nextLesson = null;
+    let allUpcomingLessons = [];
 
-    outerLoop:
     for (const schedule of schedules) {
       const lessons = schedule.weekPlan[todayDay] || [];
       for (const lesson of lessons) {
-        if (!lesson.teacherId || !lesson.subject) continue;
+        if (!lesson.teacherId || !lesson.subject || !lesson.startTime) continue;
         if (!lesson.teacherId.equals(teacher._id)) continue;
 
         const [hour, minute] = lesson.startTime.split(':').map(Number);
@@ -308,21 +308,31 @@ export const getNextLessonForTeacher = async (req, res) => {
         lessonDate.setHours(hour, minute, 0, 0);
 
         if (lessonDate >= now) {
-          nextLesson = {
-            classId: schedule.classId,
-            day: todayDay,
+          allUpcomingLessons.push({
+            className: schedule.classId?.name,
             subject: lesson.subject,
             startTime: lesson.startTime,
             endTime: lesson.endTime,
-            status: lesson.status,
-            substitute: lesson.substitute || null
-          };
-          break outerLoop;
+            time: `${lesson.startTime} - ${lesson.endTime}`,
+            lessonDate
+          });
         }
       }
     }
 
-    res.json({ nextLesson }); // אם אין שיעורים היום – nextLesson יהיה null
+    // מיון לפי שעה
+    allUpcomingLessons.sort((a, b) => a.lessonDate - b.lessonDate);
+
+    const nextLesson = allUpcomingLessons[0] || null;
+    const upcoming = allUpcomingLessons.slice(1); // כל השאר ללא הראשון
+
+    if (nextLesson) {
+      nextLesson.upcoming = upcoming;
+      nextLesson.minutesUntil = Math.floor((nextLesson.lessonDate - now) / (1000 * 60));
+      delete nextLesson.lessonDate; // לא צריך לשלוח את זה
+    }
+
+    res.json(nextLesson || {});
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -347,7 +357,9 @@ export const getScheduleByTeacher = async (req, res) => {
         { "weekPlan.thursday.teacherId": teacherId },
         { "weekPlan.friday.teacherId": teacherId }
       ]
-    }).lean();
+    })
+    .populate('classId', 'name') 
+    .lean();
 
     // יצירת מבנה ייחודי של ימים ושיעורים
     const daysOfWeek = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -368,6 +380,7 @@ export const getScheduleByTeacher = async (req, res) => {
             subject: lesson.subject,
             startTime: lesson.startTime,
             endTime: lesson.endTime,
+            lessonNumber: lesson.lessonNumber,
             status: lesson.status,
             substitute: lesson.substitute
           }));
@@ -418,5 +431,54 @@ export const getScheduleForStudent = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error fetching schedule", error });
+  }
+};
+
+export const getHomeroomClassSchedule = async (req, res) => {
+  try {
+    const teacherId = req.id;
+    const teacher = await User.findById(teacherId).populate('classes');
+    
+    if (!teacher) {
+      return res.status(404).json({ error: "מורה לא נמצא" });
+    }
+    
+    if (!teacher.ishomeroom) {
+      return res.status(403).json({ error: "רק מחנכים יכולים לגשת למערכת הכיתה" });
+    }
+    
+    // מציאת כיתת החינוך
+    const homeroomClass = teacher.classes.find(cls => 
+      cls.homeroomTeacher && cls.homeroomTeacher.toString() === teacherId.toString()
+    );
+    
+    if (!homeroomClass) {
+      return res.status(404).json({ error: "לא נמצאה כיתת חינוך" });
+    }
+    
+    // שליפת מערכת הכיתה
+    const schedule = await Schedule.findOne({ classId: homeroomClass._id, schoolId: req.schoolId })
+      .populate("weekPlan.sunday.teacherId", "firstName lastName")
+      .populate("weekPlan.monday.teacherId", "firstName lastName")
+      .populate("weekPlan.tuesday.teacherId", "firstName lastName")
+      .populate("weekPlan.wednesday.teacherId", "firstName lastName")
+      .populate("weekPlan.thursday.teacherId", "firstName lastName")
+      .populate("weekPlan.friday.teacherId", "firstName lastName");
+    
+    if (!schedule) {
+      return res.status(404).json({ error: "מערכת לא נמצאה לכיתה" });
+    }
+    
+    // המרה לפורמט של ימים ושיעורים
+    const daysOfWeek = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+    const result = daysOfWeek.map(day => ({
+      day,
+      lessons: schedule.weekPlan[day] || []
+    }));
+    
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "שגיאת שרת" });
   }
 };
