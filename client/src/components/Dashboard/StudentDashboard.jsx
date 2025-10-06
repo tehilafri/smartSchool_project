@@ -55,9 +55,7 @@ const StudentDashboard = ({ onLogout }) => {
       if (!userResponse || !userResponse.data) {
         console.error("getMe returned undefined or has no data");
       }
-      console.log("schedule", scheduleData);
       setNextLesson(nextLessonData?.nextLesson || null);
-      console.log("nextLesson", nextLesson);
       setSchedule(scheduleData?.weekPlan || {});
       setStudentInfo(userResponse?.data || null); // בטיחותי אם undefined
       setUpcomingExams(examsData || []);

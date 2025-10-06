@@ -764,7 +764,6 @@ const AdminDashboard = ({ onLogout }) => {
                         })
                       }
                     />
-                {console.log(cls.name)}
                     <button
                       className="btn-small btn-primary"
                       onClick={() =>
@@ -1012,7 +1011,6 @@ const AdminDashboard = ({ onLogout }) => {
               <p>אין בקשות היעדרות כרגע.</p>
             ) : (
               <div className="absence-requests">
-                {console.log("absences", absences)}
                 {absences.requests.map((absence) => {
                   // חישובי שדות בצורה עמידה במקרה שהשדות מגיעים בצורות שונות
                   const teacherName =
@@ -1064,7 +1062,6 @@ const AdminDashboard = ({ onLogout }) => {
                   <h3>פרטי בית הספר</h3>
                   <div className="info-grid">
                     <div className="info-item">
-                  {console.log("me.schoolId:", me.schoolId)}
                       <label>שם בית הספר: </label>
                       <span>{me.schoolId.name || "לא צוין"}</span>
                     </div>

@@ -333,7 +333,6 @@ const SecretaryDashboard = ({ onLogout }) => {
                 <div className="stat-icon">🔄</div>
                 <div className="stat-info">
                   <h3>{substitutes.length}</h3>
-                  {console.log(substitutes)}
                   <p>ממלאי מקום</p>
                 </div>
               </div>

@@ -124,8 +124,6 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-    //הדפסת  _id של בית הספר לפי הקוד
-    console.log(school._id);
 
     res.json({
       token,
@@ -287,15 +285,11 @@ export const updateUser = async (req, res) => {
     // עדכון כיתות
     // עדכון כיתות
   if (classes) {
-    console.log("Received classes:", classes);
 
     // שליפה של כל הכיתות שהוזנו
     const existingClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
-    console.log("Existing classes found:", existingClasses);
     const existingNames = existingClasses.map(c => c.name);
-    console.log("Existing class names:", existingNames);
     const invalidNames = classes.filter(c => !existingNames.includes(c));
-    console.log("Invalid class names:", invalidNames);
     if (invalidNames.length > 0) {
       return res.status(400).json({ message: `These classes do not exist: ${invalidNames.join(', ')}` });
     }
@@ -308,17 +302,13 @@ export const updateUser = async (req, res) => {
     ) {
       // שמירת הרשימה החדשה ב-user עצמו
       const newClassIds = existingClasses.map(c => c._id);
-      console.log("New class IDs to set:", newClassIds);
-      console.log("User's current classes:", user.classes);
       const oldClassIds = user.classes.map(c => c.toString());
-      console.log("Old class IDs:", oldClassIds);
       user.classes = newClassIds;
 
       // 1. הוספה – בכיתות החדשות שעדיין לא היה בהן
       for (const classDoc of existingClasses) {
         if (!classDoc.teachers.includes(user._id)) {
           classDoc.teachers.push(user._id);
-          console.log(`Added teacher ${user._id} to class ${classDoc.name}`);
           await classDoc.save();
         }
       }
@@ -326,7 +316,6 @@ export const updateUser = async (req, res) => {
       // 2. הסרה – כיתות שהיו בעבר וכבר לא מופיעות עכשיו
       const removedClasses = await Class.find({ _id: { $in: oldClassIds.filter(id => !newClassIds.includes(id)) } });
       for (const classDoc of removedClasses) {
-        console.log(`Removing teacher ${user._id} from class ${classDoc.name}`);
         classDoc.teachers = classDoc.teachers.filter(tid => tid.toString() !== user._id.toString());
         await classDoc.save();
       }
@@ -372,7 +361,6 @@ export const forgotPassword = async (req, res) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
   const message = `You requested a password reset. Click here: ${resetUrl}`;
-  console.log(user.email);
   try {
     await sendEmail(user.email, 'Password Reset', message);
 

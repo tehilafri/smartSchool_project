@@ -191,7 +191,6 @@ const TeacherDashboard = ({ onLogout }) => {
      try {
     setLoadingSchedule(true);
     const scheduleRes = await getScheduleByTeacher();
-    console.log("scheduleRes", scheduleRes);
 
     if (!cancelled) {
       // ממיר לפורמט weekPlan
@@ -377,7 +376,6 @@ const TeacherDashboard = ({ onLogout }) => {
     
     const examEvents = allEvents.filter(event => event.type === 'exam');
     const examResults = filterExamsByTeacherRole(examEvents, me);
-    console.log("Refreshed exams");
     setExams(examResults);
   };
 
@@ -1081,23 +1079,11 @@ const renderScheduleTable = () => {
                           return isThisWeek && isForMyClasses && isNotExam;
                         });
                         
-                        console.log('Total events this week (non-exam):', filteredEvents.length);
-                        console.log('All events:', events.map(e => ({title: e.title, type: e.type, date: e.date, classes: e.classes})));
-                        console.log('Teacher classes:', teacherClassIds);
-                        console.log('Start of week:', startOfWeek);
-                        console.log('End of week:', endOfWeek);
-                        console.log('Today:', today);
-                        
                         // בדיקה ספציפית לאירוע הטיול
                         const tripEvent = events.find(e => e.title === 'טיול למדבר');
                         if (tripEvent) {
-                          console.log('Trip event found:', tripEvent);
                           const tripDate = new Date(tripEvent.date);
                           tripDate.setHours(0, 0, 0, 0);
-                          console.log('Trip date:', tripDate);
-                          console.log('Is trip this week?', tripDate >= startOfWeek && tripDate <= endOfWeek);
-                          console.log('Is trip for my classes?', tripEvent.classes?.some(cls => teacherClassIds.includes(cls._id || cls)));
-                          console.log('Is trip not exam?', tripEvent.type !== 'exam');
                         }
                         
                         return filteredEvents.length;

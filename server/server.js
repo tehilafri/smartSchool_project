@@ -65,13 +65,11 @@ mongoose.connection.once("open", () => {
 
 // כל שעה – בדיקת בקשות ממתינות
 cron.schedule('43 * * * *', async () => {
-  console.log('Checking pending requests...');
   await checkPendingSubstituteRequests();
 });
 
 // פעם ביום אחרי שעות הלימודים – איפוס שיעורים שעברו
 cron.schedule('0 16 * * *', async () => {
-  console.log('Resetting past substitutes...');
   await resetPastSubstitutes();
 });
 

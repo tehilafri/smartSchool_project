@@ -46,7 +46,6 @@ const Login = () => {
     })
   }
 
-  console.log("Form Data:", formData) // בדיקת נתוני הטופס
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")

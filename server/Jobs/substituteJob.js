@@ -52,11 +52,9 @@ export const resetPastSubstitutes = async () => {// רץ כל שעה ומחזי�
 
       if (updated) {
         await schedule.save();
-        console.log(`Updated schedule for class ${schedule.classId}`);
       }
     }
 
-    console.log('Reset past substitutes job completed.');
   } catch (err) {
     console.error('Error in resetPastSubstitutes job:', err);
   }
@@ -92,9 +90,6 @@ export const checkPendingSubstituteRequests = async () => {
     if (now >= weekBefore) {
       const { availableInternal, availableExternal } = await findCandidates(request);
 
-      console.log('בקשה:', request._id);
-      console.log('מורים פנויים פנימיים:', availableInternal.map(t => t.firstName + ' ' + t.lastName));
-      console.log('מורים פנויים חיצוניים:', availableExternal.map(t => t.firstName + ' ' + t.lastName));
       
       // --- כאן שולחים מיילים בפועל ---
       const formattedDate = new Date(request.date).toLocaleDateString('en-US', { 
@@ -117,14 +112,9 @@ export const checkPendingSubstituteRequests = async () => {
 // יריץ כל דקה (*/1 * * * *)
 export function startCheckJob() {
   cron.schedule("*/1 * * * *", async () => {
-    // console.log("Checking Google Sheet for new substitutes...");
     try {
-      // console.log("Reading sheet...");
-      // console.log("SHEET_ID:", SHEET_ID);
-      // console.log("SHEET_RANGE:", SHEET_RANGE);
       const rows = await readSheet(SHEET_ID, SHEET_RANGE);
       if (!rows || rows.length < 2) {
-        console.log("No rows in sheet");
         return;
       }
 
@@ -135,7 +125,6 @@ export function startCheckJob() {
         processedColIndex = header.length;
         const colLetter = columnToLetter(processedColIndex + 1);
         await updateSheetCell(SHEET_ID, `${SHEET_TAB}!${colLetter}1`, "התייחסו");
-        console.log("Added 'התייחסו' header at", colLetter + "1");
       }
 
       const updates = [];
@@ -207,7 +196,6 @@ ${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה,
             await sendEmail(teacherEmail, subject, text);
             const colLetter = columnToLetter(processedColIndex + 1);
             updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["נשלח למורה"]] });
-            console.log(`Notified teacher ${teacherEmail} for absence ${absenceCode}`);
           } catch (e) {
             console.error("Failed to send notification email:", e);
             const colLetter = columnToLetter(processedColIndex + 1);
@@ -221,7 +209,6 @@ ${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה,
 
       if (updates.length) {
         await batchUpdate(SHEET_ID, updates);
-        // console.log("Updated sheet processed cells:", updates.length);
       }
     } catch (err) {
       console.error("Error in check job:", err);

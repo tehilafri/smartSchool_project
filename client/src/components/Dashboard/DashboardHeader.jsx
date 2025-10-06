@@ -96,7 +96,6 @@ const DashboardHeader = ({ schoolId, onLogout }) => {
                 alt="School Logo" 
                 className="dashboard-logo-img-circle"
                 onError={e => {
-                  console.log('Image load error:', e);
                   e.target.src = '/default-school.png'; // תמונת ברירת מחדל בתיקיית public
                 }}
               />

@@ -32,11 +32,7 @@ export const createSchool = async (req, res) => {
     const host = req.get('host');  // ייתן 'localhost:1000'
     imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
 
-      console.log('✔️ full imageUrl שנשמר:', imageUrl);
-    } else {
-      console.log('❌ לא התקבל קובץ תמונה בהרשמה');
-    }
-
+    } 
 
     // יצירת בית ספר
     const school = new School({
@@ -54,7 +50,6 @@ export const createSchool = async (req, res) => {
     });
 
     await school.save();
-    console.log('✔️ בית ספר נשמר במסד:', school._id, 'imageUrl:', school.imageUrl);
 
     // עדכון המנהלת לשיוך לבית ספר
     admin.schoolId = school._id;

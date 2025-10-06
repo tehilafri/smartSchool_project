@@ -13,8 +13,8 @@ export const getAllClasses = async () => {
 };
 
 // עדכון מחנכת של כיתה
-export const updateHomeroomTeacher = async (className, teacherId) => {
-  const response = await api.put(`/classes/updateHomeroomTeacher/${className}`, { teacherId });
+export const updateHomeroomTeacher = async (data) => {
+  const response = await api.put(`/classes/updateHomeroomTeacher/${data.className}`, { teacherId: data.teacherId });
   return response.data;
 };
 

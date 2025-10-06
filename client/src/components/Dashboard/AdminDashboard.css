@@ -2,9 +2,9 @@
 
 /* Compact button styles for section headers */
 .section-header .btn {
-  padding: 6px 12px;
+  padding: 12px 8px;
   font-size: 13px;
-  width: auto;
+  width: fit-content;
   min-width: auto;
   min-height: auto;
 }

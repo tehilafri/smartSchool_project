@@ -65,8 +65,6 @@ export const updateExternalSubstitute = async (req, res) => {
 // קבלת כל ממלאי המקום
 export const getAllExternalSubstitutes = async (req, res) => {
   try {
-    console.log('school:', req.schoolId);
-    console.log(req.id);
     const subs = await ExternalSubstitute.find({ schoolId: req.schoolId });
     res.json(subs);
   } catch (err) {

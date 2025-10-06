@@ -52,7 +52,6 @@ export const addEvent = async (req, res) => {
         
         //למצוא את המורה בטבלת users באמצעות req.id
         const teacher = await User.findOne({ _id: req.id, schoolId: req.schoolId });
-        console.log(teacher.userName);
         //אם לא מלמדת את המקצוע הזה- שגיאה אלא אם כן היא מחנכת
         if(!teacher.ishomeroom && (!teacher.subjects || !teacher.subjects.includes(req.body.subject)))
           return res.status(403).json({ message: 'מורה יכול ליצור אירוע מבחן רק למקצועות שהוא מלמד' });
@@ -65,8 +64,6 @@ export const addEvent = async (req, res) => {
 
       }
     if (foundClasses.length !== classes.length) {
-      console.log('Requested classes:', foundClasses);
-      console.log('Some classes not found:', classes);
       return res.status(400).json({ message: 'One or more classes not found' });
     }
     const classIds = foundClasses.map(c => c._id);
@@ -75,7 +72,6 @@ export const addEvent = async (req, res) => {
 
     const hasOverlap = await checkEventOverlap({ date, startTime, endTime, classIds });
     if (hasOverlap) {
-      console.log('Event overlap detected for classes:', classes);
       return res.status(400).json({ message: 'אירוע כבר קיים בכיתה אחת או יותר בשעות האלה' });
     }
     // יצירת האירוע במסד
@@ -179,10 +175,8 @@ export const updateEvent = async (req, res) => {
 
       // אם לא נמצאו כל הכיתות — החזרת שגיאה עם לוג מסודר
       if (foundClasses.length !== classes.length) {
-        console.log('Requested classes for update:', classes);
         const foundIds = foundClasses.map(fc => fc._id.toString());
         const missing = classes.filter(c => !foundIds.includes(c.toString()));
-        console.log('Some classes not found during update:', missing);
         return res.status(400).json({ message: 'One or more classes not found', missing });
       }
 
@@ -205,7 +199,6 @@ export const updateEvent = async (req, res) => {
       });
 
       if (hasOverlap) {
-        console.log('Event overlap detected during update for classes:', classIds);
         return res.status(400).json({ message: 'אירוע כבר קיים לכיתה אחת או יותר בשעות האלה' });
       }
     }
