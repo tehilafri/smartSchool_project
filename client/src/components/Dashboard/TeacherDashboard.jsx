@@ -178,8 +178,8 @@ const TeacherDashboard = ({ onLogout }) => {
       try {
         setLoadingMe(true);
         const meRes = await getMe();
-        fetchedMe=meRes;
-        if (!cancelled) setMe(meRes);
+        fetchedMe=meRes?.data;
+        if (!cancelled) setMe(meRes?.data);
       } catch (err) {
         console.error("getMe error", err);
         if (!cancelled) setError((e) => e || "שגיאה בטעינת משתמש");
@@ -220,7 +220,7 @@ const TeacherDashboard = ({ onLogout }) => {
       // classes count
       try {
         setLoadingCounts(true);
-        if (!cancelled) setClassesCount(fetchedMe?.data?.classes?.length ?? 0);
+        if (!cancelled) setClassesCount(fetchedMe?.classes?.length ?? 0);
       } catch (err) {
         console.error("getAllClasses error", err);
       } finally {

@@ -36,7 +36,7 @@ export const addEvent = async (req, res) => {
     }
 
     // המרה משמות כיתות ל־ObjectIds
-    const foundClasses = await Class.find({ _id: { $in: classes }, schoolId: req.schoolId });
+    const foundClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
 
     if (type === 'trip' || type === 'activity') 
       {
@@ -171,7 +171,7 @@ export const updateEvent = async (req, res) => {
     if (Array.isArray(classes) && classes.length > 0) {
       // חשוב: use classes directly (array of ids). קודם הבדק שכולם תקינים מבחינת פורמט (optional)
       // המופע הבעייתי היה שימוש ב-classes._id -> זה חסר משמעות כש-classes הוא מערך
-      const foundClasses = await Class.find({ _id: { $in: classes }, schoolId: req.schoolId });
+      const foundClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
 
       // אם לא נמצאו כל הכיתות — החזרת שגיאה עם לוג מסודר
       if (foundClasses.length !== classes.length) {
