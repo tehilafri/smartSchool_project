@@ -36,7 +36,7 @@ function Router() {
         <Route path="/features" element={<Layout showHeader={false}><Features /></Layout>} />
         <Route path="/about" element={<Layout showHeader={false}><About /></Layout>} />
         <Route path="/testimonials" element={<Layout showHeader={false}><Testimonials /></Layout>} />
-        <Route path="/login" element={<Layout showHeader={false}><Login /></Layout>} />
+        <Route path="/login" element={<Layout ><Login /></Layout>} />
         <Route
           path="/register_user"
           element={
@@ -45,9 +45,9 @@ function Router() {
             </ProtectedRoute>
           }
         />
-        <Route path="/register_school" element={<Layout showHeader={false}><RegisterSchool /></Layout>} />
-        <Route path="/forgot-password" element={<Layout showHeader={false}><ForgotPassword /></Layout>} />
-        <Route path="/reset-password/:token" element={<Layout showHeader={false}><ResetPassword /></Layout>} />
+        <Route path="/register_school" element={<Layout ><RegisterSchool /></Layout>} />
+        <Route path="/forgot-password" element={<Layout ><ForgotPassword /></Layout>} />
+        <Route path="/reset-password/:token" element={<Layout ><ResetPassword /></Layout>} />
         <Route
           path="/dashboard/admin"
           element={

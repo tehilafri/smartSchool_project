@@ -27,13 +27,13 @@ const Footer = () => {
             <h4 className="footer-subtitle">קישורים מהירים</h4>
             <ul className="footer-links">
               <li>
-                <a href="#features">תכונות</a>
+                <a href="/#features">תכונות</a>
               </li>
               <li>
-                <a href="#about">אודות</a>
+                <a href="/#about">אודות</a>
               </li>
               <li>
-                <a href="#testimonials">המלצות</a>
+                <a href="/#testimonials">המלצות</a>
               </li>
             </ul>
           </div>
@@ -42,16 +42,16 @@ const Footer = () => {
             <h4 className="footer-subtitle">תמיכה</h4>
             <ul className="footer-links">
               <li>
-                <a href="#help">מרכז עזרה</a>
+                <a href="/#help">מרכז עזרה</a>
               </li>
               <li>
-                <a href="#docs">תיעוד</a>
+                <a href="/#docs">תיעוד</a>
               </li>
               <li>
-                <a href="#support">צור קשר</a>
+                <a href="/#support">צור קשר</a>
               </li>
               <li>
-                <a href="#training">הדרכות</a>
+                <a href="/#training">הדרכות</a>
               </li>
             </ul>
           </div>

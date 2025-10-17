@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import DashboardHeader from "../Dashboard/DashboardHeader";
 import Footer from "../Footer/Footer";
 import { getMe } from "../../services/userService";
+import Header from "../Header/Header";
 import "./Layout.css";
 
 const Layout = ({ children, showHeader = true, showFooter = true }) => {
@@ -37,6 +38,7 @@ const Layout = ({ children, showHeader = true, showFooter = true }) => {
 
   return (
     <div className="layout-container">
+      {showHeader && <Header />}
       {showHeader && schoolId && (
         <DashboardHeader schoolId={schoolId} onLogout={handleLogout} />
       )}
