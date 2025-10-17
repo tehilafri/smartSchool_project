@@ -92,19 +92,30 @@ const SecretaryDashboard = ({ onLogout }) => {
   };
 
   const handleAddEvent = async () => {
-    await addEvent(formData);
+    // שליחת שמות כיתות במקום מזהים
+    const classNames = (formData.classes || []).map(id => {
+      const cls = classes.find(c => c._id === id);
+      return cls ? cls.name : id;
+    });
+    await addEvent({ ...formData, classes: classNames });
     closeModal();
     fetchAllData();
   };
 
   const handleUpdateEvent = async (id) => {
-    await updateEvent(id, formData);
+    // שליחת שמות כיתות במקום מזהים
+    const classNames = (formData.classes || []).map(cid => {
+      const cls = classes.find(c => c._id === cid);
+      return cls ? cls.name : cid;
+    });
+    await updateEvent(id, { ...formData, classes: classNames });
     closeModal();
     fetchAllData();
   };
 
   const handleDeleteEvent = async (id) => {
-    await deleteEvent(id);
+    const event = events.find(e => e._id === id);
+    await deleteEvent(event.eventId);
     fetchAllData();
   };
 
@@ -450,10 +461,10 @@ const SecretaryDashboard = ({ onLogout }) => {
                       <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
                       <td>
                         {event.type !== "exam" && (
-                          <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
-                        )}
-                        {event.type !== "exam" && (
-                          <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
+                          <>
+                            <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
+                            <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
+                          </>
                         )}
                       </td>
                     </tr>

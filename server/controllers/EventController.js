@@ -38,10 +38,10 @@ export const addEvent = async (req, res) => {
     const foundClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
 
     if (type === 'trip' || type === 'activity') 
-      {
-      if (req.role !== 'admin') 
-        return res.status(403).json({ message: 'רק מנהלת יכולה ליצור אירועים כאלה' });
-      }
+{
+  if (req.role !== 'admin' && req.role !== 'secretary')
+    return res.status(403).json({ message: 'רק מנהלת או מזכירה יכולה ליצור אירועים כאלה' });
+}
     else if (type === 'exam')
       {
         if (req.role !== 'teacher')
@@ -157,11 +157,13 @@ export const updateEvent = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // בדיקה שרק היוצר יכול לעדכן
-    if (event.createdBy.toString() !== req.id) {
-      if (event.type !== 'exam' || !event.targetTeacher || event.targetTeacher.toString() !== req.id) {
-        return res.status(403).json({ message: 'Only the creator can update this event' });
-      }
+    // בדיקת הרשאות עדכון
+    const isCreator = event.createdBy.toString() === req.id;
+    const isTargetTeacher = event.type === 'exam' && event.targetTeacher && event.targetTeacher.toString() === req.id;
+    const canEditNonExam = event.type !== 'exam' && (req.role === 'admin' || req.role === 'secretary');
+    
+    if (!isCreator && !isTargetTeacher && !canEditNonExam) {
+      return res.status(403).json({ message: 'אין הרשאה לעדכן אירוע זה' });
     }
 
     // הכנה לעדכון
@@ -239,11 +241,13 @@ export const deleteEvent = async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // בדיקה שרק היוצר יכול למחוק
-    if (event.createdBy.toString() !== req.id) {
-      if (event.type !== 'exam' || !event.targetTeacher || event.targetTeacher.toString() !== req.id) {
-        return res.status(403).json({ message: 'Only the creator can delete this event' });
-      }
+    // בדיקת הרשאות מחיקה
+    const isCreator = event.createdBy.toString() === req.id;
+    const isTargetTeacher = event.type === 'exam' && event.targetTeacher && event.targetTeacher.toString() === req.id;
+    const canDeleteNonExam = event.type !== 'exam' && (req.role === 'admin' || req.role === 'secretary');
+    
+    if (!isCreator && !isTargetTeacher && !canDeleteNonExam) {
+      return res.status(403).json({ message: 'אין הרשאה למחוק אירוע זה' });
     }
 
     //  זימון הלוגיקה העסקית לפני המחיקה
