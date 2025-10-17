@@ -138,6 +138,7 @@ const StudentDashboard = ({ onLogout }) => {
                       
                       return upcomingExams.filter(exam => {
                         const examDate = new Date(exam.date);
+                        examDate.setHours(0, 0, 0, 0);
                         return examDate >= startOfWeek && examDate <= endOfWeek;
                       }).length;
                     })()
@@ -157,10 +158,41 @@ const StudentDashboard = ({ onLogout }) => {
               <div className="next-class-card">
                 <div className="next-class-header">
                   <h3>{nextLesson.subject}</h3>
-                  <span className="time-remaining">{nextLesson.timeRemaining}</span>
+                  <span className="time-remaining">{
+                    (() => {
+                      const now = new Date();
+                      const [hour, minute] = nextLesson.startTime.split(':').map(Number);
+                      const lessonTime = new Date();
+                      lessonTime.setHours(hour, minute, 0, 0);
+                      
+                      const diffMs = lessonTime - now;
+                      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                      
+                      if (diffMinutes <= 0) return 'מתחיל עכשיו';
+                      if (diffMinutes < 60) return `עוד ${diffMinutes} דקות`;
+                      
+                      const hours = Math.floor(diffMinutes / 60);
+                      const remainingMinutes = diffMinutes % 60;
+                      return remainingMinutes > 0 
+                        ? `עוד ${hours} שעות ו-${remainingMinutes} דקות`
+                        : `עוד ${hours} שעות`;
+                    })()
+                  }</span>
                 </div>
                 <div className="next-class-details">
-                  <div className="detail-item"><span className="detail-label">מורה:</span> <span className="detail-value">{nextLesson.teacherId?.firstName} {nextLesson.teacherId?.lastName}</span></div>
+                  <div className="detail-item"><span className="detail-label">מורה:</span> <span className="detail-value">{
+                    (() => {
+                      const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
+                      const todayDay = daysOfWeek[new Date().getDay()];
+                      const todayLessons = schedule[todayDay] || [];
+                      const matchingLesson = todayLessons.find(lesson => 
+                        lesson.startTime === nextLesson.startTime && lesson.subject === nextLesson.subject
+                      );
+                      return matchingLesson?.teacherId?.firstName && matchingLesson?.teacherId?.lastName 
+                        ? `${matchingLesson.teacherId.firstName} ${matchingLesson.teacherId.lastName}`
+                        : 'לא ידוע';
+                    })()
+                  }</span></div>
                   <div className="detail-item"><span className="detail-label">שעה:</span> <span className="detail-value">{nextLesson.startTime} - {nextLesson.endTime}</span></div>
                   <div className="detail-item"><span className="detail-label">מקצוע:</span> <span className="detail-value">{nextLesson.subject}</span></div>
                 </div>
@@ -171,22 +203,47 @@ const StudentDashboard = ({ onLogout }) => {
             
             {nextLesson && (
               <div className="upcoming-lessons-section">
-                <h3>שיעורים באים</h3>
-                {nextLesson?.upcomingLessons && nextLesson.upcomingLessons.length > 0 ? (
-                  <div className="upcoming-lessons-list">
-                    {nextLesson.upcomingLessons.map((lesson, idx) => (
-                      <div key={idx} className="upcoming-lesson-item">
-                        <div className="lesson-time">{lesson.startTime} - {lesson.endTime}</div>
-                        <div className="lesson-info">
-                          <strong>{lesson.subject}</strong>
-                          <small>עם {lesson.teacherId?.firstName} {lesson.teacherId?.lastName}</small>
+                <h3>שיעורים נוספים היום</h3>
+                {(() => {
+                  const now = new Date();
+                  const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
+                  const todayDay = daysOfWeek[now.getDay()];
+                  const todayLessons = schedule[todayDay] || [];
+                  
+                  // מוצאים את כל השיעורים שעדיין לא התחילו
+                  const allUpcomingLessons = todayLessons.filter(lesson => {
+                    if (!lesson.subject || !lesson.startTime) return false;
+                    const [hour, minute] = lesson.startTime.split(':').map(Number);
+                    const lessonDate = new Date();
+                    lessonDate.setHours(hour, minute, 0, 0);
+                    return lessonDate > now;
+                  }).sort((a, b) => {
+                    // מסדרים לפי שעת התחלה
+                    const timeA = a.startTime.split(':').map(Number);
+                    const timeB = b.startTime.split(':').map(Number);
+                    return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+                  });
+                  
+                  // מציגים רק את השיעורים שבאים אחרי השיעור הבא (ללא השיעור הבא עצמו)
+                  const lessonsAfterNext = allUpcomingLessons.slice(1);
+                  
+                  return lessonsAfterNext.length > 0 ? (
+                    <div className="upcoming-lessons-list">
+                      {lessonsAfterNext.map((lesson, idx) => (
+                        <div key={idx} className="upcoming-lesson-item">
+                          <div className="lesson-time">{lesson.startTime} - {lesson.endTime}</div>
+                          <div className="lesson-info">
+                            <strong>{lesson.subject}</strong>
+                            <small>עם {lesson.teacherId?.firstName} {lesson.teacherId?.lastName}</small>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>אין עוד שיעורים היום</p>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p>אין עוד שיעורים היום</p>
+                  );
+                })()
+                }
               </div>
             )}
           </div>
@@ -207,6 +264,7 @@ const StudentDashboard = ({ onLogout }) => {
                     <th>שלישי</th>
                     <th>רביעי</th>
                     <th>חמישי</th>
+                    <th>שישי</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,7 +281,7 @@ const StudentDashboard = ({ onLogout }) => {
                             )}
                           </div>
                         </td>
-                        {["sunday", "monday", "tuesday", "wednesday", "thursday"].map((day, dayIdx) => {
+                        {["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"].map((day, dayIdx) => {
                           // חיפוש השיעור לפי lessonNumber במקום אינדקס
                           const lesson = schedule[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
                           const hasLesson = lesson && (lesson.subject || lesson.teacherId);
@@ -364,7 +422,9 @@ const StudentDashboard = ({ onLogout }) => {
         // שימוש ב-upcomingExams שכבר כולל את פרטי המורה
         const classExams = upcomingExams.sort((a, b) => {
           const dateA = new Date(a.date);
+          dateA.setHours(0, 0, 0, 0);
           const dateB = new Date(b.date);
+          dateB.setHours(0, 0, 0, 0);
           return dateA - dateB;
         });
         

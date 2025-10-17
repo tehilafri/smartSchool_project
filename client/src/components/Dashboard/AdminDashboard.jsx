@@ -95,7 +95,7 @@ const AdminDashboard = ({ onLogout }) => {
       data.endTime = data.endTime.slice(0,5);
     }
     if (data?.classes) {
-      data.classes = data.classes.map(c => c._id); // שומרים רק את ה־id
+      data.classes = data.classes.map(c => c.name); // המרת מערך אובייקטים למערך שמות כיתות
     }
     setModalType(type);
     setModalData(data);
@@ -172,8 +172,9 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   // מחיקת אירוע
-  const handleDeleteEvent = async (id) => {
-    await deleteEvent(id);
+  const handleDeleteEvent = async (eventMongoId) => {
+    const event = events.find(e => e._id === eventMongoId);
+    await deleteEvent(event.eventId);
     fetchAllData();
   };
 
@@ -220,10 +221,15 @@ const AdminDashboard = ({ onLogout }) => {
   const loadClassSchedule = async (classId) => {
     try {
       const scheduleData = await getHomeroomClassSchedule(classId);
+      if (!scheduleData || scheduleData.length === 0) {
+        setSelectedClassSchedule(null);
+        return;
+      }
       const formattedSchedule = formatSchedule(scheduleData);
       setSelectedClassSchedule(formattedSchedule);
     } catch (err) {
-      console.error('Error loading class schedule:', err);
+      // אין מערכת שעות לכיתה זו
+      setSelectedClassSchedule(null);
     }
   };
 
@@ -397,13 +403,13 @@ const AdminDashboard = ({ onLogout }) => {
               <div key={cls._id}>
                 <input
                   type="checkbox"
-                  checked={formData.classes?.includes(cls._id) || false}
+                  checked={formData.classes?.includes(cls.name) || false}
                   onChange={e => {
                     let updated = formData.classes || [];
                     if (e.target.checked) {
-                      updated = [...updated, cls._id];
+                      updated = [...updated, cls.name];
                     } else {
-                      updated = updated.filter(id => id !== cls._id);
+                      updated = updated.filter(name => name !== cls.name);
                     }
                     setFormData({ ...formData, classes: updated });
                   }}
@@ -943,7 +949,13 @@ const AdminDashboard = ({ onLogout }) => {
                     ))}
                   </select>
                 </div>
-                {selectedClassSchedule && renderClassSchedule()}
+                {selectedClassId && (
+                  selectedClassSchedule ? renderClassSchedule() : (
+                    <div className="no-schedule-message">
+                      <p>לא הוכנסה מערכת שעות לכיתה זו</p>
+                    </div>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -1114,8 +1126,8 @@ const AdminDashboard = ({ onLogout }) => {
 
   // רנדר מערכת שעות מורה
   const renderTeacherSchedule = () => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday"];
-    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי"];
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
     const schoolHours = me?.schoolId?.scheduleHours || [];
     const maxLessons = schoolHours.length;
 
@@ -1171,8 +1183,8 @@ const AdminDashboard = ({ onLogout }) => {
 
   // רנדר מערכת שעות כיתה
   const renderClassSchedule = () => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday"];
-    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי"];
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
     const schoolHours = me?.schoolId?.scheduleHours || [];
     const maxLessons = schoolHours.length;
 
@@ -1201,9 +1213,10 @@ const AdminDashboard = ({ onLogout }) => {
                     </td>
                     {days.map((day, dayIdx) => {
                       const lesson = selectedClassSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
+                      const hasLesson = lesson && (lesson.subject || lesson.teacherId);
                       return (
-                        <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"}`}>
-                          {lesson ? (
+                        <td key={dayIdx} className={`class-slot ${hasLesson ? "" : "empty"}`}>
+                          {hasLesson ? (
                             <>
                               <strong>{lesson.subject || "—"}</strong><br />
                               <small>

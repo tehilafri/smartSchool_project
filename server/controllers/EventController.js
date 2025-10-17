@@ -31,7 +31,6 @@ export const addEvent = async (req, res) => {
   
     // בדיקות חובה
     if (!type || !date || !classes || classes.length === 0 || !title) {
-      console.log('Missing required fields:');
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -96,7 +95,17 @@ export const addEvent = async (req, res) => {
     await event.save();
 
     //  כאן מזמנים את הלוגיקה העסקית
-    await EventService.applyEventImpact(event);
+    try {
+      await EventService.applyEventImpact(event);
+    } catch (serviceErr) {
+      console.error('EventService.applyEventImpact error:', serviceErr);
+      // מחיקת האירוע אם הלוגיקה העסקית נכשלת
+      await event.deleteOne();
+      return res.status(500).json({ 
+        message: 'שגיאה ביישום הלוגיקה העסקית', 
+        error: serviceErr.message || serviceErr 
+      });
+    }
     // await EventService.sendNotifications(event);
 
     res.status(201).json({ message: 'Event added', event });
@@ -110,6 +119,8 @@ export const getEvents = async (req, res) => {
   try {
     const events = await Event.find({ schoolId: req.schoolId })
       .populate('classes', 'name')
+      .populate('createdBy', 'firstName lastName')
+      .populate('targetTeacher', 'firstName lastName')
       .sort({ date: 1 });
 
     res.json(events);
@@ -148,8 +159,9 @@ export const updateEvent = async (req, res) => {
 
     // בדיקה שרק היוצר יכול לעדכן
     if (event.createdBy.toString() !== req.id) {
-            if (event.type !== 'exam' || !event.targetTeacher.toString() === req.id)
-      return res.status(403).json({ message: 'Only the creator can update this event' });
+      if (event.type !== 'exam' || !event.targetTeacher || event.targetTeacher.toString() !== req.id) {
+        return res.status(403).json({ message: 'Only the creator can update this event' });
+      }
     }
 
     // הכנה לעדכון
@@ -218,11 +230,10 @@ export const updateEvent = async (req, res) => {
   }
 };
 
-
 export const deleteEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    let event = await Event.findOne({ _id: eventId, schoolId: req.schoolId });
+    let event = await Event.findOne({ eventId: eventId, schoolId: req.schoolId });
 
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -230,13 +241,23 @@ export const deleteEvent = async (req, res) => {
 
     // בדיקה שרק היוצר יכול למחוק
     if (event.createdBy.toString() !== req.id) {
-              if(event.type!=='exam' || !event.targetTeacher.toString()===req.id)
-      return res.status(403).json({ message: 'Only the creator can delete this event' });
+      if (event.type !== 'exam' || !event.targetTeacher || event.targetTeacher.toString() !== req.id) {
+        return res.status(403).json({ message: 'Only the creator can delete this event' });
+      }
     }
 
     //  זימון הלוגיקה העסקית לפני המחיקה
-    await EventService.revertEventImpact(event);
-    await event.deleteOne({ _id: event._id });
+    try {
+      await EventService.revertEventImpact(event);
+    } catch (serviceErr) {
+      console.error('EventService.revertEventImpact error:', serviceErr);
+      return res.status(500).json({ 
+        message: 'שגיאה בביטול הלוגיקה העסקית', 
+        error: serviceErr.message || serviceErr.toString() || 'שגיאה לא ידועה' 
+      });
+    }
+    
+    await event.deleteOne();
 
     res.json({ message: 'Event deleted' });
   } catch (err) {
@@ -256,10 +277,13 @@ export const getUpcomingExams = async (req, res) => {
     const classIds = student.classes.map(c => c._id);
 
     // 2. שליפת כל אירועי המבחן הקרובים לכיתות שלו
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // מאפס לתחילת היום
+    
     const exams = await Event.find({
       type: 'exam',
       classes: { $in: classIds },
-      date: { $gte: new Date() } // רק מבחנים מהיום והלאה
+      date: { $gte: today } // רק מבחנים מהיום והלאה
     })
     .populate('classes', 'name')
     .populate('createdBy', 'firstName lastName')
@@ -283,10 +307,13 @@ export const getNextExam = async (req, res) => {
     const classIds = student.classes.map(c => c._id);
 
     // שליפת המבחן הקרוב ביותר
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // מאפס לתחילת היום
+    
     const nextExam = await Event.findOne({
       type: 'exam',
       classes: { $in: classIds },
-      date: { $gte: new Date() }
+      date: { $gte: today }
     })
     .populate('classes', 'name')
     .populate('createdBy', 'firstName lastName')

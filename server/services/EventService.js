@@ -18,6 +18,10 @@ const EventService = {
 
   for (let schedule of schedules) {
     let lessons = schedule.weekPlan[eventDay];
+    
+    if (!lessons || !Array.isArray(lessons)) {
+      continue; // דלג על מערכת שעות שלא מוגדרת ליום זה
+    }
 
     lessons.forEach(lesson => {
       const lessonStart = parseTime(lesson.startTime);
@@ -111,6 +115,10 @@ const EventService = {
 
   for (let schedule of schedules) {
     let lessons = schedule.weekPlan[eventDay];
+    
+    if (!lessons || !Array.isArray(lessons)) {
+      continue; // דלג על מערכת שעות שלא מוגדרת ליום זה
+    }
 
     lessons.forEach(lesson => {
       const lessonStart = parseTime(lesson.startTime);

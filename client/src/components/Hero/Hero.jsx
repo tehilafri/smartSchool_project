@@ -1,4 +1,5 @@
 import "./Hero.css"
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   return (
@@ -14,9 +15,9 @@ const Hero = () => {
             הפכו את הניהול היומיומי לפשוט ויעיל יותר.
           </p>
           <div className="hero-actions">
-            <a href="#signup" className="btn btn-primary btn-large">
+            <Link to="/register_school" className="btn btn-primary btn-large">
               התחילו עכשיו
-            </a>
+            </Link>
           </div>
           <div className="hero-stats">
             <div className="stat">

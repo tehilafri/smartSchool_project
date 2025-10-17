@@ -97,15 +97,20 @@ const TeacherDashboard = ({ onLogout }) => {
     let myExams = [];
     let othersExams = [];
     
+    if (!teacherData || !Array.isArray(examEvents)) {
+      return { myExams, othersExams };
+    }
+    
     if (teacherData?.ishomeroom) {
       const homeroomClass = teacherData.classes?.find(cls => 
-        cls.homeroomTeacher && cls.homeroomTeacher._id === teacherData._id
+        cls?.homeroomTeacher?._id === teacherData._id
       );
       
       examEvents.forEach(exam => {
-        const isMyExam = exam.createdBy === teacherData._id;
-        const isTargetedForMe = exam.targetTeacher === teacherData._id;
-        const isMyClassExam = homeroomClass && exam.classes?.some(cls => cls._id === homeroomClass._id);
+        if (!exam) return;
+        const isMyExam = (exam.createdBy?._id || exam.createdBy) === teacherData._id;
+        const isTargetedForMe = (exam.targetTeacher?._id || exam.targetTeacher) === teacherData._id;
+        const isMyClassExam = homeroomClass && exam.classes?.some(cls => cls?._id === homeroomClass._id);
         
         if (isMyExam && !exam.targetTeacher) {
           // מבחן שיצרתי עבורי
@@ -120,8 +125,9 @@ const TeacherDashboard = ({ onLogout }) => {
       });
     } else {
       examEvents.forEach(exam => {
-        const isMyExam = exam.createdBy === teacherData._id;
-        const isTargetedForMe = exam.targetTeacher === teacherData._id;
+        if (!exam) return;
+        const isMyExam = (exam.createdBy?._id || exam.createdBy) === teacherData._id;
+        const isTargetedForMe = (exam.targetTeacher?._id || exam.targetTeacher) === teacherData._id;
         
         if ((isMyExam && !exam.targetTeacher) || isTargetedForMe) {
           myExams.push(exam);
@@ -248,7 +254,7 @@ const TeacherDashboard = ({ onLogout }) => {
           
           // סינון מבחנים לפי ההיגיון הנדרש
           const examEvents = allEvents.filter(event => event.type === 'exam');
-          const examResults = filterExamsByTeacherRole(examEvents, fetchedMe?.data);
+          const examResults = filterExamsByTeacherRole(examEvents, fetchedMe);
           setExams(examResults);
         }
       } catch (err) {
@@ -396,7 +402,9 @@ const TeacherDashboard = ({ onLogout }) => {
       } catch (err) {
         console.error('deleteExam error', err);
         const errorMessage = err.response?.data?.message || err.message || 'שגיאה לא ידועה';
-        showNotification(`שגיאה במחיקת המבחן: ${errorMessage}`, 'error');
+        const errorDetails = err.response?.data?.error || '';
+        const fullErrorMessage = errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage;
+        showNotification(`שגיאה במחיקת המבחן: ${fullErrorMessage}`, 'error');
       }
     };
 
@@ -469,8 +477,8 @@ const renderClassScheduleTable = () => {
   if (loadingClassSchedule) return <p>טוען מערכת שעות של הכיתה...</p>;
   if (!classSchedule || !classSchedule.weekPlan) return <p>לא נמצאה מערכת שעות לכיתה.</p>;
 
-  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday"];
-  const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי"];
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+  const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
 
   const schoolHours = me?.schoolId?.scheduleHours || [];
   const maxLessons = schoolHours.length || Math.max(
@@ -697,8 +705,8 @@ const renderScheduleTable = () => {
   if (loadingSchedule) return <p>טוען מערכת שעות...</p>;
   if (!schedule || !schedule.weekPlan) return <p>לא נמצאה מערכת שעות.</p>;
 
-  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday"];
-  const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי"];
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+  const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
 
   // נתוני השעות מבית הספר
   const schoolHours = me?.schoolId?.scheduleHours || [];
@@ -816,8 +824,8 @@ const renderScheduleTable = () => {
                               const hasLessonAtTime = lesson && lesson.subject;
                               const isMyClass = lesson && lesson.classId && 
                                 event.classes?.some(cls => cls._id === lesson.classId._id || cls._id === lesson.classId);
-                              const isMyExam = event.createdBy === me?._id;
-                              const isTargetedForMe = event.targetTeacher === me?._id;
+                              const isMyExam = (event.createdBy?._id || event.createdBy) === me?._id;
+                              const isTargetedForMe = (event.targetTeacher?._id || event.targetTeacher) === me?._id;
                               
                               return isSameDate && isLessonMatch && hasLessonAtTime && isMyClass && (isMyExam || isTargetedForMe);
                             });
@@ -878,8 +886,8 @@ const renderScheduleTable = () => {
                           const hasMyLessonAtTime = myLessonAtTime && myLessonAtTime.subject;
                           const isMyClass = myLessonAtTime && myLessonAtTime.classId && 
                             event.classes?.some(cls => cls._id === myLessonAtTime.classId._id || cls._id === myLessonAtTime.classId);
-                          const isMyExam = event.createdBy === me?._id;
-                          const isTargetedForMe = event.targetTeacher === me?._id;
+                          const isMyExam = (event.createdBy?._id || event.createdBy) === me?._id;
+                          const isTargetedForMe = (event.targetTeacher?._id || event.targetTeacher) === me?._id;
                           
                           return isSameDate && isLessonMatch && hasMyLessonAtTime && isMyClass && (isMyExam || isTargetedForMe);
                         });
@@ -957,10 +965,6 @@ const renderScheduleTable = () => {
         <div className="upcoming-item">
           <span className="upcoming-time">{start.trim()}{end && end.trim() ? ` - ${end.trim()}` : ""}</span>
           <span className="upcoming-subject">{subject.trim()} - כיתה {className.trim()}</span>
-        </div>
-
-        <div className="next-class-actions">
-          <button className="btn btn-outline">צפה בחומרים</button>
         </div>
       </div>
     );
@@ -1103,8 +1107,17 @@ const renderScheduleTable = () => {
                         if (loadingExams) return "...";
                         if (!exams.myExams && !exams.othersExams) return "0";
                         const today = new Date();
-                        const upcomingMyExams = (exams.myExams || []).filter(exam => new Date(exam.date) >= today);
-                        const upcomingOthersExams = (exams.othersExams || []).filter(exam => new Date(exam.date) >= today);
+                        today.setHours(0, 0, 0, 0);
+                        const upcomingMyExams = (exams.myExams || []).filter(exam => {
+                          const examDate = new Date(exam.date);
+                          examDate.setHours(0, 0, 0, 0);
+                          return examDate >= today;
+                        });
+                        const upcomingOthersExams = (exams.othersExams || []).filter(exam => {
+                          const examDate = new Date(exam.date);
+                          examDate.setHours(0, 0, 0, 0);
+                          return examDate >= today;
+                        });
                         return upcomingMyExams.length + upcomingOthersExams.length;
                       })()
                     }
@@ -1436,8 +1449,11 @@ const renderScheduleTable = () => {
                       {exams.myExams
                         .sort((a, b) => {
                           const dateA = new Date(a.date);
+                          dateA.setHours(0, 0, 0, 0);
                           const dateB = new Date(b.date);
+                          dateB.setHours(0, 0, 0, 0);
                           const now = new Date();
+                          now.setHours(0, 0, 0, 0);
                           
                           const aIsUpcoming = dateA >= now;
                           const bIsUpcoming = dateB >= now;
@@ -1454,7 +1470,9 @@ const renderScheduleTable = () => {
                         })
                         .map((exam, index) => {
                         const examDate = new Date(exam.date);
+                        examDate.setHours(0, 0, 0, 0);
                         const now = new Date();
+                        now.setHours(0, 0, 0, 0);
                         const isUpcoming = examDate >= now;
                         
                         return (
@@ -1486,8 +1504,11 @@ const renderScheduleTable = () => {
                       {exams.othersExams
                         .sort((a, b) => {
                           const dateA = new Date(a.date);
+                          dateA.setHours(0, 0, 0, 0);
                           const dateB = new Date(b.date);
+                          dateB.setHours(0, 0, 0, 0);
                           const now = new Date();
+                          now.setHours(0, 0, 0, 0);
                           
                           const aIsUpcoming = dateA >= now;
                           const bIsUpcoming = dateB >= now;
@@ -1504,7 +1525,9 @@ const renderScheduleTable = () => {
                         })
                         .map((exam, index) => {
                         const examDate = new Date(exam.date);
+                        examDate.setHours(0, 0, 0, 0);
                         const now = new Date();
+                        now.setHours(0, 0, 0, 0);
                         const isUpcoming = examDate >= now;
                         
                         return (
