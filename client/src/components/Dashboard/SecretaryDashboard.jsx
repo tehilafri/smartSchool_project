@@ -46,7 +46,7 @@ const SecretaryDashboard = ({ onLogout }) => {
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "students", label: "ניהול תלמידים", icon: "👨🎓" },
+    { id: "students", label: "ניהול תלמידים", icon: "👨" },
     { id: "events", label: "ניהול אירועים", icon: "🎉" },
     { id: "classes", label: "ניהול כיתות", icon: "🏫" },
     { id: "substitutes", label: "ממלאי מקום", icon: "🔄" },
@@ -54,22 +54,40 @@ const SecretaryDashboard = ({ onLogout }) => {
     { id: "reports", label: "דוחות", icon: "📈" },
   ]
 
+    const today = new Date();
+    today.setHours(0,0,0,0); // מאפסים את השעה כדי להשוות תאריכים בלבד
+
+    // מיון האירועים לפי המרחק מהיום (חיובי או שלילי)
+    const sortedByDistance = events
+      .map(event => ({
+        ...event,
+        distance: Math.abs(new Date(event.date).getTime() - today.getTime())
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+  // לוקחים את שלושת האירועים הקרובים ביותר
+  const nearestEvents = sortedByDistance.slice(0, 3);
   const openModal = (type, data = null) => {
-    if (data?.date) {
-      data.date = new Date(data.date).toISOString().split("T")[0];
+    // אל תשנה את data המקורי!
+    let modalDataCopy = data ? { ...data } : null;
+    if (modalDataCopy?.date) {
+      modalDataCopy.date = new Date(modalDataCopy.date).toISOString().split("T")[0];
     }
-    if (data?.startTime) {
-      data.startTime = data.startTime.slice(0,5);
+    if (modalDataCopy?.startTime) {
+      modalDataCopy.startTime = modalDataCopy.startTime.slice(0,5);
     }
-    if (data?.endTime) {
-      data.endTime = data.endTime.slice(0,5);
+    if (modalDataCopy?.endTime) {
+      modalDataCopy.endTime = modalDataCopy.endTime.slice(0,5);
     }
-    if (data?.classes) {
-      data.classes = data.classes.map(c => c._id);
+    if (modalDataCopy?.classes && Array.isArray(modalDataCopy.classes) && modalDataCopy.classes.length > 0) {
+      // אם זה אובייקטים, תוציא מזהים, אם כבר מזהים תשאיר
+      if (typeof modalDataCopy.classes[0] === "object" && modalDataCopy.classes[0] !== null) {
+        modalDataCopy.classes = modalDataCopy.classes.map(c => c._id);
+      }
     }
     setModalType(type)
-    setModalData(data)
-    setFormData(data || {})
+    setModalData(modalDataCopy)
+    setFormData(modalDataCopy || {})
     setShowModal(true)
   }
 
@@ -372,12 +390,16 @@ const SecretaryDashboard = ({ onLogout }) => {
             </div>
 
             <div className="recent-activities">
-              <h3>פעילות אחרונה</h3>
+              <h3>מה קורה בבית הספר</h3>
               <div className="activity-list">
-                {events.slice(0, 3).map((event, idx) => (
+                {nearestEvents.map((event, idx) => (
                   <div className="activity-item" key={event._id || idx}>
-                    <span className="activity-time">{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "לא ידוע"}</span>
-                    <span className="activity-text">{event.title || event.description || "אירוע"} - כיתות: {event.classes?.map(c => c.name).join(", ") || "לא צוין"}</span>
+                    <span className="activity-time">
+                      {event.date ? new Date(event.date).toLocaleDateString('he-IL') : "לא ידוע"}
+                    </span>
+                    <span className="activity-text">
+                      {event.title || event.description || "אירוע"} - כיתות: {event.classes?.map(c => c.name).join(", ") || "לא צוין"}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -428,6 +450,14 @@ const SecretaryDashboard = ({ onLogout }) => {
         )
 
       case "events":
+        // חלוקה לאירועים עתידיים ועבר
+        const now = new Date();
+        const futureEvents = events
+          .filter(ev => ev.date && new Date(ev.date) >= now)
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        const pastEvents = events
+          .filter(ev => ev.date && new Date(ev.date) < now)
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
         return (
           <div className="dashboard-content">
             <div className="section-header">
@@ -436,41 +466,83 @@ const SecretaryDashboard = ({ onLogout }) => {
                 הוסף אירוע
               </button>
             </div>
-
-            <div className="data-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>סוג</th>
-                    <th>כותרת</th>
-                    <th>תאריך</th>
-                    <th>שעת התחלה</th>
-                    <th>שעת סיום</th>
-                    <th>כיתות</th>
-                    <th>פעולות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((event) => (
-                    <tr key={event._id}>
-                      <td>{event.type}</td>
-                      <td>{event.title}</td>
-                      <td>{new Date(event.date).toLocaleDateString('he-IL')}</td>
-                      <td>{event.startTime}</td>
-                      <td>{event.endTime}</td>
-                      <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
-                      <td>
-                        {event.type !== "exam" && (
-                          <>
-                            <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
-                            <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
-                          </>
-                        )}
-                      </td>
+            <div className="events-section">
+              <h3>אירועים עתידיים</h3>
+              <div className="data-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>תאריך</th>
+                      <th>סוג</th>
+                      <th>כותרת</th>
+                      <th>הערות</th>
+                      <th>שעת התחלה</th>
+                      <th>שעת סיום</th>
+                      <th>כיתות</th>
+                      <th>פעולות</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {futureEvents.map((event) => (
+                      <tr key={event._id}>
+                        <td>{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "-"}</td>
+                        <td>{event.type}</td>
+                        <td>{event.title}</td>
+                        <td>{event.description || "-"}</td>
+                        <td>{event.startTime}</td>
+                        <td>{event.endTime}</td>
+                        <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
+                        <td>
+                          {event.type !== "exam" && (
+                            <>
+                              <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
+                              <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <h3 style={{marginTop: "2em"}}>אירועים קודמים</h3>
+              <div className="data-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>תאריך</th>
+                      <th>סוג</th>
+                      <th>כותרת</th>
+                      <th>הערות</th>
+                      <th>שעת התחלה</th>
+                      <th>שעת סיום</th>
+                      <th>כיתות</th>
+                      <th>פעולות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pastEvents.map((event) => (
+                      <tr key={event._id}>
+                        <td>{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "-"}</td>
+                        <td>{event.type}</td>
+                        <td>{event.title}</td>
+                        <td>{event.description || "-"}</td>
+                        <td>{event.startTime}</td>
+                        <td>{event.endTime}</td>
+                        <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
+                        <td>
+                          {event.type !== "exam" && (
+                            <>
+                              <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
+                              <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )

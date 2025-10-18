@@ -78,7 +78,7 @@ const TeacherDashboard = ({ onLogout }) => {
   const [editingExam, setEditingExam] = useState(null);
   const [classSchedule, setClassSchedule] = useState(null);
   const [loadingClassSchedule, setLoadingClassSchedule] = useState(false);
-
+  const [selectedEvent, setSelectedEvent] = useState(null); // חדש
 
 
   const updateForm = (code, field, value) => {
@@ -323,7 +323,9 @@ const TeacherDashboard = ({ onLogout }) => {
       showNotification("הבקשה נשלחה בהצלחה!", 'success');
       // רענון בקשות
       const subs = await getSubstituteRequests();
-      setSubRequests(Array.isArray(subs) ? subs : subs?.data ?? []);
+      setSubRequests(subs?.requests ?? []);
+      // עדכון הסקשן ל"ההיעדרויות שלי" כדי להציג מיד את הבקשה החדשה
+      setActiveSection("myAbsences");
       closeModal();
     } catch (err) {
       console.error("report absence", err);
@@ -485,8 +487,32 @@ const renderClassScheduleTable = () => {
     ...days.map(day => classSchedule.weekPlan[day]?.length || 0)
   );
 
+  const today = new Date();
+
+  // חישוב יום ראשון של השבוע (או השבוע הבא אם היום שבת)
+  const startOfWeek = new Date(today);
+  const dayOffset = today.getDay() === 6 ? 1 : 0;
+  startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // יום שישי של השבוע
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 5);
+
+  // פונקציה לנראות תאריך בעברית
+  const formatDate = (date) => date.toLocaleDateString("he-IL");
+
+  // [מערך של תאריכי כל הימים (ראשון–שישי)
+  const weekDates = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
   return (
     <div className="schedule-table">
+      <h3>{`מתאריך ${formatDate(startOfWeek)} עד ${formatDate(endOfWeek)}`}</h3>
       <table>
         <thead>
           <tr>
@@ -517,15 +543,7 @@ const renderClassScheduleTable = () => {
                     if (!schoolHours[hourIdx] || event.type === 'exam') return false;
                     
                     const hourInfo = schoolHours[hourIdx];
-                    const today = new Date();
-                    const startOfWeek = new Date(today);
-                    startOfWeek.setDate(today.getDate() - today.getDay());
-                    startOfWeek.setHours(0, 0, 0, 0);
-                    
-                    const dayIndex = days.indexOf(day);
-                    const targetDate = new Date(startOfWeek);
-                    targetDate.setDate(startOfWeek.getDate() + dayIndex);
-                    
+                    const targetDate = weekDates[dayIdx];
                     const eventDate = new Date(event.date);
                     eventDate.setHours(0, 0, 0, 0);
                     
@@ -563,7 +581,7 @@ const renderClassScheduleTable = () => {
                           {hasEvents && (
                             <div className="slot-events">
                               {slotEvents.map((event, idx) => (
-                                <div key={idx} className={`event-indicator ${event.type}`}>
+                                <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => setSelectedEvent(event)}>
                                   <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
                                   <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small>
                                 </div>
@@ -576,18 +594,9 @@ const renderClassScheduleTable = () => {
                               if (!schoolHours[hourIdx] || event.type !== 'exam') return false;
                               
                               const hourInfo = schoolHours[hourIdx];
-                              const today = new Date();
-                              const startOfWeek = new Date(today);
-                              startOfWeek.setDate(today.getDate() - today.getDay());
-                              startOfWeek.setHours(0, 0, 0, 0);
-                              
-                              const dayIndex = days.indexOf(day);
-                              const targetDate = new Date(startOfWeek);
-                              targetDate.setDate(startOfWeek.getDate() + dayIndex);
-                              
+                              const targetDate = weekDates[dayIdx];
                               const eventDate = new Date(event.date);
                               eventDate.setHours(0, 0, 0, 0);
-                              
                               const isSameDate = eventDate.getTime() === targetDate.getTime();
                               const isLessonMatch = event.selectedLessons ? 
                                 event.selectedLessons.includes(hourIdx + 1) : 
@@ -605,7 +614,7 @@ const renderClassScheduleTable = () => {
                             return slotExams.length > 0 && (
                               <div className="slot-exams">
                                 {slotExams.map((exam, idx) => (
-                                  <div key={idx} className="exam-indicator">
+                                  <div key={idx} className="exam-indicator clickable" onClick={() => setSelectedEvent(exam)}>
                                     📄 {exam.title}
                                     {(() => {
                                       const isTeachingThisSubject = lesson && lesson.subject === exam.subject;
@@ -628,15 +637,7 @@ const renderClassScheduleTable = () => {
                           if (!schoolHours[hourIdx] || event.type !== 'exam') return false;
                           
                           const hourInfo = schoolHours[hourIdx];
-                          const today = new Date();
-                          const startOfWeek = new Date(today);
-                          startOfWeek.setDate(today.getDate() - today.getDay());
-                          startOfWeek.setHours(0, 0, 0, 0);
-                          
-                          const dayIndex = days.indexOf(day);
-                          const targetDate = new Date(startOfWeek);
-                          targetDate.setDate(startOfWeek.getDate() + dayIndex);
-                          
+                          const targetDate = weekDates[dayIdx];
                           const eventDate = new Date(event.date);
                           eventDate.setHours(0, 0, 0, 0);
                           
@@ -659,7 +660,7 @@ const renderClassScheduleTable = () => {
                               {hasEvents && (
                                 <div className="slot-events">
                                   {slotEvents.map((event, idx) => (
-                                    <div key={idx} className={`event-indicator ${event.type}`}>
+                                    <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => setSelectedEvent(event)}>
                                       {event.type === 'exam' ? '📄' : '🎯'} {event.title}
                                     </div>
                                   ))}
@@ -668,10 +669,9 @@ const renderClassScheduleTable = () => {
                               {slotExams.length > 0 && (
                                 <div className="slot-exams">
                                   {slotExams.map((exam, idx) => (
-                                    <div key={idx} className="exam-indicator">
+                                    <div key={idx} className="exam-indicator clickable" onClick={() => setSelectedEvent(exam)}>
                                       📄 {exam.title}
                                       {(() => {
-                                        // בתא ריק אין לנו lesson, אז נבדוק אם המורה מלמדת את המקצוע בכלל
                                         const isTeachingThisSubject = me?.subjects?.includes(exam.subject);
                                         if (exam.createdBy === me?._id || isTeachingThisSubject) {
                                           return null;
@@ -716,8 +716,32 @@ const renderScheduleTable = () => {
     ...days.map(day => schedule.weekPlan[day]?.length || 0)
   );
 
+  const today = new Date();
+
+  // חישוב יום ראשון של השבוע (או השבוע הבא אם היום שבת)
+  const startOfWeek = new Date(today);
+  const dayOffset = today.getDay() === 6 ? 1 : 0;
+  startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // יום שישי של השבוע
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 5);
+
+  // פונקציה לנראות תאריך בעברית
+  const formatDate = (date) => date.toLocaleDateString("he-IL");
+
+  //  מערך של תאריכי כל הימים (ראשון–שישי)
+  const weekDates = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
   return (
     <div className="schedule-table">
+      <h3>{`מתאריך ${formatDate(startOfWeek)} עד ${formatDate(endOfWeek)}`}</h3>
       <table>
         <thead>
           <tr>
@@ -747,15 +771,7 @@ const renderScheduleTable = () => {
                     if (!schoolHours[hourIdx] || event.type === 'exam') return false;
                     
                     const hourInfo = schoolHours[hourIdx];
-                    const today = new Date();
-                    const startOfWeek = new Date(today);
-                    startOfWeek.setDate(today.getDate() - today.getDay());
-                    startOfWeek.setHours(0, 0, 0, 0);
-                    
-                    const dayIndex = days.indexOf(day);
-                    const targetDate = new Date(startOfWeek);
-                    targetDate.setDate(startOfWeek.getDate() + dayIndex);
-                    
+                    const targetDate = weekDates[dayIdx];
                     const eventDate = new Date(event.date);
                     eventDate.setHours(0, 0, 0, 0);
                     
@@ -790,7 +806,7 @@ const renderScheduleTable = () => {
                           {hasEvents && (
                             <div className="slot-events">
                               {slotEvents.map((event, idx) => (
-                                <div key={idx} className={`event-indicator ${event.type}`}>
+                                <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => setSelectedEvent(event)}>
                                   <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
                                   <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small>
                                 </div>
@@ -803,15 +819,7 @@ const renderScheduleTable = () => {
                               if (!schoolHours[hourIdx] || event.type !== 'exam') return false;
                               
                               const hourInfo = schoolHours[hourIdx];
-                              const today = new Date();
-                              const startOfWeek = new Date(today);
-                              startOfWeek.setDate(today.getDate() - today.getDay());
-                              startOfWeek.setHours(0, 0, 0, 0);
-                              
-                              const dayIndex = days.indexOf(day);
-                              const targetDate = new Date(startOfWeek);
-                              targetDate.setDate(startOfWeek.getDate() + dayIndex);
-                              
+                              const targetDate = weekDates[dayIdx];
                               const eventDate = new Date(event.date);
                               eventDate.setHours(0, 0, 0, 0);
                               
@@ -833,7 +841,7 @@ const renderScheduleTable = () => {
                             return slotExams.length > 0 && (
                               <div className="slot-exams">
                                 {slotExams.map((exam, idx) => (
-                                  <div key={idx} className="exam-indicator">
+                                  <div key={idx} className="exam-indicator clickable" onClick={() => setSelectedEvent(exam)}>
                                     📄 {exam.title}
                                     {(() => {
                                       const isTeachingThisSubject = lesson && lesson.subject === exam.subject;
@@ -853,7 +861,7 @@ const renderScheduleTable = () => {
                       ) : hasEvents ? (
                         <div className="slot-events">
                           {slotEvents.map((event, idx) => (
-                            <div key={idx} className={`event-indicator ${event.type}`}>
+                            <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => setSelectedEvent(event)}>
                               <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
                               <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small>
                             </div>
@@ -864,15 +872,7 @@ const renderScheduleTable = () => {
                           if (!schoolHours[hourIdx] || event.type !== 'exam') return false;
                           
                           const hourInfo = schoolHours[hourIdx];
-                          const today = new Date();
-                          const startOfWeek = new Date(today);
-                          startOfWeek.setDate(today.getDate() - today.getDay());
-                          startOfWeek.setHours(0, 0, 0, 0);
-                          
-                          const dayIndex = days.indexOf(day);
-                          const targetDate = new Date(startOfWeek);
-                          targetDate.setDate(startOfWeek.getDate() + dayIndex);
-                          
+                          const targetDate = weekDates[dayIdx];
                           const eventDate = new Date(event.date);
                           eventDate.setHours(0, 0, 0, 0);
                           
@@ -895,7 +895,7 @@ const renderScheduleTable = () => {
                         return slotExams.length > 0 ? (
                           <div className="slot-exams">
                             {slotExams.map((exam, idx) => (
-                              <div key={idx} className="exam-indicator">
+                              <div key={idx} className="exam-indicator clickable" onClick={() => setSelectedEvent(exam)}>
                                 📄 {exam.title}
                                 {(() => {
                                   const isTeachingThisSubject = me?.subjects?.includes(exam.subject);
@@ -923,9 +923,6 @@ const renderScheduleTable = () => {
   );
 };
 
-
-
-  // עזר: render השיעור הבא
   const renderNextClass = () => {
     if (loadingNextLesson) return <p>טוען שיעור הבא...</p>;
     if (!nextLesson || !nextLesson.subject || Object.keys(nextLesson).length === 0) {
@@ -1062,7 +1059,9 @@ const renderScheduleTable = () => {
                         if (!events || events.length === 0 || !me?.classes) return "0";
                         const today = new Date();
                         const startOfWeek = new Date(today);
-                        startOfWeek.setDate(today.getDate() - today.getDay()); // ראשון
+                        // אם היום שבת (6), הצג את השבוע הבא
+                        const dayOffset = today.getDay() === 6 ? 1 : 0;
+                        startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7)); // ראשון
                         startOfWeek.setHours(0, 0, 0, 0);
                         const endOfWeek = new Date(startOfWeek);
                         endOfWeek.setDate(startOfWeek.getDate() + 6); // שבת
@@ -1582,6 +1581,46 @@ const renderScheduleTable = () => {
                 
                 {modalType === "createSchedule" && (
                   <CreateScheduleForm onSubmit={handleCreateSchedule} onCancel={closeModal} showNotification={showNotification} me={me} />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Event Details Modal */}
+        {selectedEvent && (
+          <div className="modal-overlay" onClick={() => setSelectedEvent(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{selectedEvent.type === 'exam' ? '📄' : '🎯'} {selectedEvent.title}</h3>
+                <button className="modal-close" onClick={() => setSelectedEvent(null)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="event-detail">
+                  <strong>תאריך:</strong> {new Date(selectedEvent.date).toLocaleDateString('he-IL')}
+                </div>
+                <div className="event-detail">
+                  <strong>שעה:</strong> {selectedEvent.startTime} - {selectedEvent.endTime}
+                </div>
+                {selectedEvent.subject && (
+                  <div className="event-detail">
+                    <strong>מקצוע:</strong> {selectedEvent.subject}
+                  </div>
+                )}
+                <div className="event-detail">
+                  <strong>כיתות:</strong> {selectedEvent.classes?.map(c => c.name).join(', ') || 'לא צוין'}
+                </div>
+                {selectedEvent.description && (
+                  <div className="event-detail">
+                    <strong>הערות:</strong>
+                    <div className="event-description">{selectedEvent.description}</div>
+                  </div>
+                )}
+                {selectedEvent.notes && (
+                  <div className="event-detail">
+                    <strong>הערות מהמורה:</strong>
+                    <div className="event-notes">{selectedEvent.notes}</div>
+                  </div>
                 )}
               </div>
             </div>
