@@ -286,24 +286,20 @@ const AdminDashboard = ({ onLogout }) => {
             value={formData.email || ""}
             onChange={e => setFormData({ ...formData, email: e.target.value })}
           />
-          <input
-            type="date"
-            placeholder="תאריך לידה"
-            value={formData.birthDate || ""}
-            onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
-          />
-          <input
-            type="password"
-            placeholder="סיסמה חדשה"
-            value={formData.password || ""}
-            onChange={e => setFormData({ ...formData, password: e.target.value })}
-          />
-          <input
-            type="checkbox"
-            checked={formData.ishomeroom || false}  // אם לא מוגדר, נחשב ל־false
-            onChange={e => setFormData({ ...formData, ishomeroom: e.target.checked })}
-          />
-          <label>מחנכת?</label>
+           {/* ✅ יוצג רק אם עורכים מורה */}
+            {modalType === "editTeacher" && (
+              <label style={{ display: 'block', margin: '10px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.ishomeroom || false}
+                  onChange={e => setFormData({ ...formData, ishomeroom: e.target.checked })}
+                />
+                {" "}מחנכת כיתה
+              </label>
+            )}
+          {(modalType === "editTeacher" || modalType === "editStudent") && (
+          <>
+          <label>{modalType === "editTeacher" ? 'מלמדת בכיתות:' : 'לומדת בכיתה:'}</label>
           <input
             type="text"
             placeholder="כיתות (מופרדות בפסיקים)"
@@ -315,7 +311,8 @@ const AdminDashboard = ({ onLogout }) => {
               })
             }
           />
-
+          </>
+          )}
           <button className="btn btn-primary" type="submit">שמור</button>
         </form>
       );
@@ -989,10 +986,30 @@ const nearestEvents = sortedByDistance.slice(0, 3);
         // חלוקה לאירועים עתידיים ועבר
         const now = new Date();
         const futureEvents = events
-          .filter(ev => ev.date && new Date(ev.date) >= now)
+             .filter(ev => {
+            if (!ev.date) return false;
+            const eventDate = new Date(ev.date);
+            if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+              const [hours, minutes] = ev.endTime.split(':');
+              const eventEndTime = new Date(eventDate);
+              eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+              return eventEndTime > now;
+            }
+            return eventDate > now;
+          })
           .sort((a, b) => new Date(a.date) - new Date(b.date));
         const pastEvents = events
-          .filter(ev => ev.date && new Date(ev.date) < now)
+          .filter(ev => {
+            if (!ev.date) return false;
+            const eventDate = new Date(ev.date);
+            if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+              const [hours, minutes] = ev.endTime.split(':');
+              const eventEndTime = new Date(eventDate);
+              eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+              return eventEndTime <= now;
+            }
+            return eventDate < now;
+          })
           .sort((a, b) => new Date(b.date) - new Date(a.date));
         return (
           <div className="dashboard-content">

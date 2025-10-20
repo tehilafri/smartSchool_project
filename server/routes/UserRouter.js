@@ -37,7 +37,7 @@ router.put('/reset-password/:token', resetPassword);
 router.get('/secretaries', jwtMiddleware, getAllSecretaries);
 router.get('/:id', jwtMiddleware, getUserById);
 router.put('/:id', jwtMiddleware, updateUser);
-router.delete('/:id', jwtMiddleware, requireRole('admin'),deleteUser);
+router.delete('/:id', jwtMiddleware, requireRole('admin', 'secretary'), deleteUser);
 
 
 

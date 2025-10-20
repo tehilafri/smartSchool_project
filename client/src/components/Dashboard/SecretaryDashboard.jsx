@@ -104,7 +104,11 @@ const SecretaryDashboard = ({ onLogout }) => {
   };
 
   const handleUpdateUser = async (id) => {
-    await updateUser(id, formData);
+    const classNames = (formData.classes || []).map(id => {
+    const cls = classes.find(c => c._id === id);
+    return cls ? cls.name : id; // מחליף ID בשם
+  });
+    await updateUser(id, { ...formData, classes: classNames });
     closeModal();
     fetchAllData();
   };
@@ -453,10 +457,30 @@ const SecretaryDashboard = ({ onLogout }) => {
         // חלוקה לאירועים עתידיים ועבר
         const now = new Date();
         const futureEvents = events
-          .filter(ev => ev.date && new Date(ev.date) >= now)
+          .filter(ev => {
+            if (!ev.date) return false;
+            const eventDate = new Date(ev.date);
+            if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+              const [hours, minutes] = ev.endTime.split(':');
+              const eventEndTime = new Date(eventDate);
+              eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+              return eventEndTime > now;
+            }
+            return eventDate > now;
+          })
           .sort((a, b) => new Date(a.date) - new Date(b.date));
         const pastEvents = events
-          .filter(ev => ev.date && new Date(ev.date) < now)
+          .filter(ev => {
+            if (!ev.date) return false;
+            const eventDate = new Date(ev.date);
+            if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+              const [hours, minutes] = ev.endTime.split(':');
+              const eventEndTime = new Date(eventDate);
+              eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+              return eventEndTime <= now;
+            }
+            return eventDate < now;
+          })
           .sort((a, b) => new Date(b.date) - new Date(a.date));
         return (
           <div className="dashboard-content">
