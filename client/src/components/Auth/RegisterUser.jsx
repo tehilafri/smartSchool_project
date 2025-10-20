@@ -18,13 +18,11 @@ const RegisterUser = () => {
     phone: "",
     birthDate: "",
     password: "",
-    role: roleParam,
-    classes: "",
-    subjects: "",
-    ishomeroom: false,
+    role: roleParam
   });
 
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +57,7 @@ const RegisterUser = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // נקה שגיאות קודמות
     try {
       const payload = {
         ...formData,
@@ -88,7 +87,7 @@ const RegisterUser = () => {
       });
     } catch (err) {
       console.error(err);
-      setMessage("❌ שגיאה: " + (err.response?.data?.message || err.message));
+      setError(err.response?.data?.message || err.message || "שגיאה לא ידועה");
     }
   };
 
@@ -252,44 +251,22 @@ const RegisterUser = () => {
             </div>
           )}
 
-          {(formData.role === 'teacher' || formData.role === 'student') && (
+          {(formData.role === 'student') && (
             <div className="form-group">
-              <label>כיתות (מופרדות בפסיקים)</label>
+              <label>כיתת לימוד</label>
               <input
                 type="text"
                 name="classes"
-                placeholder="לדוגמה: א1, ב2, ג3"
                 value={formData.classes}
                 onChange={handleChange}
               />
             </div>
           )}
 
-          {formData.role === 'teacher' && (
-            <>
-              <div className="form-group">
-                <label>מקצועות (מופרדים בפסיקים)</label>
-                <input
-                  type="text"
-                  name="subjects"
-                  placeholder="לדוגמה: מתמטיקה, פיזיקה, כימיה"
-                  value={formData.subjects}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="ishomeroom"
-                    checked={formData.ishomeroom}
-                    onChange={handleChange}
-                  />
-                  <span className="checkmark"></span>
-                  מחנכת כיתה
-                </label>
-              </div>
-            </>
+          {error && (
+            <div className="error-message">
+              ❌ {error}
+            </div>
           )}
 
           <div className="form-actions">

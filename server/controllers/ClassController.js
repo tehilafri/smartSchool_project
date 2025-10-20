@@ -56,6 +56,9 @@ export const createClass = async (req, res) => {
       teacher.classes.push(newClass._id);
       await teacher.save();
     }
+    //עדכון השדה isHomeroom ב-User
+    teacher.ishomeroom = true;
+    await teacher.save();
 
     // עדכון תלמידים
     if (validStudents.length > 0) {
@@ -93,6 +96,7 @@ export const updateHomeroomTeacher = async (req, res) => {
       const oldTeacher = await User.findById(classDoc.homeroomTeacher);
       if (oldTeacher) {
         oldTeacher.classes = oldTeacher.classes.filter(cId => !cId.equals(classDoc._id));
+        oldTeacher.ishomeroom = false; //מורה לא יכולה להיות מחנכת ב2 כיתות 
         await oldTeacher.save();
       }
     }
@@ -124,6 +128,7 @@ export const deleteClass = async (req, res) => {
       const teacher = await User.findById(deletedClass.homeroomTeacher);
       if (teacher) {
         teacher.classes = teacher.classes.filter(cId => !cId.equals(deletedClass._id));
+        teacher.ishomeroom = false; //מורה לא יכולה להיות מחנכת ב2 כיתות בכל מקרה....
         await teacher.save();
       }
     }

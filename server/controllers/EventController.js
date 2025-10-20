@@ -333,3 +333,32 @@ export const getNextExam = async (req, res) => {
     res.status(500).json({ message: 'Error fetching next exam', error });
   }
 };
+
+export const getJewishHolidays = async (req, res) => {
+  try {
+    const year = req.query.year || new Date().getFullYear();
+
+    const response = await fetch(
+      `https://www.hebcal.com/hebcal/?v=1&year=${year}&cfg=json&maj=on&min=on&mod=on&nx=on&s=on`
+    );
+    const data = await response.json();
+
+    // ניקוי וסינון — רק חגים יהודיים 
+    const jewishHolidays = data.items
+      .filter((item) => item.category === "holiday")
+      .map((h) => ({
+        title: h.title,
+        hebrew: h.hebrew || "",
+        date: h.date,
+      }));
+
+    res.json({
+      year,
+      total: jewishHolidays.length,
+      holidays: jewishHolidays,
+    });
+  } catch (error) {
+    console.error("Error fetching holidays:", error);
+    res.status(500).json({ message: "Failed to fetch holidays" });
+  }
+};

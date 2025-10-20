@@ -2,10 +2,12 @@ import { useState, useEffect, useState as useState2 } from "react"
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
-import { getMe, getAllStudents, updateUser, deleteUser } from "../../services/userService";
-import { getAllClasses, addStudentToClass, removeStudentFromClass, updateHomeroomTeacher } from "../../services/classService";
+import { getMe, getAllTeachers, getAllStudents, updateUser, deleteUser } from "../../services/userService";
+import { getAllClasses, addStudentToClass, removeStudentFromClass,getStudentsByName, updateHomeroomTeacher } from "../../services/classService";
 import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/eventService";
+import { getScheduleByTeacher, getHomeroomClassSchedule } from "../../services/scheduleService";
 import { getAllExternalSubstitutes, addExternalSubstitute, deleteExternalSubstitute, updateExternalSubstitute } from "../../services/externalSubstituteService";
+import { renderTeacherSchedule, renderClassSchedule } from "./AdminDashboard";
 import "./Dashboard.css"
 
 const SecretaryDashboard = ({ onLogout }) => {
@@ -17,20 +19,30 @@ const SecretaryDashboard = ({ onLogout }) => {
   const [formData, setFormData] = useState({})
   const [me, setMe] = useState2(null);
   const [students, setStudents] = useState([])
+  const [teachers, setTeachers] = useState([]);
   const [classes, setClasses] = useState([])
   const [events, setEvents] = useState([])
   const [substitutes, setSubstitutes] = useState([])
+  const [expandedClass, setExpandedClass] = useState(null);
+  const [classStudents, setClassStudents] = useState([]); 
+  const [activeScheduleTab, setActiveScheduleTab] = useState('teachers');
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [selectedTeacherSchedule, setSelectedTeacherSchedule] = useState(null);
+  const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
 
   const fetchAllData = async () => {
     try {
-      const [meRes, studentsRes, classesRes, eventsRes, substitutesRes] = await Promise.all([
+      const [meRes, teachersRes, studentsRes, classesRes, eventsRes, substitutesRes] = await Promise.all([
         getMe(),
+        getAllTeachers(),
         getAllStudents(),
         getAllClasses(),
         getEvents(),
         getAllExternalSubstitutes()
       ]);
       setMe(meRes?.data);
+      setTeachers(teachersRes?.data || []);
       setStudents(studentsRes?.data || []);
       setClasses(classesRes || []);
       setEvents(eventsRes || []);
@@ -46,9 +58,11 @@ const SecretaryDashboard = ({ onLogout }) => {
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
+    { id: "teachers", label: "ניהול מורות", icon: "👩‍🏫" },
     { id: "students", label: "ניהול תלמידים", icon: "👨" },
     { id: "events", label: "ניהול אירועים", icon: "🎉" },
     { id: "classes", label: "ניהול כיתות", icon: "🏫" },
+    { id: "schedule", label: "מערכת שעות", icon: "📅" },
     { id: "substitutes", label: "ממלאי מקום", icon: "🔄" },
     { id: "calendar", label: "יומן בית ספרי", icon: "📅" },
     { id: "reports", label: "דוחות", icon: "📈" },
@@ -82,7 +96,7 @@ const SecretaryDashboard = ({ onLogout }) => {
     if (modalDataCopy?.classes && Array.isArray(modalDataCopy.classes) && modalDataCopy.classes.length > 0) {
       // אם זה אובייקטים, תוציא מזהים, אם כבר מזהים תשאיר
       if (typeof modalDataCopy.classes[0] === "object" && modalDataCopy.classes[0] !== null) {
-        modalDataCopy.classes = modalDataCopy.classes.map(c => c._id);
+        modalDataCopy.classes = modalDataCopy.classes.map(c => c.name);
       }
     }
     setModalType(type)
@@ -176,9 +190,56 @@ const SecretaryDashboard = ({ onLogout }) => {
     fetchAllData();
   };
 
+  // טעינת מערכת שעות של מורה
+  const loadTeacherSchedule = async (teacherId) => {
+    try {
+      const scheduleData = await getScheduleByTeacher(teacherId);
+      const formattedSchedule = formatSchedule(scheduleData);
+      setSelectedTeacherSchedule(formattedSchedule);
+    } catch (err) {
+      console.error('Error loading teacher schedule:', err);
+    }
+  };
+
+  // טעינת מערכת שעות של כיתה
+  const loadClassSchedule = async (classId) => {
+    try {
+      const scheduleData = await getHomeroomClassSchedule(classId);
+      if (!scheduleData || scheduleData.length === 0) {
+        setSelectedClassSchedule(null);
+        return;
+      }
+      const formattedSchedule = formatSchedule(scheduleData);
+      setSelectedClassSchedule(formattedSchedule);
+    } catch (err) {
+      // אין מערכת שעות לכיתה זו
+      setSelectedClassSchedule(null);
+    }
+  };
+
+  // פורמט מערכת שעות
+  const formatSchedule = (teacherSchedule) => {
+    const weekPlan = {
+      sunday: [],
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+    };
+
+    teacherSchedule.forEach(dayObj => {
+      const { day, lessons } = dayObj;
+      const sortedLessons = lessons.sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+      weekPlan[day] = sortedLessons;
+    });
+
+    return { weekPlan };
+  };
+
   const renderModalForm = () => {
-    if (modalType === "editStudent") {
-      return (
+     if (modalType === "editStudent" || modalType === "editTeacher") {
+     return (
         <form onSubmit={e => {
           e.preventDefault();
           handleUpdateUser(modalData._id);
@@ -201,16 +262,31 @@ const SecretaryDashboard = ({ onLogout }) => {
             value={formData.email || ""}
             onChange={e => setFormData({ ...formData, email: e.target.value })}
           />
+          <>
           <input
             type="tel"
             placeholder="טלפון"
             value={formData.phone || ""}
             onChange={e => setFormData({ ...formData, phone: e.target.value })}
           />
+          <label>{modalType === "editTeacher" ? 'מלמדת בכיתות:' : 'לומדת בכיתה:'}</label>
+          <input
+            type="text"
+            placeholder="כיתות (מופרדות בפסיקים)"
+            value={formData.classes || ""}
+            onChange={e =>
+              setFormData({
+                ...formData,
+                classes: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
+              })
+            }
+          />
+          </>
           <button className="btn btn-primary" type="submit">שמור</button>
         </form>
       );
     }
+
     if (modalType === "addEvent" || modalType === "editEvent") {
       return (
         <form onSubmit={e => {
@@ -348,18 +424,18 @@ const SecretaryDashboard = ({ onLogout }) => {
                   <p>תלמידים</p>
                 </div>
               </div>
+             <div className="stat-card">
+                <div className="stat-icon">👩‍🏫</div>
+                <div className="stat-info">
+                  <h3>{teachers.length}</h3>
+                  <p>מורות</p>
+                </div>
+              </div>
               <div className="stat-card">
                 <div className="stat-icon">🏫</div>
                 <div className="stat-info">
                   <h3>{classes.length}</h3>
                   <p>כיתות</p>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon">🎉</div>
-                <div className="stat-info">
-                  <h3>{events.length}</h3>
-                  <p>אירועים</p>
                 </div>
               </div>
               <div className="stat-card">
@@ -411,6 +487,47 @@ const SecretaryDashboard = ({ onLogout }) => {
           </div>
         )
 
+      case "teachers":
+        return (
+          <div className="dashboard-content">
+            <div className="section-header">
+              <h2>ניהול מורות</h2>
+              <button className="btn btn-primary" onClick={() => navigate("/register_user?role=teacher")}>
+                הוסף מורה
+              </button>
+            </div>
+            <div className="data-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>שם</th>
+                    <th>סל מקצועות</th>
+                    <th>כיתות לימוד</th>
+                    <th>אימייל</th>
+                    <th>טלפון</th>
+                    <th>פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teachers.map((teacher) => (
+                    <tr key={teacher._id}>
+                      <td>{teacher.firstName} {teacher.lastName}</td>
+                      <td>{teacher.subjects ? teacher.subjects.join(", ") : "-"}</td>
+                      <td>{teacher.classes ? teacher.classes.map(cls => cls.name).join(", ") : "-"}</td>
+                      <td>{teacher.email || "-"}</td>
+                      <td>{teacher.phone || "-"}</td>
+                      <td>
+                        <button className="btn-small btn-outline" onClick={() => openModal("editTeacher", teacher)}>✏️</button>
+                        <button className="btn-small btn-danger" onClick={() => handleDeleteUser(teacher._id)}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+
       case "students":
         return (
           <div className="dashboard-content">
@@ -452,6 +569,80 @@ const SecretaryDashboard = ({ onLogout }) => {
             </div>
           </div>
         )
+      
+        case "schedule":
+        return (
+          <div className="dashboard-content">
+            <h2>מערכת שעות</h2>
+            
+            <div className="schedule-tabs">
+              <button 
+                className={`tab-button ${activeScheduleTab === 'teachers' ? 'active' : ''}`}
+                onClick={() => setActiveScheduleTab('teachers')}
+              >
+                מערכת מורות
+              </button>
+              <button 
+                className={`tab-button ${activeScheduleTab === 'classes' ? 'active' : ''}`}
+                onClick={() => setActiveScheduleTab('classes')}
+              >
+                מערכת כיתות
+              </button>
+            </div>
+            
+            {activeScheduleTab === 'teachers' && (
+              <div className="teachers-schedule-section">
+                <div className="teacher-selector">
+                  <label>בחר מורה:</label>
+                  <select 
+                    value={selectedTeacherId} 
+                    onChange={(e) => {
+                      setSelectedTeacherId(e.target.value);
+                      if (e.target.value) loadTeacherSchedule(e.target.value);
+                    }}
+                  >
+                    <option value="">בחר מורה...</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.firstName} {teacher.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedTeacherSchedule && renderTeacherSchedule(me, selectedTeacherSchedule)}
+              </div>
+            )}
+            
+            {activeScheduleTab === 'classes' && (
+              <div className="classes-schedule-section">
+                <div className="class-selector">
+                  <label>בחר כיתה:</label>
+                  <select 
+                    value={selectedClassId} 
+                    onChange={(e) => {
+                      setSelectedClassId(e.target.value);
+                      if (e.target.value) loadClassSchedule(e.target.value);
+                    }}
+                  >
+                    <option value="">בחר כיתה...</option>
+                    {classes.map(cls => (
+                      <option key={cls._id} value={cls._id}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedClassId && (
+                  selectedClassSchedule ? renderClassSchedule(me, selectedClassSchedule) : (
+                    <div className="no-schedule-message">
+                      <p>לא הוכנסה מערכת שעות לכיתה זו</p>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        );
 
       case "events":
         // חלוקה לאירועים עתידיים ועבר
@@ -594,7 +785,7 @@ const SecretaryDashboard = ({ onLogout }) => {
                   <div className="form-inline">
                     <input
                       type="text"
-                      placeholder="ת״ז מחנכת חדשה"
+                      placeholder="ת״ז מחנכת חדשה לשינוי"
                       value={formData[cls._id]?.homeroomTeacher || ""}
                       onChange={(e) =>
                         setFormData({
@@ -617,67 +808,45 @@ const SecretaryDashboard = ({ onLogout }) => {
                     >
                      ✏️
                     </button>
-                  </div>
-                  <div className="form-inline">
-                    <input
-                      type="text"
-                      placeholder="ת״ז תלמיד להוספה"
-                      value={formData[cls._id]?.newStudentId || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [cls._id]: {
-                            ...formData[cls._id],
-                            newStudentId: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                    <button
-                      className="btn-small btn-primary"
-                      onClick={() =>
-                        handleAddStudentToClass(
-                          cls.name,
-                          formData[cls._id]?.newStudentId
-                        )
-                      }
-                    >
-                     ➕ 
-                    </button>
-                  </div>
-
-                  <div className="form-inline">
-                    <input
-                      type="text"
-                      placeholder="ת״ז תלמיד למחיקה"
-                      value={formData[cls._id]?.removeStudentId || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [cls._id]: {
-                            ...formData[cls._id],
-                            removeStudentId: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                    <button
-                      className="btn-small btn-danger"
-                      onClick={() =>
-                        handleRemoveStudentFromClass(
-                          cls.name,
-                          formData[cls._id]?.removeStudentId
-                        )
-                      }
-                    >
-                      ➖
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
+                  </div> 
+                  <div className="class-actions">
+                                     <button
+                                       className="btn-small btn-info"
+                                       onClick={async () => {
+                                         if (expandedClass === cls._id) {
+                                           setExpandedClass(null); // סגירה
+                                         } else {
+                                           const data = await getStudentsByName(cls.name);
+                                           setExpandedClass(cls._id);
+                                           setClassStudents(data || []);
+                                         }
+                                       }}
+                                      > פרטים </button>
+                 
+                                   </div>
+                 
+                                   {/* הצגת תלמידים */}
+                                   {expandedClass === cls._id && (
+                                     <div className="students-list">
+                                       <h4>תלמידים בכיתה {cls.name}</h4>
+                                       {classStudents.length > 0 ? (
+                                         <ul>
+                                           {classStudents.map((st) => (
+                                             <li key={st._id}>
+                                                ת''ז: {st.userId}, שם: {st.firstName} {st.lastName}, אימייל: {st.email}
+                                             </li>
+                                           ))}
+                                         </ul>
+                                       ) : (
+                                         <p>אין תלמידים בכיתה זו.</p>
+                                       )}
+                                     </div>
+                                   )}
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
+                         );
 
       case "substitutes":
         return (
@@ -778,6 +947,7 @@ const SecretaryDashboard = ({ onLogout }) => {
             <div className="modal-header">
               <h3>
                 {modalType === "editStudent" && "עריכת תלמיד"}
+                {modalType === "editTeacher" && "עריכת מורה"}
                 {modalType === "addEvent" && "הוספת אירוע חדש"}
                 {modalType === "editEvent" && "עריכת אירוע"}
                 {modalType === "addSubstitute" && "הוספת ממלא מקום"}

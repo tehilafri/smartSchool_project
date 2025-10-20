@@ -92,8 +92,18 @@ export const register = async (req, res) => {
 
   } catch (err) {
     console.error(err);
+
+    // אם זו שגיאת כפילות של MongoDB
+    if (err.code === 11000) {
+        const duplicateField = Object.keys(err.keyValue)[0]; // שדה שחזר כפול
+        const duplicateValue = err.keyValue[duplicateField];
+        return res.status(400).json({
+            message: `משתמש עם אותו ${duplicateField === 'userName' ? 'שם משתמש' : duplicateField === 'userId' ? 'תעודת זהות' : 'מייל'} כבר קיים בבית הספר`
+        });
+    }
+
     res.status(500).json({ message: 'Server error', error: err.message });
-  }
+}
 };
 
 export const login = async (req, res) => {
@@ -263,7 +273,6 @@ export const updateUser = async (req, res) => {
       if (currentUser._id.toString() !== user._id.toString()) {
         return res.status(403).json({ message: 'You can only update your own profile' });
       }
-      if (role) return res.status(403).json({ message: 'You cannot change your role' });
     }
 
     if (currentUser.role === 'secretary') {
@@ -282,45 +291,48 @@ export const updateUser = async (req, res) => {
       user.ishomeroom = ishomeroom;
     }
 
-    // עדכון כיתות
-    // עדכון כיתות
-  if (classes) {
+  // עדכון כיתות
+    if (classes) {
+      // שליפה של כל הכיתות שהוזנו
+      const existingClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
+      const existingNames = existingClasses.map(c => c.name);
+      const invalidNames = classes.filter(c => !existingNames.includes(c));
+      if (invalidNames.length > 0) {
+        return res.status(400).json({ message: `These classes do not exist: ${invalidNames.join(', ')}` });
+      }
 
-    // שליפה של כל הכיתות שהוזנו
-    const existingClasses = await Class.find({ name: { $in: classes }, schoolId: req.schoolId });
-    const existingNames = existingClasses.map(c => c.name);
-    const invalidNames = classes.filter(c => !existingNames.includes(c));
-    if (invalidNames.length > 0) {
-      return res.status(400).json({ message: `These classes do not exist: ${invalidNames.join(', ')}` });
-    }
+      // בדיקת הרשאות לעדכון
+      const canUpdateClasses =
+        currentUser.role === 'admin' ||
+        currentUser.role === 'secretary' ||
+        (currentUser.role === 'teacher' && currentUser._id.toString() === user._id.toString());
 
-    // בדיקת הרשאות לעדכון
-    if (
-      currentUser.role === 'admin' ||
-      currentUser.role === 'secretary' ||
-      (currentUser.role === 'teacher' && currentUser._id.toString() === user._id.toString())
-    ) {
-      // שמירת הרשימה החדשה ב-user עצמו
+      if (!canUpdateClasses) return res.status(403).json({ message: 'You cannot update classes for this user' });
+
+      // שמירת הרשימה החדשה
       const newClassIds = existingClasses.map(c => c._id);
       const oldClassIds = user.classes.map(c => c.toString());
       user.classes = newClassIds;
 
-      // 1. הוספה – בכיתות החדשות שעדיין לא היה בהן
+      // עדכון השדה לפי תפקיד
+      const field = user.role === 'teacher' ? 'teachers' : 'students';
+
+      // הוספה בכיתות החדשות
       for (const classDoc of existingClasses) {
-        if (!classDoc.teachers.includes(user._id)) {
-          classDoc.teachers.push(user._id);
+        if (!classDoc[field].includes(user._id)) {
+          classDoc[field].push(user._id);
           await classDoc.save();
         }
       }
 
-      // 2. הסרה – כיתות שהיו בעבר וכבר לא מופיעות עכשיו
+      // הסרה מהכיתות הישנות
       const removedClasses = await Class.find({ _id: { $in: oldClassIds.filter(id => !newClassIds.includes(id)) } });
       for (const classDoc of removedClasses) {
-        classDoc.teachers = classDoc.teachers.filter(tid => tid.toString() !== user._id.toString());
+        classDoc[field] = classDoc[field].filter(id => id.toString() !== user._id.toString());
         await classDoc.save();
       }
     }
-  }
+
 
     // עדכון מקצועות (strings)
     if (subjects && (currentUser.role === 'secretary' || currentUser.role === 'teacher' || currentUser.role === 'admin')) {

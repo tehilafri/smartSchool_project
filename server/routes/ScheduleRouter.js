@@ -8,10 +8,10 @@ router.post('/createSchedule', jwtMiddleware , requireRole('teacher', 'admin'), 
 router.get('/nextLesson', jwtMiddleware, requireRole('student'), getNextLessonForStudent);
 router.get('/nextLessonForTeacher', jwtMiddleware, requireRole('teacher'), getNextLessonForTeacher);
 router.get('/ScheduleByTeacher', jwtMiddleware, requireRole('teacher', 'admin'), getScheduleByTeacher);
-router.get('/ScheduleByTeacher/:teacherId', jwtMiddleware, requireRole('admin'), getScheduleByTeacher);
+router.get('/ScheduleByTeacher/:teacherId', jwtMiddleware, requireRole('admin','secretary'), getScheduleByTeacher);
 router.put('/updateDay', jwtMiddleware, requireRole('teacher', 'admin'), updateScheduleDay);
 router.get('/getScheduleForStudent', jwtMiddleware, requireRole('student'), getScheduleForStudent);
 router.get('/homeroomClassSchedule', jwtMiddleware, requireRole('teacher'), getHomeroomClassSchedule);
-router.get('/homeroomClassSchedule/:classId', jwtMiddleware, requireRole('admin'), getHomeroomClassSchedule);
+router.get('/homeroomClassSchedule/:classId', jwtMiddleware, requireRole('admin','secretary'), getHomeroomClassSchedule);
 
 export default router;

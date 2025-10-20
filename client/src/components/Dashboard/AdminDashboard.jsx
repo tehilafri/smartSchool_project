@@ -12,6 +12,121 @@ import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
 
+ // רנדר מערכת שעות מורה
+  export const renderTeacherSchedule = (me, selectedTeacherSchedule) => {
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
+    const schoolHours = me?.schoolId?.scheduleHours || [];
+    const maxLessons = schoolHours.length;
+
+    return (
+      <div className="schedule-container">
+        <div className="schedule-table">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
+                const hourInfo = schoolHours[hourIdx];
+                return (
+                  <tr key={hourIdx}>
+                    <td className="time-slot">
+                      <div className="hour-info">
+                        <div className="hour-number">שעה {hourIdx + 1}</div>
+                        {hourInfo && (
+                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                        )}
+                      </div>
+                    </td>
+                    {days.map((day, dayIdx) => {
+                      const lesson = selectedTeacherSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
+                      return (
+                        <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"}`}>
+                          {lesson ? (
+                            <>
+                              <strong>{lesson.subject || "—"}</strong><br />
+                              <small>
+                                {lesson.classId
+                                  ? `כיתה ${lesson.classId.name}` 
+                                  : "—"}
+                              </small>
+                            </>
+                          ) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // רנדר מערכת שעות כיתה
+  export const renderClassSchedule = (me, selectedClassSchedule) => {
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
+    const schoolHours = me?.schoolId?.scheduleHours || [];
+    const maxLessons = schoolHours.length;
+
+    return (
+      <div className="schedule-container">
+        <div className="schedule-table">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
+                const hourInfo = schoolHours[hourIdx];
+                return (
+                  <tr key={hourIdx}>
+                    <td className="time-slot">
+                      <div className="hour-info">
+                        <div className="hour-number">שעה {hourIdx + 1}</div>
+                        {hourInfo && (
+                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                        )}
+                      </div>
+                    </td>
+                    {days.map((day, dayIdx) => {
+                      const lesson = selectedClassSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
+                      const hasLesson = lesson && (lesson.subject || lesson.teacherId);
+                      return (
+                        <td key={dayIdx} className={`class-slot ${hasLesson ? "" : "empty"}`}>
+                          {hasLesson ? (
+                            <>
+                              <strong>{lesson.subject || "—"}</strong><br />
+                              <small>
+                                {lesson.teacherId
+                                  ? `${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}`
+                                  : "—"}
+                              </small>
+                            </>
+                          ) : "—"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
 const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
 
@@ -118,13 +233,6 @@ const AdminDashboard = ({ onLogout }) => {
   // מחיקת משתמש  
   const handleDeleteUser = async (id) => { //לפי מזהה של מונגו!!
     await deleteUser(id);
-    fetchAllData();
-  };
-
-  // יצירת משתמש חדש (מורה/מזכירה/תלמידה)
-  const handleAddUser = async (role) => {
-    await registerUser({ ...formData, role });
-    closeModal();
     fetchAllData();
   };
 
@@ -286,17 +394,12 @@ const AdminDashboard = ({ onLogout }) => {
             value={formData.email || ""}
             onChange={e => setFormData({ ...formData, email: e.target.value })}
           />
-           {/* ✅ יוצג רק אם עורכים מורה */}
-            {modalType === "editTeacher" && (
-              <label style={{ display: 'block', margin: '10px 0' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.ishomeroom || false}
-                  onChange={e => setFormData({ ...formData, ishomeroom: e.target.checked })}
-                />
-                {" "}מחנכת כיתה
-              </label>
-            )}
+          <input
+            type="tel"
+            placeholder="טלפון"
+            value={formData.phone || ""}
+            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+          />
           {(modalType === "editTeacher" || modalType === "editStudent") && (
           <>
           <label>{modalType === "editTeacher" ? 'מלמדת בכיתות:' : 'לומדת בכיתה:'}</label>
@@ -336,12 +439,7 @@ const AdminDashboard = ({ onLogout }) => {
           onChange={e => setFormData({ ...formData, homeroomTeacher: e.target.value })}
           required
           />
-          <input type="text" 
-          placeholder="ת''ז תלמידים (מופרדים בפסיקים)"
-          value={formData.students || ""}
-          onChange={e => setFormData({ ...formData, students: e.target.value })}
-          />
-          <button className="btn btn-primary" type="submit" onClick={handleAddClass}>שמור</button>
+          <button className="btn btn-primary" type="submit">שמור</button>
         </form>
       );
     }
@@ -779,7 +877,7 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                   <div className="form-inline">
                     <input
                       type="text"
-                      placeholder="ת״ז מחנכת חדשה"
+                      placeholder="ת״ז מחנכת חדשה לשינוי"
                       value={formData[cls._id]?.homeroomTeacher || ""}
                       onChange={(e) =>
                         setFormData({
@@ -804,63 +902,6 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                     </button>
                   </div>
 
-                  {/* הוספת תלמיד */}
-                  <div className="form-inline">
-                    <input
-                      type="text"
-                      placeholder="ת״ז תלמיד להוספה"
-                      value={formData[cls._id]?.newStudentId || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [cls._id]: {
-                            ...formData[cls._id],
-                            newStudentId: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                    <button
-                      className="btn-small btn-primary"
-                      onClick={() =>
-                        handleAddStudentToClass(
-                          cls.name,
-                          formData[cls._id]?.newStudentId
-                        )
-                      }
-                    >
-                      ➕
-                    </button>
-                  </div>
-
-                  {/* הסרת תלמיד */}
-                  <div className="form-inline">
-                    <input
-                      type="text"
-                      placeholder="ת״ז תלמיד למחיקה"
-                      value={formData[cls._id]?.removeStudentId || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [cls._id]: {
-                            ...formData[cls._id],
-                            removeStudentId: e.target.value,
-                          },
-                        })
-                      }
-                    />
-                    <button
-                      className="btn-small btn-danger"
-                      onClick={() =>
-                        handleRemoveStudentFromClass(
-                          cls.name,
-                          formData[cls._id]?.removeStudentId
-                        )
-                      }
-                    >
-                     🗑️
-                    </button>
-                  </div>
 
                   {/* כפתורי פעולות */}
                   <div className="class-actions">
@@ -947,7 +988,7 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                     ))}
                   </select>
                 </div>
-                {selectedTeacherSchedule && renderTeacherSchedule()}
+                {selectedTeacherSchedule && renderTeacherSchedule(me, selectedTeacherSchedule)}
               </div>
             )}
             
@@ -971,7 +1012,7 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                   </select>
                 </div>
                 {selectedClassId && (
-                  selectedClassSchedule ? renderClassSchedule() : (
+                  selectedClassSchedule ? renderClassSchedule(me, selectedClassSchedule) : (
                     <div className="no-schedule-message">
                       <p>לא הוכנסה מערכת שעות לכיתה זו</p>
                     </div>
@@ -1109,6 +1150,60 @@ const nearestEvents = sortedByDistance.slice(0, 3);
         );
 
       case "absences":
+        const todayAbsences = new Date();
+        todayAbsences.setHours(0, 0, 0, 0);
+        
+        const futureAbsences = absences.requests
+          .filter(absence => {
+            const absenceDate = new Date(absence.date);
+            absenceDate.setHours(0, 0, 0, 0);
+            return absenceDate >= todayAbsences;
+          })
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        const pastAbsences = absences.requests
+          .filter(absence => {
+            const absenceDate = new Date(absence.date);
+            absenceDate.setHours(0, 0, 0, 0);
+            return absenceDate < todayAbsences;
+          })
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const renderAbsenceCard = (absence) => {
+          const teacherName =
+            absence.teacherName ||
+            (absence.originalTeacherId ? `${absence.originalTeacherId.firstName || ""} ${absence.originalTeacherId.lastName || ""}`.trim() : (absence.teacher || "לא ידוע"));
+          const substituteName =
+            absence.substituteName ||
+            (absence.substituteTeacher ? `${absence.substituteTeacher.firstName || ""} ${absence.substituteTeacher.lastName || ""}`.trim() : (absence.substitute || "טרם נמצא"));
+          const dateStr = absence.date
+            ? (() => {
+                try { return new Date(absence.date).toLocaleDateString("he-IL"); }
+                catch (e) { return absence.date; }
+              })()
+            : "-";
+          const hoursStr = absence.hours || `${absence.startTime || "-"} - ${absence.endTime || "-"}`;
+          const className = classes.find(c => c._id === absence.classId)?.name || "-";
+          const statusText = absence.statusText || absence.status || "-";
+
+          return (
+            <div className={`absence-card ${absence.status || ""}`} key={absence._id}>
+              <div className="absence-header">
+                <h4>{teacherName}</h4>
+                <span className={`status-badge ${absence.status || ""}`}>{statusText}</span>
+              </div>
+              <div className="absence-details">
+                <p><strong>תאריך:</strong> {dateStr}</p>
+                <p><strong>שעות:</strong> {hoursStr}</p>
+                <p><strong>סיבה:</strong> {absence.reason || "-"}</p>
+                <p><strong>כיתה מושפעת:</strong> {className}</p>
+                <p><strong>מחליף:</strong> {substituteName}</p>
+                {absence.notes && <p><strong>הערות נוספות:</strong> {absence.notes}</p>}
+              </div>
+            </div>
+          );
+        };
+
         return (         
           <div className="dashboard-content">
             <h2>בקשות היעדרות</h2>
@@ -1116,44 +1211,25 @@ const nearestEvents = sortedByDistance.slice(0, 3);
             {Array.isArray(absences) && absences.length === 0 ? (
               <p>אין בקשות היעדרות כרגע.</p>
             ) : (
-              <div className="absence-requests">
-                {absences.requests.map((absence) => {
-                  // חישובי שדות בצורה עמידה במקרה שהשדות מגיעים בצורות שונות
-                  const teacherName =
-                    absence.teacherName ||
-                    (absence.originalTeacherId ? `${absence.originalTeacherId.firstName || ""} ${absence.originalTeacherId.lastName || ""}`.trim() : (absence.teacher || "לא ידוע"));
-                  const substituteName =
-                    absence.substituteName ||
-                    (absence.substituteTeacher ? `${absence.substituteTeacher.firstName || ""} ${absence.substituteTeacher.lastName || ""}`.trim() : (absence.substitute || "טרם נמצא"));
-                  const dateStr = absence.date
-                    ? (() => {
-                        try { return new Date(absence.date).toLocaleDateString("he-IL"); }
-                        catch (e) { return absence.date; }
-                      })()
-                    : "-";
-                  const hoursStr = absence.hours || `${absence.startTime || "-"} - ${absence.endTime || "-"}`;
-                  const classesStr = Array.isArray(absence.classes) ? absence.classes.join(", ") : (absence.classes || "-");
-                  const statusText = absence.statusText || absence.status || "-";
-
-                  return (
-                    <div className={`absence-card ${absence.status || ""}`} key={absence._id}>
-                      <div className="absence-header">
-                        <h4>{teacherName}</h4>
-                        <span className={`status-badge ${absence.status || ""}`}>{statusText}</span>
-                      </div>
-
-                      <div className="absence-details">
-                        <p><strong>תאריך:</strong> {dateStr}</p>
-                        <p><strong>שעות:</strong> {hoursStr}</p>
-                        <p><strong>סיבה:</strong> {absence.reason || "-"}</p>
-                        <p><strong>כיתות מושפעות:</strong> {classesStr}</p>
-                        <p><strong>מחליף:</strong> {substituteName}</p>
-                        {absence.notes && <p><strong>הערות נוספות:</strong> {absence.notes}</p>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <>
+                <h3>בקשות היעדרות עתידיות</h3>
+                <div className="absence-requests">
+                  {futureAbsences.length === 0 ? (
+                    <p>אין בקשות היעדרות עתידיות.</p>
+                  ) : (
+                    futureAbsences.map(renderAbsenceCard)
+                  )}
+                </div>
+                
+                <h3 style={{marginTop: "2em"}}>בקשות היעדרות קודמות</h3>
+                <div className="absence-requests">
+                  {pastAbsences.length === 0 ? (
+                    <p>אין בקשות היעדרות קודמות.</p>
+                  ) : (
+                    pastAbsences.map(renderAbsenceCard)
+                  )}
+                </div>
+              </>
             )}
           </div>
         );
@@ -1216,121 +1292,6 @@ const nearestEvents = sortedByDistance.slice(0, 3);
           </div>
         );
     }
-  };
-
-  // רנדר מערכת שעות מורה
-  const renderTeacherSchedule = () => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
-    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
-    const schoolHours = me?.schoolId?.scheduleHours || [];
-    const maxLessons = schoolHours.length;
-
-    return (
-      <div className="schedule-container">
-        <div className="schedule-table">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
-                const hourInfo = schoolHours[hourIdx];
-                return (
-                  <tr key={hourIdx}>
-                    <td className="time-slot">
-                      <div className="hour-info">
-                        <div className="hour-number">שעה {hourIdx + 1}</div>
-                        {hourInfo && (
-                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
-                        )}
-                      </div>
-                    </td>
-                    {days.map((day, dayIdx) => {
-                      const lesson = selectedTeacherSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
-                      return (
-                        <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"}`}>
-                          {lesson ? (
-                            <>
-                              <strong>{lesson.subject || "—"}</strong><br />
-                              <small>
-                                {lesson.classId
-                                  ? `כיתה ${lesson.classId.name}` 
-                                  : "—"}
-                              </small>
-                            </>
-                          ) : "—"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  // רנדר מערכת שעות כיתה
-  const renderClassSchedule = () => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
-    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
-    const schoolHours = me?.schoolId?.scheduleHours || [];
-    const maxLessons = schoolHours.length;
-
-    return (
-      <div className="schedule-container">
-        <div className="schedule-table">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
-                const hourInfo = schoolHours[hourIdx];
-                return (
-                  <tr key={hourIdx}>
-                    <td className="time-slot">
-                      <div className="hour-info">
-                        <div className="hour-number">שעה {hourIdx + 1}</div>
-                        {hourInfo && (
-                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
-                        )}
-                      </div>
-                    </td>
-                    {days.map((day, dayIdx) => {
-                      const lesson = selectedClassSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
-                      const hasLesson = lesson && (lesson.subject || lesson.teacherId);
-                      return (
-                        <td key={dayIdx} className={`class-slot ${hasLesson ? "" : "empty"}`}>
-                          {hasLesson ? (
-                            <>
-                              <strong>{lesson.subject || "—"}</strong><br />
-                              <small>
-                                {lesson.teacherId
-                                  ? `${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}`
-                                  : "—"}
-                              </small>
-                            </>
-                          ) : "—"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
   };
 
   // מודאל דינמי
