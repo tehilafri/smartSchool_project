@@ -3,7 +3,7 @@ import "./Dashboard.css";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
 
-import { getMe } from "../../services/userService";
+import { getMe, getAllTeachers } from "../../services/userService";
 import { getScheduleByTeacher, getNextLessonForTeacher, updateScheduleDay, createSchedule, getHomeroomClassSchedule } from "../../services/scheduleService"; 
 import { getSubstituteRequests, reportAbsence ,approveReplacement} from "../../services/substituteRequestsSercive";
 import { getEvents, getNextExam, getUpcomingExams, addEvent, updateEvent, deleteEvent } from "../../services/eventService";
@@ -622,7 +622,7 @@ const renderClassScheduleTable = () => {
                                         return null;
                                       }
                                       return (
-                                        <small className="exam-creator"> ({exam.createdByName || 'מורה אחרת'})</small>
+                                        <small className="exam-creator"> ({exam.targetTeacher.firstName} {exam.targetTeacher.lastName})</small>
                                       );
                                     })()}
                                   </div>
@@ -677,7 +677,7 @@ const renderClassScheduleTable = () => {
                                           return null;
                                         }
                                         return (
-                                          <small className="exam-creator"> ({exam.createdByName || 'מורה אחרת'})</small>
+                                        <small className="exam-creator"> ({exam.targetTeacher.firstName} {exam.targetTeacher.lastName})</small>
                                         );
                                       })()}
                                     </div>
@@ -849,7 +849,7 @@ const renderScheduleTable = () => {
                                         return null;
                                       }
                                       return (
-                                        <small className="exam-creator"> ({exam.createdByName || 'מורה אחרת'})</small>
+                                        <small className="exam-creator"> ({exam.targetTeacher.firstName} {exam.targetTeacher.lastName})</small>
                                       );
                                     })()}
                                   </div>
@@ -903,7 +903,7 @@ const renderScheduleTable = () => {
                                     return null;
                                   }
                                   return (
-                                    <small className="exam-creator"> ({exam.createdByName || 'מורה אחרת'})</small>
+                                      <small className="exam-creator"> ({exam.targetTeacher.firstName} {exam.targetTeacher.lastName})</small>
                                   );
                                 })()}
                               </div>
@@ -1642,6 +1642,7 @@ function CreateScheduleForm({ onSubmit, onCancel, showNotification, me }) {
     friday: []
   });
   const [loading, setLoading] = useState(true);
+  const [teachers, setTeachers] = useState([]);
 
   const dayLabels = {
     sunday: "ראשון",
@@ -1671,6 +1672,19 @@ function CreateScheduleForm({ onSubmit, onCancel, showNotification, me }) {
       setLoading(false);
     }
   }, [me]);
+
+  // שליפת רשימת המורים
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const response = await getAllTeachers();
+        setTeachers(response.data);
+      } catch (err) {
+        console.error('Error fetching teachers:', err);
+      }
+    };
+    fetchTeachers();
+  }, []);
 
   const updateLesson = (day, lessonIndex, field, value) => {
     setWeekPlan(prev => ({
@@ -1733,12 +1747,17 @@ function CreateScheduleForm({ onSubmit, onCancel, showNotification, me }) {
                     )}
                   </div>
                   <div className="lesson-inputs">
-                    <input
-                      type="text"
-                      placeholder="תעודת זהות מורה"
+                    <select
                       value={lesson.teacherId}
                       onChange={(e) => updateLesson(day, lessonIndex, 'teacherId', e.target.value)}
-                    />
+                    >
+                      <option value="">בחר מורה</option>
+                      {teachers.map(teacher => (
+                        <option key={teacher._id} value={teacher.userId}>
+                          {teacher.firstName} {teacher.lastName}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="text"
                       placeholder="מקצוע"
@@ -1770,6 +1789,7 @@ function UpdateDayForm({ onSubmit, showNotification, me }) {
   const [day, setDay] = useState("sunday");
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [teachers, setTeachers] = useState([]);
   
   // איניציאליזציה של השיעורים לפי מספר השעות בבית הספר
   useEffect(() => {
@@ -1780,6 +1800,19 @@ function UpdateDayForm({ onSubmit, showNotification, me }) {
       setLoading(false);
     }
   }, [me]);
+
+  // שליפת רשימת המורים
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const response = await getAllTeachers();
+        setTeachers(response.data);
+      } catch (err) {
+        console.error('Error fetching teachers:', err);
+      }
+    };
+    fetchTeachers();
+  }, []);
 
   const dayOptions = [
     { value: "sunday", label: "ראשון" },
@@ -1864,12 +1897,17 @@ function UpdateDayForm({ onSubmit, showNotification, me }) {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <input 
-                    type="text" 
+                  <select 
                     value={lesson.teacherId} 
                     onChange={(e) => updateLesson(index, 'teacherId', e.target.value)}
-                    placeholder="תעודת זהות מורה"
-                  />
+                  >
+                    <option value="">בחר מורה</option>
+                    {teachers.map(teacher => (
+                      <option key={teacher._id} value={teacher.userId}>
+                        {teacher.firstName} {teacher.lastName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
                   <input 
