@@ -15,12 +15,22 @@ export const sendWelcomeEmail = async (user) => {
 
     const subject = "ברוך הבא למערכת בית הספר";
     const text = `
-הצטרפת בהצלחה למערכת בית הספר.
+שלום ${user.firstName} ${user.lastName},
 
-שם המשתמש שלך הוא: ${user.userName}
-הסיסמה שלך היא: ${user.password}
-קוד בית הספר שלך הוא: ${school.schoolCode}
-    `;
+הצטרפת בהצלחה למערכת בית הספר "${school.name}".
+
+פרטי ההתחברות שלך:
+שם משתמש: ${user.userName}
+סיסמה: ${user.password}
+קוד בית הספר: ${school.schoolCode}
+
+להתחברות למערכת היכנסי לכתובת:
+${process.env.FRONTEND_URL}
+
+בברכה,
+צוות בית הספר
+`;
+
 
     await sendEmail(user.email, subject, text);
   } catch (err) {

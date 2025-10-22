@@ -53,6 +53,9 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'User with this ID or email already exists' });
     }
 
+    // שמירה זמנית של הסיסמה המקורית
+    const plainPassword = password;
+
     // הצפנת סיסמה
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -86,7 +89,10 @@ export const register = async (req, res) => {
         }
       }
     }
-    sendWelcomeEmail(newUser);
+    sendWelcomeEmail({
+  ...newUser.toObject(), // המרת המסמך לאובייקט רגיל
+  password: plainPassword // החלפה בסיסמה המקורית לצורך שליחת המייל בלבד
+});
 
     res.status(201).json({ message: 'User registered successfully' });
 
