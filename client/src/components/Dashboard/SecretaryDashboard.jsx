@@ -8,6 +8,7 @@ import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/ev
 import { getScheduleByTeacher, getHomeroomClassSchedule } from "../../services/scheduleService";
 import { getAllExternalSubstitutes, addExternalSubstitute, deleteExternalSubstitute, updateExternalSubstitute } from "../../services/externalSubstituteService";
 import { renderTeacherSchedule, renderClassSchedule } from "./AdminDashboard";
+import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
 import "./Dashboard.css"
 
 const SecretaryDashboard = ({ onLogout }) => {
@@ -30,6 +31,8 @@ const SecretaryDashboard = ({ onLogout }) => {
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedTeacherSchedule, setSelectedTeacherSchedule] = useState(null);
   const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
+  const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
+  const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
 
   const fetchAllData = async () => {
     try {
@@ -235,6 +238,31 @@ const SecretaryDashboard = ({ onLogout }) => {
     });
 
     return { weekPlan };
+  };
+
+  // פתיחת עדכון מערכת שעות
+  const openScheduleUpdate = (type, id, name) => {
+    setScheduleUpdateTarget({ type, id, name });
+    setShowScheduleUpdate(true);
+  };
+
+  // סגירת עדכון מערכת שעות
+  const closeScheduleUpdate = () => {
+    setShowScheduleUpdate(false);
+    setScheduleUpdateTarget({ type: null, id: null, name: null });
+  };
+
+  // רענון מערכת שעות לאחר עדכון
+  const handleScheduleUpdateSuccess = () => {
+    if (scheduleUpdateTarget.type === 'class' && selectedClassId) {
+      loadClassSchedule(selectedClassId);
+    }
+    closeScheduleUpdate();
+  };
+
+  const showNotification = (message, type = 'success') => {
+    // Simple notification implementation
+    alert(message);
   };
 
   const renderModalForm = () => {
@@ -633,11 +661,24 @@ const SecretaryDashboard = ({ onLogout }) => {
                   </select>
                 </div>
                 {selectedClassId && (
-                  selectedClassSchedule ? renderClassSchedule(me, selectedClassSchedule) : (
-                    <div className="no-schedule-message">
-                      <p>לא הוכנסה מערכת שעות לכיתה זו</p>
+                  <>
+                    {selectedClassSchedule ? renderClassSchedule(me, selectedClassSchedule) : (
+                      <div className="no-schedule-message">
+                        <p>לא הוכנסה מערכת שעות לכיתה זו</p>
+                      </div>
+                    )}
+                    <div className="schedule-actions">
+                      <button 
+                        className="btn btn-primary"
+                        onClick={() => {
+                          const selectedClass = classes.find(c => c._id === selectedClassId);
+                          openScheduleUpdate('class', selectedClassId, selectedClass?.name);
+                        }}
+                      >
+                        עדכן מערכת שעות
+                      </button>
                     </div>
-                  )
+                  </>
                 )}
               </div>
             )}
@@ -960,6 +1001,28 @@ const SecretaryDashboard = ({ onLogout }) => {
 
             <div className="modal-body">
               {renderModalForm()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Update Modal */}
+      {showScheduleUpdate && (
+        <div className="modal-overlay" onClick={closeScheduleUpdate}>
+          <div className="modal-content schedule-update-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>עדכון מערכת שעות - {scheduleUpdateTarget.name}</h3>
+              <button className="modal-close" onClick={closeScheduleUpdate}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <ScheduleUpdateComponent
+                targetClassName={scheduleUpdateTarget.type === 'class' ? scheduleUpdateTarget.name : null}
+                onSuccess={handleScheduleUpdateSuccess}
+                showNotification={showNotification}
+                me={me}
+              />
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { getScheduleByTeacher, getNextLessonForTeacher, updateScheduleDay, creat
 import { getSubstituteRequests, reportAbsence ,approveReplacement} from "../../services/substituteRequestsSercive";
 import { getEvents, getNextExam, getUpcomingExams, addEvent, updateEvent, deleteEvent } from "../../services/eventService";
 import { getAllClasses } from "../../services/classService";
+import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
 
 const TeacherDashboard = ({ onLogout }) => {
   // token: אפשר לקבל דרך props או localStorage
@@ -79,6 +80,7 @@ const TeacherDashboard = ({ onLogout }) => {
   const [classSchedule, setClassSchedule] = useState(null);
   const [loadingClassSchedule, setLoadingClassSchedule] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null); // חדש
+  const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
 
 
   const updateForm = (code, field, value) => {
@@ -300,6 +302,22 @@ const TeacherDashboard = ({ onLogout }) => {
     }
   };
 
+  // פתיחת עדכון מערכת שעות
+  const openScheduleUpdate = () => {
+    setShowScheduleUpdate(true);
+  };
+
+  // סגירת עדכון מערכת שעות
+  const closeScheduleUpdate = () => {
+    setShowScheduleUpdate(false);
+  };
+
+  // רענון מערכת שעות לאחר עדכון
+  const handleScheduleUpdateSuccess = () => {
+    loadClassSchedule();
+    closeScheduleUpdate();
+  };
+
   // טעינת מערכת הכיתה כשעוברים לסעיף
   useEffect(() => {
     if (activeSection === "classSchedule" && me?.ishomeroom && !classSchedule) {
@@ -339,42 +357,7 @@ const TeacherDashboard = ({ onLogout }) => {
     }
   };
 
-  // דוגמה: שמירת עדכון יום במערכת שעות
-  const handleSaveScheduleDay = async (updateData) => {
-    try {
-      await updateScheduleDay(updateData);
-      // המתנה קצרה לפני רענון
-      setTimeout(async () => {
-        const scheduleRes = await getScheduleByTeacher();
-        const formattedSchedule = formatSchedule(scheduleRes);
-        setSchedule(formattedSchedule);
-      }, 500);
-      showNotification("העדכון נשמר בהצלחה", 'success');
-    } catch (err) {
-      console.error("updateScheduleDay error", err);
-      const errorMessage = err.response?.data?.error || err.message;
-      showNotification(`שגיאה בעדכון המערכת: ${errorMessage}`, 'error');
-    }
-  };
 
-  // יצירת/עדכון מערכת שלמה
-  const handleCreateSchedule = async (scheduleData) => {
-    try {
-      await createSchedule(scheduleData);
-      // המתנה קצרה לפני רענון
-      setTimeout(async () => {
-        const scheduleRes = await getScheduleByTeacher();
-        const formattedSchedule = formatSchedule(scheduleRes);
-        setSchedule(formattedSchedule);
-      }, 500);
-      showNotification("המערכת נשמרה בהצלחה!", 'success');
-      closeModal();
-    } catch (err) {
-      console.error("createSchedule error", err);
-      const errorMessage = err.response?.data?.error || err.message;
-      showNotification(`שגיאה ביצירת המערכת: ${errorMessage}`, 'error');
-    }
-  };
 
   // פונקציה לרענון רשימת המבחנים
   const refreshExams = async () => {
@@ -982,8 +965,6 @@ const renderScheduleTable = () => {
             ...(me?.ishomeroom ? [{ id: "classSchedule", label: "מערכת הכיתה", icon: "🏢" }] : []),
 
             { id: "nextClass", label: "השיעור הבא", icon: "⏰" },
-            { id: "updateSchedule", label: "עדכון מערכת שעות", icon: "✏️" },
-
             { id: "absences", label: "דיווח היעדרות", icon: "📝" },
             { id: "myAbsences", label: "ההיעדרויות שלי", icon: "📋" },
             { id: "exams", label: "מבחנים", icon: "📄" },
@@ -1041,13 +1022,6 @@ const renderScheduleTable = () => {
           <div className="dashboard-content">
             <h2>סקירה כללית</h2>
             <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon">🏫</div>
-                <div className="stat-info">
-                  <h3>{loadingCounts ? "..." : classesCount}</h3>
-                  <p>כיתות שאני מלמדת</p>
-                </div>
-              </div>
 
               <div className="stat-card">
                 <div className="stat-icon">📚</div>
@@ -1152,10 +1126,7 @@ const renderScheduleTable = () => {
                   <span className="action-icon">📄</span>
                   <span className="action-text">קבע מבחן</span>
                 </button>
-                <button className="quick-action-card" onClick={() => setActiveSection("updateSchedule")}>
-                  <span className="action-icon">✏️</span>
-                  <span className="action-text">עדכן מערכת</span>
-                </button>
+
               </div>
             </div>
 
@@ -1231,6 +1202,14 @@ const renderScheduleTable = () => {
             <h2>מערכת הכיתה - {me.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me._id)?.name}</h2>
             <div className="schedule-container">
               {renderClassScheduleTable()}
+            </div>
+            <div className="schedule-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={openScheduleUpdate}
+              >
+                עדכן מערכת שעות
+              </button>
             </div>
           </div>
         )}
@@ -1404,27 +1383,7 @@ const renderScheduleTable = () => {
           </div>
         )}
 
-        {activeSection === "updateSchedule" && (
-          <div className="dashboard-content">
-            <h2>ניהול מערכת שעות</h2>
-            
-            <div className="schedule-update-options">
-              <div className="update-option-card">
-                <h3>עדכון יום ספציפי</h3>
-                <p>עדכן שיעורים ביום מסוים בשבוע</p>
-                <UpdateDayForm onSubmit={handleSaveScheduleDay} showNotification={showNotification} me={me} />
-              </div>
-              
-              <div className="update-option-card">
-                <h3>יצירת/עדכון מערכת שלמה</h3>
-                <p>יצירה או עדכון של כל המערכת לכיתה</p>
-                <button className="btn btn-primary" onClick={() => openModal("createSchedule")}>
-                  פתח טופס מערכת שלמה
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {activeSection === "exams" && (
           <div className="dashboard-content">
@@ -1579,9 +1538,7 @@ const renderScheduleTable = () => {
                   <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} />
                 )}
                 
-                {modalType === "createSchedule" && (
-                  <CreateScheduleForm onSubmit={handleCreateSchedule} onCancel={closeModal} showNotification={showNotification} me={me} />
-                )}
+
               </div>
             </div>
           </div>
@@ -1626,309 +1583,32 @@ const renderScheduleTable = () => {
             </div>
           </div>
         )}
+
+        {/* Schedule Update Modal */}
+        {showScheduleUpdate && (
+          <div className="modal-overlay" onClick={closeScheduleUpdate}>
+            <div className="modal-content schedule-update-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>עדכון מערכת שעות - {me.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me._id)?.name}</h3>
+                <button className="modal-close" onClick={closeScheduleUpdate}>
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <ScheduleUpdateComponent
+                  targetClassName={me.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me._id)?.name}
+                  onSuccess={handleScheduleUpdateSuccess}
+                  showNotification={showNotification}
+                  me={me}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
-/* --- רכיב עזר ליצירת מערכת שלמה --- */
-function CreateScheduleForm({ onSubmit, onCancel, showNotification, me }) {
-  const [weekPlan, setWeekPlan] = useState({
-    sunday: [],
-    monday: [],
-    tuesday: [],
-    wednesday: [],
-    thursday: [],
-    friday: []
-  });
-  const [loading, setLoading] = useState(true);
-  const [teachers, setTeachers] = useState([]);
-
-  const dayLabels = {
-    sunday: "ראשון",
-    monday: "שני",
-    tuesday: "שלישי",
-    wednesday: "רביעי",
-    thursday: "חמישי",
-    friday: "שישי"
-  };
-
-  // איניציאליזציה של המערכת לפי מספר השעות
-  useEffect(() => {
-    if (me?.schoolId?.scheduleHours) {
-      const numHours = me.schoolId.scheduleHours.length;
-      const emptyLessons = Array(numHours).fill().map(() => ({ teacherId: "", subject: "" }));
-      
-      const initialWeekPlan = {
-        sunday: [...emptyLessons],
-        monday: [...emptyLessons],
-        tuesday: [...emptyLessons],
-        wednesday: [...emptyLessons],
-        thursday: [...emptyLessons],
-        friday: [...emptyLessons]
-      };
-      
-      setWeekPlan(initialWeekPlan);
-      setLoading(false);
-    }
-  }, [me]);
-
-  // שליפת רשימת המורים
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      try {
-        const response = await getAllTeachers();
-        setTeachers(response.data);
-      } catch (err) {
-        console.error('Error fetching teachers:', err);
-      }
-    };
-    fetchTeachers();
-  }, []);
-
-  const updateLesson = (day, lessonIndex, field, value) => {
-    setWeekPlan(prev => ({
-      ...prev,
-      [day]: prev[day].map((lesson, index) => 
-        index === lessonIndex ? { ...lesson, [field]: value } : lesson
-      )
-    }));
-  };
-
-  const handleSubmit = () => {
-    if (!me?.ishomeroom) {
-      if (showNotification) {
-        showNotification("רק מחנכים יכולים לעדכן מערכת שעות", 'error');
-      }
-      return;
-    }
-
-    const homeroomClass = me?.classes?.find(cls => 
-      cls.homeroomTeacher && cls.homeroomTeacher._id === me._id
-    );
-    
-    if (!homeroomClass) {
-      if (showNotification) {
-        showNotification("לא נמצאה כיתה שאתה מחנך בה", 'error');
-      }
-      return;
-    }
-
-    const payload = { 
-      className: homeroomClass.name, 
-      weekPlan 
-    };
-    onSubmit(payload);
-  };
-
-  if (loading) {
-    return <div className="schedule-form"><p>טוען...</p></div>;
-  }
-
-  return (
-    <div className="schedule-form">
-      <div className="form-header">
-        <h3>יצירת מערכת שלמה</h3>
-        <p>כיתה: {!me?.ishomeroom ? "אתה לא מחנך" : (me?.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me._id)?.name || "לא נמצא")}</p>
-      </div>
-
-      <div className="week-schedule">
-        {Object.keys(weekPlan).map(day => (
-          <div key={day} className="day-schedule">
-            <h4>{dayLabels[day]}</h4>
-            {weekPlan[day].map((lesson, lessonIndex) => {
-              const scheduleHour = me?.schoolId?.scheduleHours?.[lessonIndex];
-              return (
-                <div key={lessonIndex} className="lesson-input-row">
-                  <div className="lesson-info">
-                    <span className="lesson-number">שעה {lessonIndex + 1}</span>
-                    {scheduleHour && (
-                      <span className="lesson-time">({scheduleHour.start} - {scheduleHour.end})</span>
-                    )}
-                  </div>
-                  <div className="lesson-inputs">
-                    <select
-                      value={lesson.teacherId}
-                      onChange={(e) => updateLesson(day, lessonIndex, 'teacherId', e.target.value)}
-                    >
-                      <option value="">בחר מורה</option>
-                      {teachers.map(teacher => (
-                        <option key={teacher._id} value={teacher.userId}>
-                          {teacher.firstName} {teacher.lastName}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="מקצוע"
-                      value={lesson.subject}
-                      onChange={(e) => updateLesson(day, lessonIndex, 'subject', e.target.value)}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      <div className="modal-actions">
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          שמור מערכת
-        </button>
-        <button className="btn btn-outline" onClick={onCancel}>
-          ביטול
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* --- רכיב עזר לעדכון יום ספציפי --- */
-function UpdateDayForm({ onSubmit, showNotification, me }) {
-  const [day, setDay] = useState("sunday");
-  const [lessons, setLessons] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [teachers, setTeachers] = useState([]);
-  
-  // איניציאליזציה של השיעורים לפי מספר השעות בבית הספר
-  useEffect(() => {
-    if (me?.schoolId?.scheduleHours) {
-      const numHours = me.schoolId.scheduleHours.length;
-      const initialLessons = Array(numHours).fill().map(() => ({ teacherId: "", subject: "" }));
-      setLessons(initialLessons);
-      setLoading(false);
-    }
-  }, [me]);
-
-  // שליפת רשימת המורים
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      try {
-        const response = await getAllTeachers();
-        setTeachers(response.data);
-      } catch (err) {
-        console.error('Error fetching teachers:', err);
-      }
-    };
-    fetchTeachers();
-  }, []);
-
-  const dayOptions = [
-    { value: "sunday", label: "ראשון" },
-    { value: "monday", label: "שני" },
-    { value: "tuesday", label: "שלישי" },
-    { value: "wednesday", label: "רביעי" },
-    { value: "thursday", label: "חמישי" },
-    { value: "friday", label: "שישי" }
-  ];
-
-  const updateLesson = (index, field, value) => {
-    const newLessons = [...lessons];
-    newLessons[index][field] = value;
-    setLessons(newLessons);
-  };
-
-  const handleSubmit = () => {
-    if (!me?.ishomeroom) {
-      if (showNotification) {
-        showNotification("רק מחנכים יכולים לעדכן מערכת שעות", 'error');
-      }
-      return;
-    }
-
-    const homeroomClass = me?.classes?.find(cls => 
-      cls.homeroomTeacher && cls.homeroomTeacher._id === me._id
-    );
-    
-    if (!homeroomClass) {
-      if (showNotification) {
-        showNotification("לא נמצאה כיתה שאתה מחנך בה", 'error');
-      }
-      return;
-    }
-
-    const payload = { className: homeroomClass.name, day, lessons };
-    onSubmit(payload);
-  };
-
-  return (
-    <div className="update-day-form">
-      <div className="form-row">
-        <div className="form-group">
-          <label>כיתת החינוך שלך</label>
-          <input 
-            type="text" 
-            value={(() => {
-              if (!me?.classes) return "טוען...";
-              if (!me?.ishomeroom) return "אתה לא מחנך - אין הרשאה לעדכן מערכת";
-              const homeroomClass = me.classes.find(cls => 
-                cls.homeroomTeacher && cls.homeroomTeacher._id === me._id
-              );
-              return homeroomClass?.name || "לא נמצאה כיתה שאתה מחנך בה";
-            })()}
-            disabled
-            style={{ backgroundColor: '#f7fafc', color: '#4a5568' }}
-          />
-        </div>
-        <div className="form-group">
-          <label>יום בשבוע</label>
-          <select value={day} onChange={(e) => setDay(e.target.value)}>
-            {dayOptions.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <h4>שיעורים</h4>
-      {loading ? (
-        <p>טוען...</p>
-      ) : (
-        lessons.map((lesson, index) => {
-          const scheduleHour = me?.schoolId?.scheduleHours?.[index];
-          return (
-            <div key={index} className="lesson-row">
-              <div className="lesson-info">
-                <span className="lesson-number">שעה {index + 1}</span>
-                {scheduleHour && (
-                  <span className="lesson-time">({scheduleHour.start} - {scheduleHour.end})</span>
-                )}
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <select 
-                    value={lesson.teacherId} 
-                    onChange={(e) => updateLesson(index, 'teacherId', e.target.value)}
-                  >
-                    <option value="">בחר מורה</option>
-                    {teachers.map(teacher => (
-                      <option key={teacher._id} value={teacher.userId}>
-                        {teacher.firstName} {teacher.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <input 
-                    type="text" 
-                    value={lesson.subject} 
-                    onChange={(e) => updateLesson(index, 'subject', e.target.value)}
-                    placeholder="מקצוע"
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })
-      )}
-
-      <button className="btn btn-primary" onClick={handleSubmit}>
-        שמור עדכון יום
-      </button>
-    </div>
-  );
-}
 
 /* --- רכיב עזר לטופס בקשת היעדרות --- */
 function AbsenceForm({ onSubmit, onCancel, showNotification }) {

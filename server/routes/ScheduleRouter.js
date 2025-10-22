@@ -4,12 +4,12 @@ import { jwtMiddleware ,requireRole} from '../Middlewares.js';
 
 const router = express.Router();
 
-router.post('/createSchedule', jwtMiddleware , requireRole('teacher', 'admin'), createSchedule);
+router.post('/createSchedule', jwtMiddleware , requireRole('teacher', 'admin','secretary'), createSchedule);
 router.get('/nextLesson', jwtMiddleware, requireRole('student'), getNextLessonForStudent);
 router.get('/nextLessonForTeacher', jwtMiddleware, requireRole('teacher'), getNextLessonForTeacher);
 router.get('/ScheduleByTeacher', jwtMiddleware, requireRole('teacher', 'admin'), getScheduleByTeacher);
 router.get('/ScheduleByTeacher/:teacherId', jwtMiddleware, requireRole('admin','secretary'), getScheduleByTeacher);
-router.put('/updateDay', jwtMiddleware, requireRole('teacher', 'admin'), updateScheduleDay);
+router.put('/updateDay', jwtMiddleware, requireRole('teacher', 'admin','secretary'), updateScheduleDay);
 router.get('/getScheduleForStudent', jwtMiddleware, requireRole('student'), getScheduleForStudent);
 router.get('/homeroomClassSchedule', jwtMiddleware, requireRole('teacher'), getHomeroomClassSchedule);
 router.get('/homeroomClassSchedule/:classId', jwtMiddleware, requireRole('admin','secretary'), getHomeroomClassSchedule);
