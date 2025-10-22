@@ -12,121 +12,10 @@ import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
 import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
+import ScheduleTable, { TeacherScheduleView } from "./ScheduleTable";
+import EventDetailsModal from "./EventDetailsModal";
 
- // רנדר מערכת שעות מורה
-  export const renderTeacherSchedule = (me, selectedTeacherSchedule) => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
-    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
-    const schoolHours = me?.schoolId?.scheduleHours || [];
-    const maxLessons = schoolHours.length;
 
-    return (
-      <div className="schedule-container">
-        <div className="schedule-table">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
-                const hourInfo = schoolHours[hourIdx];
-                return (
-                  <tr key={hourIdx}>
-                    <td className="time-slot">
-                      <div className="hour-info">
-                        <div className="hour-number">שעה {hourIdx + 1}</div>
-                        {hourInfo && (
-                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
-                        )}
-                      </div>
-                    </td>
-                    {days.map((day, dayIdx) => {
-                      const lesson = selectedTeacherSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
-                      return (
-                        <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"}`}>
-                          {lesson ? (
-                            <>
-                              <strong>{lesson.subject || "—"}</strong><br />
-                              <small>
-                                {lesson.classId
-                                  ? `כיתה ${lesson.classId.name}` 
-                                  : "—"}
-                              </small>
-                            </>
-                          ) : "—"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  // רנדר מערכת שעות כיתה
-  export const renderClassSchedule = (me, selectedClassSchedule) => {
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
-    const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
-    const schoolHours = me?.schoolId?.scheduleHours || [];
-    const maxLessons = schoolHours.length;
-
-    return (
-      <div className="schedule-container">
-        <div className="schedule-table">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: maxLessons }).map((_, hourIdx) => {
-                const hourInfo = schoolHours[hourIdx];
-                return (
-                  <tr key={hourIdx}>
-                    <td className="time-slot">
-                      <div className="hour-info">
-                        <div className="hour-number">שעה {hourIdx + 1}</div>
-                        {hourInfo && (
-                          <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
-                        )}
-                      </div>
-                    </td>
-                    {days.map((day, dayIdx) => {
-                      const lesson = selectedClassSchedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
-                      const hasLesson = lesson && (lesson.subject || lesson.teacherId);
-                      return (
-                        <td key={dayIdx} className={`class-slot ${hasLesson ? "" : "empty"}`}>
-                          {hasLesson ? (
-                            <>
-                              <strong>{lesson.subject || "—"}</strong><br />
-                              <small>
-                                {lesson.teacherId
-                                  ? `${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}`
-                                  : "—"}
-                              </small>
-                            </>
-                          ) : "—"}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
 
 const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
@@ -162,6 +51,7 @@ const AdminDashboard = ({ onLogout }) => {
   const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
   const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
   const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   // טען נתונים מהשרת
   const fetchAllData = async () => {
@@ -1016,7 +906,15 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                     ))}
                   </select>
                 </div>
-                {selectedTeacherSchedule && renderTeacherSchedule(me, selectedTeacherSchedule)}
+                {selectedTeacherSchedule && (
+                  <TeacherScheduleView 
+                    schedule={selectedTeacherSchedule.weekPlan}
+                    events={events}
+                    teacherInfo={teachers.find(t => t._id === selectedTeacherId)}
+                    schoolInfo={me?.schoolId}
+                    onEventClick={setSelectedEvent}
+                  />
+                )}
               </div>
             )}
             
@@ -1041,7 +939,21 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                 </div>
                 {selectedClassId && (
                   <>
-                    {selectedClassSchedule ? renderClassSchedule(me, selectedClassSchedule) : (
+                    {selectedClassSchedule ? (
+                      <ScheduleTable 
+                        schedule={selectedClassSchedule.weekPlan}
+                        events={events.filter(event => {
+                          const selectedClass = classes.find(c => c._id === selectedClassId);
+                          return selectedClass && event.classes?.some(cls => cls.name === selectedClass.name);
+                        })}
+                        userInfo={{
+                          ...me,
+                          classes: [classes.find(c => c._id === selectedClassId)]
+                        }}
+                        onEventClick={setSelectedEvent}
+                        isTeacherView={false}
+                      />
+                    ) : (
                       <div className="no-schedule-message">
                         <p>לא הוכנסה מערכת שעות לכיתה זו</p>
                       </div>
@@ -1426,6 +1338,8 @@ const nearestEvents = sortedByDistance.slice(0, 3);
           </div>
         </div>
       )}
+      
+      <EventDetailsModal selectedEvent={selectedEvent} onClose={() => setSelectedEvent(null)} />
     </div>
   );
 };

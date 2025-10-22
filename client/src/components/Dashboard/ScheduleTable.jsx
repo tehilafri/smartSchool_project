@@ -207,4 +207,182 @@ const ScheduleTable = ({
   );
 };
 
+// קומפוננטה להצגת מערכת שעות מנקודת מבט של מורה ספציפית
+export const TeacherScheduleView = ({ 
+  schedule, 
+  events, 
+  teacherInfo, 
+  schoolInfo,
+  onEventClick 
+}) => {
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const dayOffset = today.getDay() === 6 ? 1 : 0;
+  startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 5);
+
+  const formatDate = (date) => date.toLocaleDateString("he-IL");
+  
+  const weekDates = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const schoolHours = schoolInfo?.scheduleHours || [];
+  const maxLessons = schoolHours.length;
+
+  return (
+    <div className="schedule-container">
+      <h3>{`מתאריך ${formatDate(startOfWeek)} עד ${formatDate(endOfWeek)}`}</h3>
+      <div className="schedule-table">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>ראשון</th>
+              <th>שני</th>
+              <th>שלישי</th>
+              <th>רביעי</th>
+              <th>חמישי</th>
+              <th>שישי</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: maxLessons }).map((_, hourIdx) => {
+              const hourInfo = schoolHours[hourIdx];
+              return (
+                <tr key={hourIdx}>
+                  <td className="time-slot">
+                    <div className="hour-info">
+                      <div className="hour-number">שעה {hourIdx + 1}</div>
+                      {hourInfo && (
+                        <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                      )}
+                    </div>
+                  </td>
+                  {["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"].map((day, dayIdx) => {
+                    const lesson = schedule[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
+                    const hasLesson = lesson && (lesson.subject || lesson.teacherId);
+                    
+                    // אירועים של המורה
+                    const teacherEvents = events.filter(event => {
+                      if (!hourInfo || event.type === 'exam') return false;
+                      
+                      const targetDate = weekDates[dayIdx];
+                      const eventDate = new Date(event.date);
+                      eventDate.setHours(0, 0, 0, 0);
+                      
+                      const isSameDate = eventDate.getTime() === targetDate.getTime();
+                      const isTimeOverlap = event.startTime <= hourInfo.end;
+                      
+                      // בדיקה אם האירוע קשור למורה
+                      const isTeacherEvent = teacherInfo?.classes?.some(teacherClass => 
+                        event.classes?.some(eventClass => eventClass.name === teacherClass.name)
+                      );
+                      
+                      return isSameDate && isTimeOverlap && isTeacherEvent;
+                    });
+                    
+                    // מבחנים של המורה
+                    const teacherExams = events.filter(event => {
+                      if (!hourInfo || event.type !== 'exam') return false;
+                      
+                      const targetDate = weekDates[dayIdx];
+                      const eventDate = new Date(event.date);
+                      eventDate.setHours(0, 0, 0, 0);
+                      
+                      const isSameDate = eventDate.getTime() === targetDate.getTime();
+                      const isLessonMatch = event.selectedLessons ? 
+                        event.selectedLessons.includes(hourIdx + 1) : 
+                        (event.startTime <= hourInfo.end && event.endTime >= hourInfo.start);
+
+                      // בדיקה אם המבחן קשור למורה
+                      const isTeacherExam = String(event.createdBy._id) === String(teacherInfo?._id )
+                      
+                      return isSameDate && isLessonMatch && isTeacherExam;
+                    });
+                    
+                    const hasEvents = teacherEvents.length > 0;
+                    
+                    return (
+                      <td key={day} className={`class-slot ${hasLesson ? "" : "empty"} ${hasEvents ? "has-events" : ""}`}>
+                        {hasLesson ? (
+                          <>
+                            <strong>{lesson.subject}</strong><br/>
+                            <small>
+                              {lesson.substitute ? (
+                                <span style={{color: '#f6ad55'}}>מחליף: {lesson.substitute.firstName} {lesson.substitute.lastName}</span>
+                              ) : (
+                                lesson.classId ? `כיתה ${lesson.classId.name}` : "—"
+                              )}
+                            </small>
+                            {lesson.status === 'replaced' && (
+                              <div style={{fontSize: '10px', color: '#f6ad55', marginTop: '2px'}}>
+                                מוחלף
+                              </div>
+                            )}
+                            {hasEvents && (
+                              <div className="slot-events">
+                                {teacherEvents.map((event, idx) => (
+                                  <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => onEventClick(event)}>
+                                    <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {teacherExams.length > 0 && (
+                              <div className="slot-exams">
+                                {teacherExams.map((exam, idx) => (
+                                  <div key={idx} className="exam-indicator clickable" onClick={() => onEventClick(exam)}>
+                                    📄 {exam.title}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (() => {
+                          if (hasEvents || teacherExams.length > 0) {
+                            return (
+                              <>
+                                {hasEvents && (
+                                  <div className="slot-events">
+                                    {teacherEvents.map((event, idx) => (
+                                      <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => onEventClick(event)}>
+                                        {event.type === 'exam' ? '📄' : '🎯'} {event.title}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {teacherExams.length > 0 && (
+                                  <div className="slot-exams">
+                                    {teacherExams.map((exam, idx) => (
+                                      <div key={idx} className="exam-indicator clickable" onClick={() => onEventClick(exam)}>
+                                        📄 {exam.title}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+                          return "—";
+                        })()}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 export default ScheduleTable;

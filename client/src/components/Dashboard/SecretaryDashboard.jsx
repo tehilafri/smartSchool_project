@@ -7,8 +7,10 @@ import { getAllClasses, addStudentToClass, removeStudentFromClass,getStudentsByN
 import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/eventService";
 import { getScheduleByTeacher, getHomeroomClassSchedule } from "../../services/scheduleService";
 import { getAllExternalSubstitutes, addExternalSubstitute, deleteExternalSubstitute, updateExternalSubstitute } from "../../services/externalSubstituteService";
-import { renderTeacherSchedule, renderClassSchedule } from "./AdminDashboard";
+
 import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
+import ScheduleTable, { TeacherScheduleView } from "./ScheduleTable";
+import EventDetailsModal from "./EventDetailsModal";
 import "./Dashboard.css"
 
 const SecretaryDashboard = ({ onLogout }) => {
@@ -33,6 +35,7 @@ const SecretaryDashboard = ({ onLogout }) => {
   const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
   const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
   const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const fetchAllData = async () => {
     try {
@@ -637,7 +640,15 @@ const SecretaryDashboard = ({ onLogout }) => {
                     ))}
                   </select>
                 </div>
-                {selectedTeacherSchedule && renderTeacherSchedule(me, selectedTeacherSchedule)}
+                {selectedTeacherSchedule && (
+                  <TeacherScheduleView 
+                    schedule={selectedTeacherSchedule.weekPlan}
+                    events={events}
+                    teacherInfo={teachers.find(t => t._id === selectedTeacherId)}
+                    schoolInfo={me?.schoolId}
+                    onEventClick={setSelectedEvent}
+                  />
+                )}
               </div>
             )}
             
@@ -662,7 +673,21 @@ const SecretaryDashboard = ({ onLogout }) => {
                 </div>
                 {selectedClassId && (
                   <>
-                    {selectedClassSchedule ? renderClassSchedule(me, selectedClassSchedule) : (
+                    {selectedClassSchedule ? (
+                      <ScheduleTable 
+                        schedule={selectedClassSchedule.weekPlan}
+                        events={events.filter(event => {
+                          const selectedClass = classes.find(c => c._id === selectedClassId);
+                          return selectedClass && event.classes?.some(cls => cls.name === selectedClass.name);
+                        })}
+                        userInfo={{
+                          ...me,
+                          classes: [classes.find(c => c._id === selectedClassId)]
+                        }}
+                        onEventClick={setSelectedEvent}
+                        isTeacherView={false}
+                      />
+                    ) : (
                       <div className="no-schedule-message">
                         <p>לא הוכנסה מערכת שעות לכיתה זו</p>
                       </div>
@@ -1027,6 +1052,8 @@ const SecretaryDashboard = ({ onLogout }) => {
           </div>
         </div>
       )}
+      
+      <EventDetailsModal selectedEvent={selectedEvent} onClose={() => setSelectedEvent(null)} />
     </div>
   )
 }

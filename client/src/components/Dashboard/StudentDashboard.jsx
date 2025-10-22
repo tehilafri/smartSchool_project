@@ -12,6 +12,7 @@ import {
   getEvents
 } from "../../services/eventService";
 import { getMe } from "../../services/userService";
+import EventDetailsModal from "./EventDetailsModal";
 
 const StudentDashboard = ({ onLogout }) => {
   const [activeSection, setActiveSection] = useState("overview");
@@ -357,44 +358,10 @@ const StudentDashboard = ({ onLogout }) => {
         {renderContent()}
         
         {/* Event Details Modal */}
-        {selectedEvent && (
-          <div className="modal-overlay" onClick={() => setSelectedEvent(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>{selectedEvent.type === 'exam' ? '📄' : '🎯'} {selectedEvent.title}</h3>
-                <button className="modal-close" onClick={() => setSelectedEvent(null)}>×</button>
-              </div>
-              <div className="modal-body">
-                <div className="event-detail">
-                  <strong>תאריך:</strong> {new Date(selectedEvent.date).toLocaleDateString('he-IL')}
-                </div>
-                <div className="event-detail">
-                  <strong>שעה:</strong> {selectedEvent.startTime} - {selectedEvent.endTime}
-                </div>
-                {selectedEvent.subject && (
-                  <div className="event-detail">
-                    <strong>מקצוע:</strong> {selectedEvent.subject}
-                  </div>
-                )}
-                <div className="event-detail">
-                  <strong>כיתות:</strong> {selectedEvent.classes?.map(c => c.name).join(', ') || 'לא צוין'}
-                </div>
-                {selectedEvent.description && (
-                  <div className="event-detail">
-                    <strong>הערות:</strong>
-                    <div className="event-description">{selectedEvent.description}</div>
-                  </div>
-                )}
-                {selectedEvent.notes && (
-                  <div className="event-detail">
-                    <strong>הערות מהמורה:</strong>
-                    <div className="event-notes">{selectedEvent.notes}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <EventDetailsModal 
+          selectedEvent={selectedEvent} 
+          onClose={() => setSelectedEvent(null)} 
+        />
       </div>
     </div>
   );

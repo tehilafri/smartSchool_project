@@ -10,6 +10,8 @@ import { getEvents, getNextExam, getUpcomingExams, addEvent, updateEvent, delete
 import { getAllClasses } from "../../services/classService";
 import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
 import ScheduleTable from "./ScheduleTable";
+import {TeacherScheduleView} from "./ScheduleTable";
+import EventDetailsModal from "./EventDetailsModal";
 
 const TeacherDashboard = ({ onLogout }) => {
   // token: אפשר לקבל דרך props או localStorage
@@ -475,224 +477,14 @@ const renderClassScheduleTable = () => {
 };
 
 const renderScheduleTable = () => {
-  if (loadingSchedule) return <p>טוען מערכת שעות...</p>;
-  if (!schedule || !schedule.weekPlan) return <p>לא נמצאה מערכת שעות.</p>;
-
-  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
-  const dayLabels = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
-
-  // נתוני השעות מבית הספר
-  const schoolHours = me?.schoolId?.scheduleHours || [];
-  
-  // מספר השעות לפי בית הספר (לא לפי מה שיש במערכת)
-  const maxLessons = schoolHours.length || Math.max(
-    ...days.map(day => schedule.weekPlan[day]?.length || 0)
-  );
-
-  const today = new Date();
-
-  // חישוב יום ראשון של השבוע (או השבוע הבא אם היום שבת)
-  const startOfWeek = new Date(today);
-  const dayOffset = today.getDay() === 6 ? 1 : 0;
-  startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  // יום שישי של השבוע
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 5);
-
-  // פונקציה לנראות תאריך בעברית
-  const formatDate = (date) => date.toLocaleDateString("he-IL");
-
-  //  מערך של תאריכי כל הימים (ראשון–שישי)
-  const weekDates = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-
   return (
-    <div className="schedule-table">
-      <h3>{`מתאריך ${formatDate(startOfWeek)} עד ${formatDate(endOfWeek)}`}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            {dayLabels.map((label, idx) => <th key={idx}>{label}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: maxLessons }).map((_, hourIdx) => {
-            const hourInfo = schoolHours[hourIdx];
-            return (
-              <tr key={hourIdx}>
-                <td className="time-slot">
-                  <div className="hour-info">
-                    <div className="hour-number">שעה {hourIdx + 1}</div>
-                    {hourInfo && (
-                      <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
-                    )}
-                  </div>
-                </td>
-                {days.map((day, dayIdx) => {
-                  // חיפוש השיעור לפי lessonNumber במקום אינדקס
-                  const lesson = schedule.weekPlan[day]?.find(l => l.lessonNumber === hourIdx + 1) || null;
-                  
-                  // חיפוש אירועים לתא זה - רק לשבוע הנוכחי (ללא מבחנים)
-                  const slotEvents = events.filter(event => {
-                    if (!schoolHours[hourIdx] || event.type === 'exam') return false;
-                    
-                    const hourInfo = schoolHours[hourIdx];
-                    const targetDate = weekDates[dayIdx];
-                    const eventDate = new Date(event.date);
-                    eventDate.setHours(0, 0, 0, 0);
-                    
-                    const isSameDate = eventDate.getTime() === targetDate.getTime();
-                    const isTimeOverlap = event.startTime <= hourInfo.end;
-                    
-                    return isSameDate && isTimeOverlap;
-                  });
-                  
-                  const hasEvents = slotEvents.length > 0;
-                  
-                  return (
-                    <td key={dayIdx} className={`class-slot ${lesson ? "" : "empty"} ${hasEvents ? "has-events" : ""}`}>
-                      {lesson ? (
-                        <>
-                          <strong>{lesson.subject || "—"}</strong><br />
-                          <small>
-                            {lesson.classId
-                              ? `כיתה ${lesson.classId.name}` 
-                              : "—"}
-                          </small>
-                          {lesson.substitute && (
-                            <div style={{fontSize: '11px', color: '#f6ad55', marginTop: '2px'}}>
-                              מחליף: {lesson.substitute.firstName} {lesson.substitute.lastName}
-                            </div>
-                          )}
-                          {lesson.status === 'replaced' && (
-                            <div style={{fontSize: '10px', color: '#f6ad55', marginTop: '2px'}}>
-                              מוחלף
-                            </div>
-                          )}
-                          {hasEvents && (
-                            <div className="slot-events">
-                              {slotEvents.map((event, idx) => (
-                                <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => setSelectedEvent(event)}>
-                                  <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
-                                  <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {/* הצגת מבחנים רלוונטיים */}
-                          {(() => {
-                            const slotExams = events.filter(event => {
-                              if (!schoolHours[hourIdx] || event.type !== 'exam') return false;
-                              
-                              const hourInfo = schoolHours[hourIdx];
-                              const targetDate = weekDates[dayIdx];
-                              const eventDate = new Date(event.date);
-                              eventDate.setHours(0, 0, 0, 0);
-                              
-                              const isSameDate = eventDate.getTime() === targetDate.getTime();
-                              const isLessonMatch = event.selectedLessons ? 
-                                event.selectedLessons.includes(hourIdx + 1) : 
-                                (event.startTime <= hourInfo.end && event.endTime >= hourInfo.start);
-                              
-                              // בדיקה אם המבחן רלוונטי למורה
-                              const hasLessonAtTime = lesson && lesson.subject;
-                              const isMyClass = lesson && lesson.classId && 
-                                event.classes?.some(cls => cls._id === lesson.classId._id || cls._id === lesson.classId);
-                              const isMyExam = (event.createdBy?._id || event.createdBy) === me?._id;
-                              const isTargetedForMe = (event.targetTeacher?._id || event.targetTeacher) === me?._id;
-                              
-                              return isSameDate && isLessonMatch && hasLessonAtTime && isMyClass && (isMyExam || isTargetedForMe);
-                            });
-                            
-                            return slotExams.length > 0 && (
-                              <div className="slot-exams">
-                                {slotExams.map((exam, idx) => (
-                                  <div key={idx} className="exam-indicator clickable" onClick={() => setSelectedEvent(exam)}>
-                                    📄 {exam.title}
-                                    {(() => {
-                                      const isTeachingThisSubject = lesson && lesson.subject === exam.subject;
-                                      if (exam.createdBy === me?._id || isTeachingThisSubject) {
-                                        return null;
-                                      }
-                                      return (
-                                        <small className="exam-creator"> ({exam.targetTeacher.firstName} {exam.targetTeacher.lastName})</small>
-                                      );
-                                    })()}
-                                  </div>
-                                ))}
-                              </div>
-                            );
-                          })()}
-                        </>
-                      ) : hasEvents ? (
-                        <div className="slot-events">
-                          {slotEvents.map((event, idx) => (
-                            <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => setSelectedEvent(event)}>
-                              <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
-                              <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (() => {
-                        const slotExams = events.filter(event => {
-                          if (!schoolHours[hourIdx] || event.type !== 'exam') return false;
-                          
-                          const hourInfo = schoolHours[hourIdx];
-                          const targetDate = weekDates[dayIdx];
-                          const eventDate = new Date(event.date);
-                          eventDate.setHours(0, 0, 0, 0);
-                          
-                          const isSameDate = eventDate.getTime() === targetDate.getTime();
-                          const isLessonMatch = event.selectedLessons ? 
-                            event.selectedLessons.includes(hourIdx + 1) : 
-                            (event.startTime <= hourInfo.end && event.endTime >= hourInfo.start);
-                          
-                          // בדיקה אם המבחן רלוונטי למורה
-                          const myLessonAtTime = schedule?.weekPlan?.[day]?.find(l => l.lessonNumber === hourIdx + 1);
-                          const hasMyLessonAtTime = myLessonAtTime && myLessonAtTime.subject;
-                          const isMyClass = myLessonAtTime && myLessonAtTime.classId && 
-                            event.classes?.some(cls => cls._id === myLessonAtTime.classId._id || cls._id === myLessonAtTime.classId);
-                          const isMyExam = (event.createdBy?._id || event.createdBy) === me?._id;
-                          const isTargetedForMe = (event.targetTeacher?._id || event.targetTeacher) === me?._id;
-                          
-                          return isSameDate && isLessonMatch && hasMyLessonAtTime && isMyClass && (isMyExam || isTargetedForMe);
-                        });
-                        
-                        return slotExams.length > 0 ? (
-                          <div className="slot-exams">
-                            {slotExams.map((exam, idx) => (
-                              <div key={idx} className="exam-indicator clickable" onClick={() => setSelectedEvent(exam)}>
-                                📄 {exam.title}
-                                {(() => {
-                                  const isTeachingThisSubject = me?.subjects?.includes(exam.subject);
-                                  if (exam.createdBy === me?._id || isTeachingThisSubject) {
-                                    return null;
-                                  }
-                                  return (
-                                      <small className="exam-creator"> ({exam.targetTeacher.firstName} {exam.targetTeacher.lastName})</small>
-                                  );
-                                })()}
-                              </div>
-                            ))}
-                          </div>
-                        ) : "—";
-                      })()}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <TeacherScheduleView 
+      schedule={schedule.weekPlan}
+      events={events}
+      teacherInfo={me}
+      schoolInfo={me?.schoolId}
+      onEventClick={setSelectedEvent}
+    />
   );
 };
 
@@ -1334,45 +1126,7 @@ const renderScheduleTable = () => {
           </div>
         )}
 
-        {/* Event Details Modal */}
-        {selectedEvent && (
-          <div className="modal-overlay" onClick={() => setSelectedEvent(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>{selectedEvent.type === 'exam' ? '📄' : '🎯'} {selectedEvent.title}</h3>
-                <button className="modal-close" onClick={() => setSelectedEvent(null)}>×</button>
-              </div>
-              <div className="modal-body">
-                <div className="event-detail">
-                  <strong>תאריך:</strong> {new Date(selectedEvent.date).toLocaleDateString('he-IL')}
-                </div>
-                <div className="event-detail">
-                  <strong>שעה:</strong> {selectedEvent.startTime} - {selectedEvent.endTime}
-                </div>
-                {selectedEvent.subject && (
-                  <div className="event-detail">
-                    <strong>מקצוע:</strong> {selectedEvent.subject}
-                  </div>
-                )}
-                <div className="event-detail">
-                  <strong>כיתות:</strong> {selectedEvent.classes?.map(c => c.name).join(', ') || 'לא צוין'}
-                </div>
-                {selectedEvent.description && (
-                  <div className="event-detail">
-                    <strong>הערות:</strong>
-                    <div className="event-description">{selectedEvent.description}</div>
-                  </div>
-                )}
-                {selectedEvent.notes && (
-                  <div className="event-detail">
-                    <strong>הערות מהמורה:</strong>
-                    <div className="event-notes">{selectedEvent.notes}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <EventDetailsModal selectedEvent={selectedEvent} onClose={() => setSelectedEvent(null)} />
 
         {/* Schedule Update Modal */}
         {showScheduleUpdate && (
