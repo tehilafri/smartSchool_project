@@ -2,18 +2,43 @@ import { useState, useEffect } from "react";
 import "./Dashboard.css";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
+import DashboardSidebar from "./DashboardSidebar";
+import OverviewSection from "./OverviewSection";
+import DataTable from "./DataTable";
+import DashboardModal from "./DashboardModal";
+import useDashboard from "../../hooks/useDashboard";
 
-import { getMe, getAllTeachers } from "../../services/userService";
-import { getScheduleByTeacher, getNextLessonForTeacher, updateScheduleDay, createSchedule, getHomeroomClassSchedule } from "../../services/scheduleService"; 
+import { getAllTeachers, getMe } from "../../services/userService";
+import { getNextLessonForTeacher, updateScheduleDay, createSchedule, getHomeroomClassSchedule, getScheduleByTeacher } from "../../services/scheduleService"; 
 import { getSubstituteRequests, reportAbsence ,approveReplacement} from "../../services/substituteRequestsSercive";
 import { getEvents, getNextExam, getUpcomingExams, addEvent, updateEvent, deleteEvent } from "../../services/eventService";
-import { getAllClasses } from "../../services/classService";
+import { getAllClasses, getStudentsByName } from "../../services/classService";
 import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
 import ScheduleTable from "./ScheduleTable";
 import {TeacherScheduleView} from "./ScheduleTable";
 import EventDetailsModal from "./EventDetailsModal";
 
 const TeacherDashboard = ({ onLogout }) => {
+  const {
+    activeSection,
+    setActiveSection,
+    showModal,
+    setShowModal,
+    modalType,
+    setModalType,
+    modalData,
+    formData,
+    setFormData,
+    me,
+    setMe,
+    loadingMe,
+    setLoadingMe,
+    selectedEvent,
+    setSelectedEvent,
+    openModal,
+    closeModal
+  } = useDashboard();
+
   // token: אפשר לקבל דרך props או localStorage
   const [currentToken, setCurrentToken] = useState(localStorage.getItem("token"));
   const token = currentToken;
@@ -52,13 +77,6 @@ const TeacherDashboard = ({ onLogout }) => {
     };
   }, []);
 
-  const [activeSection, setActiveSection] = useState("overview");
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState("");
-
-  const [me, setMe] = useState(null);
-  const [loadingMe, setLoadingMe] = useState(true);
-
   const [schedule, setSchedule] = useState(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
 
@@ -82,8 +100,9 @@ const TeacherDashboard = ({ onLogout }) => {
   const [editingExam, setEditingExam] = useState(null);
   const [classSchedule, setClassSchedule] = useState(null);
   const [loadingClassSchedule, setLoadingClassSchedule] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null); // חדש
   const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
+  const [selectedClassForStudents, setSelectedClassForStudents] = useState('');
+  const [classStudents, setClassStudents] = useState([]);
 
 
   const updateForm = (code, field, value) => {
@@ -276,17 +295,7 @@ const TeacherDashboard = ({ onLogout }) => {
     };
   }, [token]); 
 
-  // modal handlers
-  const openModal = (type) => {
-    setModalType(type);
-    setShowModal(true);
-  };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setModalType("");
-    setEditingExam(null);
-  };
 
   // טעינת מערכת הכיתה למחנכת
   const loadClassSchedule = async () => {
@@ -319,6 +328,19 @@ const TeacherDashboard = ({ onLogout }) => {
   const handleScheduleUpdateSuccess = () => {
     loadClassSchedule();
     closeScheduleUpdate();
+  };
+
+  // טעינת פרטי תלמידים לכיתה נבחרת
+  const loadStudentsForClass = async (className) => {
+    try {
+      console.log('Loading students for class:', className);
+      const studentsData = await getStudentsByName(className);
+      console.log('Students data received:', studentsData);
+      setClassStudents(studentsData || []);
+    } catch (err) {
+      console.error('Error loading students for class:', err);
+      setClassStudents([]);
+    }
   };
 
   // טעינת מערכת הכיתה כשעוברים לסעיף
@@ -376,8 +398,7 @@ const TeacherDashboard = ({ onLogout }) => {
   // עריכת מבחן קיים
   const handleEditExam = (exam) => {
     setEditingExam(exam);
-    setModalType("editExam");
-    setShowModal(true);
+    openModal("editExam", exam);
   };
 
   // מחיקת מבחן
@@ -532,42 +553,26 @@ const renderScheduleTable = () => {
     );
   };
 
+  const menuItems = [
+    { id: "overview", label: "סקירה כללית", icon: "📊" },
+    { id: "schedule", label: "המערכת שלי", icon: "📅" },
+    ...(me?.ishomeroom ? [{ id: "classSchedule", label: "מערכת הכיתה", icon: "🏢" }] : []),
+    { id: "nextClass", label: "השיעור הבא", icon: "⏰" },
+    { id: "absences", label: "דיווח היעדרות", icon: "📝" },
+    { id: "myAbsences", label: "ההיעדרויות שלי", icon: "📋" },
+    { id: "students", label: "פרטי תלמידים", icon: "👨🎓" },
+    { id: "exams", label: "מבחנים", icon: "📄" },
+  ];
+
   return (
     <div className="dashboard-container">
-      <div className="dashboard-sidebar">
-        <div className="sidebar-header" style={{marginTop: 70}}>
-          <h2>Smart School</h2>
-          <p>פאנל מורה</p>
-        </div>
-
-        <nav className="sidebar-nav">
-          {[
-            { id: "overview", label: "סקירה כללית", icon: "📊" },
-            { id: "schedule", label: "המערכת שלי", icon: "📅" },
-            ...(me?.ishomeroom ? [{ id: "classSchedule", label: "מערכת הכיתה", icon: "🏢" }] : []),
-
-            { id: "nextClass", label: "השיעור הבא", icon: "⏰" },
-            { id: "absences", label: "דיווח היעדרות", icon: "📝" },
-            { id: "myAbsences", label: "ההיעדרויות שלי", icon: "📋" },
-            { id: "exams", label: "מבחנים", icon: "📄" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeSection === item.id ? "active" : ""}`}
-              onClick={() => setActiveSection(item.id)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="btn btn-outline logout-btn" onClick={onLogout}>
-            יציאה
-          </button>
-        </div>
-      </div>
+      <DashboardSidebar 
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        menuItems={menuItems}
+        userRole="teacher"
+        onLogout={onLogout}
+      />
 
       <div className="dashboard-main" style={{paddingTop: 60}}>
         {me?.schoolId && <DashboardHeader schoolId={me.schoolId._id} onLogout={onLogout} />}
@@ -601,173 +606,127 @@ const renderScheduleTable = () => {
         )}
 
         {activeSection === "overview" && (
-          <div className="dashboard-content">
-            <h2>סקירה כללית</h2>
-            <div className="stats-grid">
-
-              <div className="stat-card">
-                <div className="stat-icon">📚</div>
-                <div className="stat-info">
-                  <h3>
-                    {
-                      (() => {
-                        if (loadingExams) return "...";
-                        if (!events || events.length === 0 || !me?.classes) return "0";
-                        const today = new Date();
-                        const startOfWeek = new Date(today);
-                        // אם היום שבת (6), הצג את השבוע הבא
-                        const dayOffset = today.getDay() === 6 ? 1 : 0;
-                        startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7)); // ראשון
-                        startOfWeek.setHours(0, 0, 0, 0);
-                        const endOfWeek = new Date(startOfWeek);
-                        endOfWeek.setDate(startOfWeek.getDate() + 6); // שבת
-                        endOfWeek.setHours(23, 59, 59, 999);
-                        
-                        const teacherClassIds = me.classes.map(c => c._id || c);
-                        
-                        const filteredEvents = events.filter(event => {
-                          const eventDate = new Date(event.date);
-                          eventDate.setHours(0, 0, 0, 0);
-                          
-                          const isThisWeek = eventDate >= startOfWeek && eventDate <= endOfWeek;
-                          const isForMyClasses = event.classes?.some(cls => 
-                            teacherClassIds.includes(cls._id || cls)
-                          );
-                          const isNotExam = event.type !== 'exam';
-                          
-                          return isThisWeek && isForMyClasses && isNotExam;
-                        });
-                        
-                        // בדיקה ספציפית לאירוע הטיול
-                        const tripEvent = events.find(e => e.title === 'טיול למדבר');
-                        if (tripEvent) {
-                          const tripDate = new Date(tripEvent.date);
-                          tripDate.setHours(0, 0, 0, 0);
-                        }
-                        
-                        return filteredEvents.length;
-                      })()
-                    }
-                  </h3>
-                  <p>אירועים השבוע</p>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon">📄</div>
-                <div className="stat-info">
-                  <h3>
-                    {
-                      (() => {
-                        if (loadingExams) return "...";
-                        if (!exams.myExams && !exams.othersExams) return "0";
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const upcomingMyExams = (exams.myExams || []).filter(exam => {
-                          const examDate = new Date(exam.date);
-                          examDate.setHours(0, 0, 0, 0);
-                          return examDate >= today;
-                        });
-                        const upcomingOthersExams = (exams.othersExams || []).filter(exam => {
-                          const examDate = new Date(exam.date);
-                          examDate.setHours(0, 0, 0, 0);
-                          return examDate >= today;
-                        });
-                        return upcomingMyExams.length + upcomingOthersExams.length;
-                      })()
-                    }
-                  </h3>
-                  <p>מבחנים קרובים</p>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon">📝</div>
-                <div className="stat-info">
-                   <h3>
-                    {
-                      subRequests
-                        ?.filter(r => new Date(r.date) >= new Date()) // רק עתידיות
-                        ?.length ?? 0
-                    }
-                  </h3>
-                  <p>בקשות היעדרות קרובות</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="teacher-quick-actions">
-              <h3>פעולות מהירות</h3>
-              <div className="quick-actions-grid">
-                <button className="quick-action-card" onClick={() => openModal("reportAbsence")}>
-                  <span className="action-icon">📝</span>
-                  <span className="action-text">דווח היעדרות</span>
-                </button>
-
-                <button className="quick-action-card" onClick={() => openModal("scheduleExam")}>
-                  <span className="action-icon">📄</span>
-                  <span className="action-text">קבע מבחן</span>
-                </button>
-
-              </div>
-            </div>
-
-            <div className="recent-activities">
-              <h3>מה חדש?</h3>
-              <div className="activity-list">
-                {(() => {
-                  if (!events || events.length === 0) return <p>אין אירועים.</p>;
+          <OverviewSection 
+            stats={[
+              {
+                icon: "📚",
+                value: (() => {
+                  if (loadingExams) return "...";
+                  if (!events || events.length === 0 || !me?.classes) return "0";
+                  const today = new Date();
+                  const startOfWeek = new Date(today);
+                  const dayOffset = today.getDay() === 6 ? 1 : 0;
+                  startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
+                  startOfWeek.setHours(0, 0, 0, 0);
+                  const endOfWeek = new Date(startOfWeek);
+                  endOfWeek.setDate(startOfWeek.getDate() + 6);
+                  endOfWeek.setHours(23, 59, 59, 999);
                   
-                  const relevantEvents = events
-                    .filter(ev => {
-                      const eventDate = new Date(ev.date);
-                      eventDate.setHours(0, 0, 0, 0);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
-                      
-                      if (diffDays < -3 || diffDays > 7) return false;
-                      
-                      // סינון מבחנים
-                      if (ev.type === 'exam') {
-                        const examResults = filterExamsByTeacherRole([ev], me);
-                        return examResults.myExams.length > 0 || examResults.othersExams.length > 0;
-                      }
-                      
-                      return true; // אירועים אחרים
-                    })
-                    .sort((a, b) => new Date(a.date) - new Date(b.date))
-                    .slice(0, 3);
+                  const teacherClassIds = me.classes.map(c => c._id || c);
                   
-                  if (relevantEvents.length === 0) return <p>אין אירועים רלוונטיים.</p>;
-                  
-                  return relevantEvents.map((ev, i) => {
-                    const eventDate = new Date(ev.date);
+                  const filteredEvents = events.filter(event => {
+                    const eventDate = new Date(event.date);
                     eventDate.setHours(0, 0, 0, 0);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
                     
-                    let timeText = "";
-                    if (diffDays === 0) timeText = "היום";
-                    else if (diffDays === 1) timeText = "מחר";
-                    else if (diffDays === -1) timeText = "אתמול";
-                    else if (diffDays > 0) timeText = `בעוד ${diffDays} ימים`;
-                    else timeText = `לפני ${Math.abs(diffDays)} ימים`;
-                    
-                    const classNames = ev.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה';
-                    
-                    return (
-                      <div className="activity-item" key={i}>
-                        <span className="activity-time">{timeText}</span>
-                        <span className="activity-text">{ev.title} - {classNames}</span>
-                      </div>
+                    const isThisWeek = eventDate >= startOfWeek && eventDate <= endOfWeek;
+                    const isForMyClasses = event.classes?.some(cls => 
+                      teacherClassIds.includes(cls._id || cls)
                     );
+                    const isNotExam = event.type !== 'exam';
+                    
+                    return isThisWeek && isForMyClasses && isNotExam;
                   });
-                })()}
-              </div>
-            </div>
-          </div>
+                  
+                  return filteredEvents.length;
+                })(),
+                label: "אירועים השבוע"
+              },
+              {
+                icon: "📄",
+                value: (() => {
+                  if (loadingExams) return "...";
+                  if (!exams.myExams && !exams.othersExams) return "0";
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const upcomingMyExams = (exams.myExams || []).filter(exam => {
+                    const examDate = new Date(exam.date);
+                    examDate.setHours(0, 0, 0, 0);
+                    return examDate >= today;
+                  });
+                  const upcomingOthersExams = (exams.othersExams || []).filter(exam => {
+                    const examDate = new Date(exam.date);
+                    examDate.setHours(0, 0, 0, 0);
+                    return examDate >= today;
+                  });
+                  return upcomingMyExams.length + upcomingOthersExams.length;
+                })(),
+                label: "מבחנים קרובים"
+              },
+              {
+                icon: "📝",
+                value: subRequests?.filter(r => new Date(r.date) >= new Date())?.length ?? 0,
+                label: "בקשות היעדרות קרובות"
+              }
+            ]}
+            quickActions={[
+              {
+                icon: "📝",
+                text: "דווח היעדרות",
+                onClick: () => openModal("reportAbsence")
+              },
+              {
+                icon: "📄",
+                text: "קבע מבחן",
+                onClick: () => openModal("scheduleExam")
+              }
+            ]}
+            recentActivities={(() => {
+              if (!events || events.length === 0) return [];
+              
+              const relevantEvents = events
+                .filter(ev => {
+                  const eventDate = new Date(ev.date);
+                  eventDate.setHours(0, 0, 0, 0);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
+                  
+                  if (diffDays < -3 || diffDays > 7) return false;
+                  
+                  if (ev.type === 'exam') {
+                    const examResults = filterExamsByTeacherRole([ev], me);
+                    return examResults.myExams.length > 0 || examResults.othersExams.length > 0;
+                  }
+                  
+                  return true;
+                })
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .slice(0, 3);
+              
+              return relevantEvents.map((ev, i) => {
+                const eventDate = new Date(ev.date);
+                eventDate.setHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
+                
+                let timeText = "";
+                if (diffDays === 0) timeText = "היום";
+                else if (diffDays === 1) timeText = "מחר";
+                else if (diffDays === -1) timeText = "אתמול";
+                else if (diffDays > 0) timeText = `בעוד ${diffDays} ימים`;
+                else timeText = `לפני ${Math.abs(diffDays)} ימים`;
+                
+                const classNames = ev.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה';
+                
+                return {
+                  time: timeText,
+                  text: `${ev.title} - ${classNames}`
+                };
+              });
+            })()}
+            userRole="teacher"
+          />
         )}
 
         {activeSection === "schedule" && (
@@ -967,6 +926,57 @@ const renderScheduleTable = () => {
 
 
 
+        {activeSection === "students" && (
+          <div className="dashboard-content">
+            <h2>פרטי תלמידים</h2>
+            
+            <div className="class-selector">
+              <label>בחר כיתה:</label>
+              <select 
+                value={selectedClassForStudents} 
+                onChange={(e) => {
+                  setSelectedClassForStudents(e.target.value);
+                  if (e.target.value) {
+                    const selectedClass = me?.classes?.find(cls => cls._id === e.target.value);
+                    if (selectedClass) {
+                      loadStudentsForClass(selectedClass.name);
+                    }
+                  } else {
+                    setClassStudents([]);
+                  }
+                }}
+              >
+                <option value="">בחר כיתה...</option>
+                {(me?.classes || []).map(cls => (
+                  <option key={cls._id} value={cls._id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {selectedClassForStudents && (
+              <div className="students-section">
+                <h3>תלמידי כיתה {me?.classes?.find(cls => cls._id === selectedClassForStudents)?.name}</h3>
+                {classStudents.length > 0 ? (
+                  <DataTable 
+                    columns={[
+                      { header: "שם", key: "name", render: (student) => `${student.firstName} ${student.lastName}` },
+                      { header: "תעודת זהות", key: "userId" },
+                      { header: "אימייל", key: "email" },
+                      { header: "טלפון", key: "phone" }
+                    ]}
+                    data={classStudents}
+                    title={""}
+                  />
+                ) : (
+                  <p>אין תלמידים בכיתה זו.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeSection === "exams" && (
           <div className="dashboard-content">
             <div className="section-header">
@@ -1092,63 +1102,40 @@ const renderScheduleTable = () => {
           </div>
         )}
 
-        {/* מודל פשוט שמציג טפסים — חיבור לכפתורי השליחה לדוגמא */}
-        {showModal && (
-          <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>
-                  {modalType === "reportAbsence" && "דיווח היעדרות"}
-                  {modalType === "scheduleExam" && "קביעת מבחן"}
-                  {modalType === "editExam" && "עריכת מבחן"}
-                </h3>
-                <button className="modal-close" onClick={closeModal}>×</button>
-              </div>
-
-              <div className="modal-body">
-                {modalType === "reportAbsence" && (
-                  <AbsenceForm onSubmit={handleSubmitAbsence} onCancel={closeModal} showNotification={showNotification} />
-                )}
-
-
-
-                {modalType === "scheduleExam" && (
-                  <ExamForm onSubmit={handleCreateExam} onCancel={closeModal} showNotification={showNotification} me={me} />
-                )}
-                
-                {modalType === "editExam" && (
-                  <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} />
-                )}
-                
-
-              </div>
-            </div>
-          </div>
-        )}
+        <DashboardModal 
+          isOpen={showModal}
+          onClose={closeModal}
+          title={
+            modalType === "reportAbsence" ? "דיווח היעדרות" :
+            modalType === "scheduleExam" ? "קביעת מבחן" :
+            modalType === "editExam" ? "עריכת מבחן" : ""
+          }
+        >
+          {modalType === "reportAbsence" && (
+            <AbsenceForm onSubmit={handleSubmitAbsence} onCancel={closeModal} showNotification={showNotification} />
+          )}
+          {modalType === "scheduleExam" && (
+            <ExamForm onSubmit={handleCreateExam} onCancel={closeModal} showNotification={showNotification} me={me} />
+          )}
+          {modalType === "editExam" && (
+            <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} />
+          )}
+        </DashboardModal>
 
         <EventDetailsModal selectedEvent={selectedEvent} onClose={() => setSelectedEvent(null)} />
 
-        {/* Schedule Update Modal */}
-        {showScheduleUpdate && (
-          <div className="modal-overlay" onClick={closeScheduleUpdate}>
-            <div className="modal-content schedule-update-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>עדכון מערכת שעות - {me.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me._id)?.name}</h3>
-                <button className="modal-close" onClick={closeScheduleUpdate}>
-                  ×
-                </button>
-              </div>
-              <div className="modal-body">
-                <ScheduleUpdateComponent
-                  targetClassName={me.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me._id)?.name}
-                  onSuccess={handleScheduleUpdateSuccess}
-                  showNotification={showNotification}
-                  me={me}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        <DashboardModal 
+          isOpen={showScheduleUpdate}
+          onClose={closeScheduleUpdate}
+          title={`עדכון מערכת שעות - ${me?.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me?._id)?.name || ''}`}
+        >
+          <ScheduleUpdateComponent
+            targetClassName={me?.classes?.find(cls => cls.homeroomTeacher && cls.homeroomTeacher._id === me?._id)?.name}
+            onSuccess={handleScheduleUpdateSuccess}
+            showNotification={showNotification}
+            me={me}
+          />
+        </DashboardModal>
       </div>
     </div>
   );

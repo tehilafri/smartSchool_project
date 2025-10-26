@@ -16,6 +16,6 @@ router.put('/updateHomeroomTeacher/:className', jwtMiddleware, requireRole('admi
 router.post('/addStudent', jwtMiddleware, requireRole('admin', 'secretary'), addStudentToClass);
 router.post('/removeStudent', jwtMiddleware, requireRole('admin', 'secretary'), removeStudentFromClass);
 router.delete('/:name', jwtMiddleware, requireRole('admin', 'secretary'), deleteClass);
-router.get('/studentsByName/:className', jwtMiddleware, requireRole('admin', 'secretary'), getStudentsByClass);
+router.get('/studentsByName/:className', jwtMiddleware, requireRole('admin', 'secretary', 'teacher'), getStudentsByClass);
 
 export default router;

@@ -31,8 +31,8 @@ export const deleteUser = (id) => {
 }
 
 // Password management
-export const forgotPassword = (email) => {
-  return api.post('/users/forgot-password', { email });
+export const forgotPassword = (email, userId) => {
+  return api.post('/users/forgot-password', { email, userId });
 };
 
 export const resetPassword = (token, newPassword) => {

@@ -14,6 +14,8 @@ import RegisterSchool from "./components/Auth/RegisterSchool";
 import RegisterUser from "./components/Auth/RegisterUser";
 import ForgotPassword from "./components/Auth/ForgotPassword";
 import ResetPassword from "./components/Auth/ResetPassword";
+import AdminRegistration from "./components/Auth/AdminRegistration";
+import ApproveAdmin from "./components/Auth/ApproveAdmin";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import HomePage from "./components/HomePage";
 import ScrollToTop from "./components/ScrollToTop";
@@ -46,6 +48,8 @@ function Router() {
           }
         />
         <Route path="/register_school" element={<Layout ><RegisterSchool /></Layout>} />
+        <Route path="/admin-registration" element={<Layout ><AdminRegistration /></Layout>} />
+        <Route path="/approve-admin/:token" element={<Layout ><ApproveAdmin /></Layout>} />
         <Route path="/forgot-password" element={<Layout ><ForgotPassword /></Layout>} />
         <Route path="/reset-password/:token" element={<Layout ><ResetPassword /></Layout>} />
         <Route

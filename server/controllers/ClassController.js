@@ -221,7 +221,7 @@ export const getStudentsByClass = async (req, res) => {
   try {
     const { className } = req.params;
     const classObj = await Class.findOne({ name: className, schoolId: req.schoolId })
-      .populate('students', 'userId firstName lastName email');
+      .populate('students', 'userId firstName lastName email phone');
     if (!classObj) {
       return res.status(404).json({ message: 'Class not found in this school' });
     }

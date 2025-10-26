@@ -1,7 +1,8 @@
 import nodemailer from "nodemailer";
 import { google } from "googleapis";
 
-export const sendEmail = async (to, subject, text) => {
+export const sendEmail = async (options) => {
+  const { to, subject, text, html } = options;
   try {
     // יוצרים את ה‑OAuth2Client בתוך הפונקציה
     const oAuth2Client = new google.auth.OAuth2(
@@ -42,6 +43,7 @@ export const sendEmail = async (to, subject, text) => {
       to,
       subject,
       text,
+      html
     };
 
     // שולחים את המייל

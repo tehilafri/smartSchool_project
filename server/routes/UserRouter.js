@@ -10,7 +10,8 @@ import {
   resetPassword,
   getMe,
   deleteUser,
-  getAllSecretaries
+  getAllSecretaries,
+  resetAdminPassword
 } from '../controllers/UserController.js';
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
 import User from '../models/User.js';
@@ -34,6 +35,7 @@ router.get('/teachers', jwtMiddleware, getAllTeachers);
 router.get('/students', jwtMiddleware, getAllStudents);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:token', resetPassword);
+router.post('/reset-admin-password', resetAdminPassword);
 router.get('/secretaries', jwtMiddleware, getAllSecretaries);
 router.get('/:id', jwtMiddleware, getUserById);
 router.put('/:id', jwtMiddleware, updateUser);

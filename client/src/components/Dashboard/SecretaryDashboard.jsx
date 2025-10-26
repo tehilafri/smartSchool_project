@@ -1,41 +1,61 @@
-import { useState, useEffect, useState as useState2 } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
-import { getMe, getAllTeachers, getAllStudents, updateUser, deleteUser } from "../../services/userService";
+import DashboardSidebar from "./DashboardSidebar";
+import OverviewSection from "./OverviewSection";
+import DataTable from "./DataTable";
+import DashboardModal from "./DashboardModal";
+import ScheduleSection from "./ScheduleSection";
+import useDashboard from "../../hooks/useDashboard";
+import { getAllTeachers, getAllStudents, updateUser, deleteUser } from "../../services/userService";
 import { getAllClasses, addStudentToClass, removeStudentFromClass,getStudentsByName, updateHomeroomTeacher } from "../../services/classService";
 import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/eventService";
-import { getScheduleByTeacher, getHomeroomClassSchedule } from "../../services/scheduleService";
 import { getAllExternalSubstitutes, addExternalSubstitute, deleteExternalSubstitute, updateExternalSubstitute } from "../../services/externalSubstituteService";
 
 import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
-import ScheduleTable, { TeacherScheduleView } from "./ScheduleTable";
 import EventDetailsModal from "./EventDetailsModal";
 import "./Dashboard.css"
 
 const SecretaryDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState("overview")
-  const [showModal, setShowModal] = useState(false)
-  const [modalType, setModalType] = useState("")
-  const [modalData, setModalData] = useState(null)
-  const [formData, setFormData] = useState({})
-  const [me, setMe] = useState2(null);
+  const {
+    activeSection,
+    setActiveSection,
+    showModal,
+    modalType,
+    modalData,
+    formData,
+    setFormData,
+    me,
+    selectedEvent,
+    setSelectedEvent,
+    activeScheduleTab,
+    setActiveScheduleTab,
+    selectedTeacherId,
+    setSelectedTeacherId,
+    selectedClassId,
+    setSelectedClassId,
+    selectedTeacherSchedule,
+    selectedClassSchedule,
+    showScheduleUpdate,
+    scheduleUpdateTarget,
+    openModal,
+    closeModal,
+    loadTeacherSchedule,
+    loadClassSchedule,
+    openScheduleUpdate,
+    closeScheduleUpdate,
+    handleScheduleUpdateSuccess
+  } = useDashboard();
+  
   const [students, setStudents] = useState([])
   const [teachers, setTeachers] = useState([]);
   const [classes, setClasses] = useState([])
   const [events, setEvents] = useState([])
   const [substitutes, setSubstitutes] = useState([])
   const [expandedClass, setExpandedClass] = useState(null);
-  const [classStudents, setClassStudents] = useState([]); 
-  const [activeScheduleTab, setActiveScheduleTab] = useState('teachers');
-  const [selectedTeacherId, setSelectedTeacherId] = useState('');
-  const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedTeacherSchedule, setSelectedTeacherSchedule] = useState(null);
-  const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
-  const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
-  const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [classStudents, setClassStudents] = useState([]);
 
   const fetchAllData = async () => {
     try {
@@ -87,36 +107,6 @@ const SecretaryDashboard = ({ onLogout }) => {
 
   // לוקחים את שלושת האירועים הקרובים ביותר
   const nearestEvents = sortedByDistance.slice(0, 3);
-  const openModal = (type, data = null) => {
-    // אל תשנה את data המקורי!
-    let modalDataCopy = data ? { ...data } : null;
-    if (modalDataCopy?.date) {
-      modalDataCopy.date = new Date(modalDataCopy.date).toISOString().split("T")[0];
-    }
-    if (modalDataCopy?.startTime) {
-      modalDataCopy.startTime = modalDataCopy.startTime.slice(0,5);
-    }
-    if (modalDataCopy?.endTime) {
-      modalDataCopy.endTime = modalDataCopy.endTime.slice(0,5);
-    }
-    if (modalDataCopy?.classes && Array.isArray(modalDataCopy.classes) && modalDataCopy.classes.length > 0) {
-      // אם זה אובייקטים, תוציא מזהים, אם כבר מזהים תשאיר
-      if (typeof modalDataCopy.classes[0] === "object" && modalDataCopy.classes[0] !== null) {
-        modalDataCopy.classes = modalDataCopy.classes.map(c => c.name);
-      }
-    }
-    setModalType(type)
-    setModalData(modalDataCopy)
-    setFormData(modalDataCopy || {})
-    setShowModal(true)
-  }
-
-  const closeModal = () => {
-    setShowModal(false)
-    setModalType("")
-    setModalData(null)
-    setFormData({})
-  }
 
   const handleDeleteUser = async (id) => {
     await deleteUser(id);
@@ -196,72 +186,7 @@ const SecretaryDashboard = ({ onLogout }) => {
     fetchAllData();
   };
 
-  // טעינת מערכת שעות של מורה
-  const loadTeacherSchedule = async (teacherId) => {
-    try {
-      const scheduleData = await getScheduleByTeacher(teacherId);
-      const formattedSchedule = formatSchedule(scheduleData);
-      setSelectedTeacherSchedule(formattedSchedule);
-    } catch (err) {
-      console.error('Error loading teacher schedule:', err);
-    }
-  };
 
-  // טעינת מערכת שעות של כיתה
-  const loadClassSchedule = async (classId) => {
-    try {
-      const scheduleData = await getHomeroomClassSchedule(classId);
-      if (!scheduleData || scheduleData.length === 0) {
-        setSelectedClassSchedule(null);
-        return;
-      }
-      const formattedSchedule = formatSchedule(scheduleData);
-      setSelectedClassSchedule(formattedSchedule);
-    } catch (err) {
-      // אין מערכת שעות לכיתה זו
-      setSelectedClassSchedule(null);
-    }
-  };
-
-  // פורמט מערכת שעות
-  const formatSchedule = (teacherSchedule) => {
-    const weekPlan = {
-      sunday: [],
-      monday: [],
-      tuesday: [],
-      wednesday: [],
-      thursday: [],
-      friday: [],
-    };
-
-    teacherSchedule.forEach(dayObj => {
-      const { day, lessons } = dayObj;
-      const sortedLessons = lessons.sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
-      weekPlan[day] = sortedLessons;
-    });
-
-    return { weekPlan };
-  };
-
-  // פתיחת עדכון מערכת שעות
-  const openScheduleUpdate = (type, id, name) => {
-    setScheduleUpdateTarget({ type, id, name });
-    setShowScheduleUpdate(true);
-  };
-
-  // סגירת עדכון מערכת שעות
-  const closeScheduleUpdate = () => {
-    setShowScheduleUpdate(false);
-    setScheduleUpdateTarget({ type: null, id: null, name: null });
-  };
-
-  // רענון מערכת שעות לאחר עדכון
-  const handleScheduleUpdateSuccess = () => {
-    if (scheduleUpdateTarget.type === 'class' && selectedClassId) {
-      loadClassSchedule(selectedClassId);
-    }
-    closeScheduleUpdate();
-  };
 
   const showNotification = (message, type = 'success') => {
     // Simple notification implementation

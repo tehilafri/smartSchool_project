@@ -115,21 +115,39 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { userName, password, schoolCode } = req.body;
+    console.log('Login attempt:', { userName, schoolCode, hasPassword: !!password });
 
     // שליפת בית ספר לפי קוד
     const school = await School.findOne({ schoolCode });
     if (!school) {
+      console.log('School not found:', schoolCode);
       return res.status(401).json({ message: 'Invalid school code' });
     }
+    console.log('School found:', school.name);
 
     // מציאת המשתמש לפי userName ושיוך לבית ספר
     const user = await User.findOne({ userName, schoolId: school._id });
     if (!user) {
+      console.log('User not found:', userName);
       return res.status(401).json({ message: 'Invalid credentials of user' });
     }
+    console.log('User found:', user.email);
+    console.log('User schoolId:', user.schoolId);
+    console.log('School _id:', school._id);
+    console.log('School IDs match:', user.schoolId.toString() === school._id.toString());
 
     // בדיקת סיסמה
+    console.log('Comparing password:', password);
+    console.log('Stored hash length:', user.password.length);
+    console.log('Stored hash starts with:', user.password.substring(0, 10));
+    
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', isMatch);
+    
+    // בדיקה ידנית עם הסיסמה הבסיסית
+    const basicMatch = await bcrypt.compare('12345678', user.password);
+    console.log('Basic password (12345678) match:', basicMatch);
+    
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials of password' });
     }
@@ -141,17 +159,20 @@ export const login = async (req, res) => {
       { expiresIn: '1h' }
     );
 
+    console.log('Login successful for:', user.email);
     res.json({
       token,
       user: {
         id: user._id,
         userName: user.userName,
         role: user.role,
-        schoolCode: school.schoolCode
+        schoolCode: school.schoolCode,
+        firstName: user.firstName,
+        lastName: user.lastName
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error('Login error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -361,67 +382,117 @@ export const updateUser = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
-  // 1. לבדוק אם משתמש עם המייל הזה קיים
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(404).json({ message: 'User not found with this email' });
-  }
-
-  // 2. ליצור טוקן
-  const resetToken = user.getResetPasswordToken();
-
-  // 3. לשמור את הטוקן וה‑expire במסד
-  await user.save({ validateBeforeSave: false });
-
-  // 4. ליצור לינק לשחזור סיסמה
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-  const message = `You requested a password reset. Click here: ${resetUrl}`;
   try {
-    await sendEmail(user.email, 'Password Reset', message);
+    const { email, userId } = req.body;
 
-    res.status(200).json({ message: 'Email sent' });
-  } catch (err) {
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
+    if (!email || !userId) {
+      return res.status(400).json({ message: 'Email and User ID are required' });
+    }
+
+    // 1. לבדוק אם משתמש עם המייל ותעודת זהות קיים
+    const user = await User.findOne({ email, userId });
+    console.log('Looking for user with email:', email, 'and userId:', userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found with this email and ID' });
+    }
+    
+    console.log('User found:', user.email, 'from school:', user.schoolId);
+
+    // 2. ליצור טוקן
+    const resetToken = user.getResetPasswordToken();
+
+    // 3. לשמור את הטוקן וה‑expire במסד
     await user.save({ validateBeforeSave: false });
 
-    res.status(500).json({ message: 'Email could not be sent' });
+    // 4. ליצור לינק לשחזור סיסמה
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset',
+        html: `<p>You requested a password reset. Click here: <a href="${resetUrl}">Reset Password</a></p>`
+      });
+
+      res.status(200).json({ message: 'Email sent' });
+    } catch (err) {
+      console.error('Email sending error:', err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      res.status(500).json({ message: 'Email could not be sent' });
+    }
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
 export const resetPassword = async (req, res) => {
   try {
+    console.log('Reset password request:', {
+      token: req.params.token,
+      hasPassword: !!req.body.password
+    });
+
     const resetPasswordToken = crypto
       .createHash('sha256')
       .update(req.params.token)
       .digest('hex');
 
-    const user = await User.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() } });
+    console.log('Looking for user with token:', resetPasswordToken);
 
-    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+    // חיפוש משתמש עם הטוקן (גם אם פג תוקף)
+    let user = await User.findOne({ resetPasswordToken });
+    
+    if (!user) {
+      console.log('User not found with token');
+      return res.status(400).json({ message: 'Invalid token' });
+    }
+    
+    // בדיקת תוקף הטוקן
+    if (user.resetPasswordExpire && user.resetPasswordExpire < Date.now()) {
+      console.log('Token expired for user:', user.email);
+      // מחיקת הטוקן הפג תוקף
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ message: 'Token expired. Please request a new password reset.' });
+    }
+
+    console.log('User found:', user.email);
+    console.log('User school ID:', user.schoolId);
+    console.log('New password will be:', req.body.password);
 
     if (!req.body.password) {
       return res.status(400).json({ message: 'Password is required' });
     }
 
+    // הצפנת הסיסמה החדשה
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(req.body.password, salt);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    
+    console.log('Password hashed successfully');
+    console.log('New hash starts with:', hashedPassword.substring(0, 10));
 
+    // עדכון הסיסמה ומחיקת הטוקן
+    user.password = hashedPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 
-    await user.save();
+    await user.save({ validateBeforeSave: false });
+    console.log('User saved successfully');
 
     // שליחת מייל אישור
     try {
-      await sendEmail(
-         user.email,
-         'Password Reset Successful',
-         `Hello ${user.firstName},\n\nYour password has been successfully reset.`
-      );
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Successful',
+        html: `<p>Hello ${user.firstName},</p><p>Your password has been successfully reset.</p>`
+      });
+      console.log('Confirmation email sent');
     } catch (err) {
       console.error('Error sending confirmation email:', err);
     }
@@ -433,6 +504,28 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+
+// פונקציה לאיפוס סיסמה ידני למנהלת
+export const resetAdminPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    const admin = await User.findOne({ email, role: 'admin' });
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+    
+    const salt = await bcrypt.genSalt(10);
+    admin.password = await bcrypt.hash('12345678', salt);
+    await admin.save();
+    
+    console.log('Admin password reset manually for:', email);
+    res.json({ message: 'Password reset to 12345678' });
+  } catch (err) {
+    console.error('Manual password reset error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 export const deleteUser = async (req, res) => {
   try {

@@ -1,4 +1,5 @@
 import React from 'react';
+import HolidayIndicator from './HolidayIndicator';
 
 const ScheduleTable = ({ 
   schedule, 
@@ -38,12 +39,18 @@ const ScheduleTable = ({
           <thead>
             <tr>
               <th></th>
-              <th>ראשון</th>
-              <th>שני</th>
-              <th>שלישי</th>
-              <th>רביעי</th>
-              <th>חמישי</th>
-              <th>שישי</th>
+              {["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"].map((dayName, idx) => {
+                const dayDate = weekDates[idx];
+                return (
+                  <th key={dayName}>
+                    <div className="day-header">
+                      <div className="day-name">{dayName}</div>
+                      <div className="day-date">{formatDate(dayDate)}</div>
+                      <HolidayIndicator date={dayDate} />
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -244,12 +251,18 @@ export const TeacherScheduleView = ({
           <thead>
             <tr>
               <th></th>
-              <th>ראשון</th>
-              <th>שני</th>
-              <th>שלישי</th>
-              <th>רביעי</th>
-              <th>חמישי</th>
-              <th>שישי</th>
+              {["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"].map((dayName, idx) => {
+                const dayDate = weekDates[idx];
+                return (
+                  <th key={dayName}>
+                    <div className="day-header">
+                      <div className="day-name">{dayName}</div>
+                      <div className="day-date">{formatDate(dayDate)}</div>
+                      <HolidayIndicator date={dayDate} />
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>

@@ -6,6 +6,7 @@ import "./Auth.css";
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,7 +15,7 @@ const ForgotPassword = () => {
     setError(""); // נקה שגיאות קודמות
 
     try {
-      await forgotPasswordAPI(email);  // קריאה לשרת
+      await forgotPasswordAPI(email, userId);  // קריאה לשרת
       setIsSubmitted(true);
 
       setTimeout(() => {
@@ -68,6 +69,20 @@ const ForgotPassword = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="הכנס כתובת אימייל"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="userId">תעודת זהות</label>
+            <input
+              type="text"
+              id="userId"
+              name="userId"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              required
+              placeholder="הכנס תעודת זהות"
+              maxLength="9"
             />
           </div>
 

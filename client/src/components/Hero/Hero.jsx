@@ -15,7 +15,7 @@ const Hero = () => {
             הפכו את הניהול היומיומי לפשוט ויעיל יותר.
           </p>
           <div className="hero-actions">
-            <Link to="/register_school" className="btn btn-primary btn-large">
+            <Link to="/admin-registration" className="btn btn-primary btn-large">
               התחילו עכשיו
             </Link>
           </div>
