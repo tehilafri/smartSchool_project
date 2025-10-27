@@ -16,6 +16,8 @@ const RegisterSchool = ({ onRegister }) => {
     description: "",
   })
   const [logo, setLogo] = useState(null);
+  const [message, setMessage] = useState("");  // הודעה כללית
+  const [isError, setIsError] = useState(false); // האם ההודעה היא שגיאה
 
   const onSwitchToLogin = function() {
     window.location.href = "/login";
@@ -65,6 +67,10 @@ const RegisterSchool = ({ onRegister }) => {
 
       const result = await createSchool(form);
       console.log("✅ School created:", result)
+
+      setMessage("✅ בית הספר נרשם בהצלחה!\nהתחבר באמצעות הפרטים שנשלחים אליך כרגע במייל");
+      setIsError(false)
+
       if (typeof onRegister === "function") {
         onRegister("principal");
       }
@@ -74,7 +80,8 @@ const RegisterSchool = ({ onRegister }) => {
       if (err?.response?.data?.message) {
         msg = err.response.data.message;
       }
-      alert(msg);
+      setMessage(`❌ ${msg}`)
+      setIsError(true)
     }
   }
 
@@ -165,6 +172,12 @@ const RegisterSchool = ({ onRegister }) => {
           <button type="button" onClick={handleAddLesson}>
             ➕ הוסף שיעור
           </button>
+
+          {message && (
+          <p className={isError ? "error-message" : "success-message"}>
+            {message}
+          </p>
+        )}
 
           <button type="submit" className="btn btn-primary auth-submit">
             הירשם

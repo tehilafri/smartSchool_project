@@ -85,7 +85,7 @@ export const createSchool = async (req, res) => {
           <br>
           <p><strong>קוד בית הספר החדש שלך:</strong> ${schoolCode}</p>
           <p>שמור את הקוד הזה - תצטרך אותו להתחברות עתידית.</p>
-          <p><strong>הסיסמה שלך אופסה ל:</strong> 12345678</p>
+          <p><strong>הסיסמה שלך כרגע:</strong> 12345678</p>
           <p>אנא שנה את הסיסמה באמצעות "שכחתי סיסמה" לאחר ההתחברות.</p>
           <br>
           <p>בברכה,<br>צוות Smart School</p>

@@ -85,12 +85,17 @@ export const submitAdminRequest = async (req, res) => {
 };
 
 export const approveAdminRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { token } = req.params;
 
     // מציאת הבקשה
-    const adminRequest = await AdminRequest.findOne({ approvalToken: token, status: 'pending' });
+    const adminRequest = await AdminRequest.findOne({ approvalToken: token, status: 'pending' }).session(session);
     if (!adminRequest) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: 'בקשה לא נמצאה או כבר טופלה' });
     }
 
@@ -102,9 +107,9 @@ export const approveAdminRequest = async (req, res) => {
     // יצירת קוד בית ספר זמני ייחודי
     const tempSchoolCode = `TEMP_${generateCode()}`;
 
-    // יצירת בית ספר זמני קודם
+    // יצירת בית ספר זמני
     const tempSchool = new School({
-      name: 'בית ספר זמני',
+      name: `בית ספר זמני ${tempSchoolCode}`,
       schoolCode: tempSchoolCode,
       principalId: new mongoose.Types.ObjectId(), // זמני
       address: 'כתובת זמנית',
@@ -112,7 +117,7 @@ export const approveAdminRequest = async (req, res) => {
       email: process.env.EMAIL_USER,
       description: 'בית ספר זמני - יש לעדכן פרטים'
     });
-    await tempSchool.save();
+    await tempSchool.save({ session });
 
     // יצירת משתמש מנהלת עם בית הספר
     const userName = `${adminRequest.firstName}${adminRequest.lastName}`;
@@ -129,15 +134,15 @@ export const approveAdminRequest = async (req, res) => {
       password: hashedPassword,
       role: 'admin'
     });
-    await newAdmin.save();
+    await newAdmin.save({ session });
 
     // עדכון בית הספר עם המנהלת האמיתית
     tempSchool.principalId = newAdmin._id;
-    await tempSchool.save();
+    await tempSchool.save({ session });
 
     // עדכון סטטוס הבקשה
     adminRequest.status = 'approved';
-    await adminRequest.save();
+    await adminRequest.save({ session });
 
     // שליחת מייל אישור למנהלת
     await sendEmail({
@@ -169,9 +174,26 @@ export const approveAdminRequest = async (req, res) => {
       `
     });
 
+    // אם הכל עבר בהצלחה, commit לטרנזקציה
+    await session.commitTransaction();
+    session.endSession();
+
     res.json({ message: 'הבקשה אושרה בהצלחה' });
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('Error approving admin request:', err);
+
+    if (err.name === 'ValidationError') {
+      const errorMessages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ message: `שגיאות ולידציה: ${errorMessages.join(', ')}` });
+    }
+
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({ message: `${field} כבר קיים במערכת` });
+    }
+
     res.status(500).json({ message: 'שגיאה באישור הבקשה' });
   }
 };
