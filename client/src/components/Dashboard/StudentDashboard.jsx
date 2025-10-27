@@ -1,21 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import "./Dashboard.css";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
 import ScheduleTable from "./ScheduleTable";
-import {
-  getNextLessonForStudent,
-  getScheduleForStudent
-} from "../../services/scheduleService";
-import {
-  getUpcomingExams,
-  getEvents
-} from "../../services/eventService";
-import { getMe } from "../../services/userService";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { fetchCurrentUser } from "../../store/slices/userSlice";
+import { fetchEvents } from "../../store/slices/schoolDataSlice";
+import { fetchStudentSchedule, fetchNextLesson } from "../../store/slices/scheduleSlice";
+import { getUpcomingExams } from "../../services/eventService";
 import EventDetailsModal from "./EventDetailsModal";
+import NextClassSection from "./NextClassSection";
 
 const StudentDashboard = ({ onLogout }) => {
+  const dispatch = useAppDispatch();
+  
+  // Redux state
+  const { currentUser: studentInfo } = useAppSelector((state) => state.user);
+  const { events } = useAppSelector((state) => state.schoolData);
+  const { studentSchedule: schedule, nextLesson } = useAppSelector((state) => state.schedule);
+  
   const [activeSection, setActiveSection] = useState("overview");
+  const [upcomingExams, setUpcomingExams] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
    // הוספת class ל-body
   useEffect(() => {
@@ -27,42 +33,23 @@ const StudentDashboard = ({ onLogout }) => {
     };
   }, []);
 
-  // States
-  const [nextLesson, setNextLesson] = useState(null);
-  const [schedule, setSchedule] = useState([]);
-  const [upcomingExams, setUpcomingExams] = useState([]);
-  const [studentInfo, setStudentInfo] = useState(null);
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-
-  // Load dashboard data
+  // Load dashboard data דרך Redux
  useEffect(() => {
   const fetchData = async () => {
     try {
-      // מביאים את כל הנתונים בו זמנית
-      const nextLessonPromise = getNextLessonForStudent();
-      const schedulePromise = getScheduleForStudent();
-      const userPromise = getMe();
-      const examsPromise = getUpcomingExams().catch(() => []);
-      const eventsPromise = getEvents().catch(() => []);
-
-      const [nextLessonData, scheduleData, userResponse, examsData, eventsData] = await Promise.all([
-        nextLessonPromise,
-        schedulePromise,
-        userPromise,
-        examsPromise,
-        eventsPromise
-      ]);
-
-      // בודקים אם התגובה קיימת
-      if (!userResponse || !userResponse.data) {
-        console.error("getMe returned undefined or has no data");
-      }
-      setNextLesson(nextLessonData?.nextLesson || null);
-      setSchedule(scheduleData?.weekPlan || {});
-      setStudentInfo(userResponse?.data || null); // בטיחותי אם undefined
+      // טעינת נתוני המשתמש
+      await dispatch(fetchCurrentUser());
+      
+      // טעינת מערכת שעות ושיעור הבא
+      await dispatch(fetchStudentSchedule());
+      await dispatch(fetchNextLesson({ userType: 'student' }));
+      
+      // טעינת אירועים
+      await dispatch(fetchEvents());
+      
+      // מבחנים קרובים (עדיין לא ב-Redux)
+      const examsData = await getUpcomingExams().catch(() => []);
       setUpcomingExams(examsData || []);
-      setEvents(Array.isArray(eventsData) ? eventsData : eventsData?.data ?? []);
 
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -70,7 +57,9 @@ const StudentDashboard = ({ onLogout }) => {
   };
 
   fetchData();
-}, []);
+}, [dispatch]);
+
+
 
 
   const menuItems = [
@@ -80,7 +69,52 @@ const StudentDashboard = ({ onLogout }) => {
     { id: "exams", label: "מבחנים מתוכננים", icon: "📄" },
   ];
 
-  console.log("----------", nextLesson);
+  // Memoized calculations to prevent unnecessary re-renders
+  const todayLessonsRemaining = useMemo(() => {
+    if (!schedule) return 0;
+    const now = new Date();
+    const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
+    const todayDay = daysOfWeek[now.getDay()];
+    const todayLessons = schedule[todayDay] || [];
+    
+    return todayLessons.filter(lesson => {
+      if (!lesson.subject || !lesson.startTime) return false;
+      const [hour, minute] = lesson.startTime.split(':').map(Number);
+      const lessonDate = new Date();
+      lessonDate.setHours(hour, minute, 0, 0);
+      return lessonDate >= now;
+    }).length;
+  }, [schedule]);
+
+  const weeklyExamsCount = useMemo(() => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    const dayOffset = today.getDay() === 6 ? 1 : 0;
+    startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return upcomingExams.filter(exam => {
+      const examDate = new Date(exam.date);
+      examDate.setHours(0, 0, 0, 0);
+      return examDate >= startOfWeek && examDate <= endOfWeek;
+    }).length;
+  }, [upcomingExams]);
+
+
+
+  const sortedExams = useMemo(() => {
+    return upcomingExams.sort((a, b) => {
+      const dateA = new Date(a.date);
+      dateA.setHours(0, 0, 0, 0);
+      const dateB = new Date(b.date);
+      dateB.setHours(0, 0, 0, 0);
+      return dateA - dateB;
+    });
+  }, [upcomingExams]);
+
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
@@ -88,17 +122,17 @@ const StudentDashboard = ({ onLogout }) => {
           <div className="dashboard-content">
             <h2>סקירה כללית</h2>
 
-            {studentInfo && (
+            {studentInfo && studentInfo.classes && studentInfo.classes[0] && (
               <div className="student-info-card">
                 <div className="student-avatar">
                   <span className="avatar-text">
-                    {studentInfo.firstName[0]}{studentInfo.lastName[0]}
+                    {studentInfo.firstName?.[0]}{studentInfo.lastName?.[0]}
                   </span>
                 </div>
                 <div className="student-details">
                   <h3>{studentInfo.firstName} {studentInfo.lastName}</h3>
-                  <p>כיתה {studentInfo.classes[0].name} - תעודת זהות: {studentInfo.userId}</p>
-                  <p>מחנכת: {studentInfo.classes[0].homeroomTeacher.firstName} {studentInfo.classes[0].homeroomTeacher.lastName}</p>
+                  <p>כיתה {studentInfo.classes[0]?.name} - תעודת זהות: {studentInfo.userId}</p>
+                  <p>מחנכת: {studentInfo.classes[0]?.homeroomTeacher?.firstName} {studentInfo.classes[0]?.homeroomTeacher?.lastName}</p>
                 </div>
               </div>
             )}
@@ -107,47 +141,14 @@ const StudentDashboard = ({ onLogout }) => {
               <div className="stat-card">
                 <div className="stat-icon">📚</div>
                 <div className="stat-info">
-                  <h3>{
-                    (() => {
-                      const now = new Date();
-                      const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
-                      const todayDay = daysOfWeek[now.getDay()];
-                      const todayLessons = schedule[todayDay] || [];
-                      
-                      return todayLessons.filter(lesson => {
-                        if (!lesson.subject || !lesson.startTime) return false;
-                        const [hour, minute] = lesson.startTime.split(':').map(Number);
-                        const lessonDate = new Date();
-                        lessonDate.setHours(hour, minute, 0, 0);
-                        return lessonDate >= now;
-                      }).length;
-                    })()
-                  }</h3>
+                  <h3>{todayLessonsRemaining}</h3>
                   <p>שיעורים נותרים היום</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">📄</div>
                 <div className="stat-info">
-                  <h3>{
-                    (() => {
-                      const today = new Date();
-                      const startOfWeek = new Date(today);
-                       // אם היום שבת (6), הצג את השבוע הבא
-                      const dayOffset = today.getDay() === 6 ? 1 : 0;
-                      startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
-                      startOfWeek.setHours(0, 0, 0, 0);
-                      const endOfWeek = new Date(startOfWeek);
-                      endOfWeek.setDate(startOfWeek.getDate() + 6);
-                      endOfWeek.setHours(23, 59, 59, 999);
-                      
-                      return upcomingExams.filter(exam => {
-                        const examDate = new Date(exam.date);
-                        examDate.setHours(0, 0, 0, 0);
-                        return examDate >= startOfWeek && examDate <= endOfWeek;
-                      }).length;
-                    })()
-                  }</h3>
+                  <h3>{weeklyExamsCount}</h3>
                   <p>מבחנים עתידיים השבוע</p>
                 </div>
               </div>
@@ -157,127 +158,36 @@ const StudentDashboard = ({ onLogout }) => {
 
       case "nextClass":
         return (
-          <div className="dashboard-content">
-            <h2>השיעור הבא</h2>
-            {nextLesson ? (
-              <div className="next-class-card">
-                <div className="next-class-header">
-                  <h3>{nextLesson.subject}</h3>
-                  <span className="time-remaining">{
-                    (() => {
-                      const now = new Date();
-                      const [hour, minute] = nextLesson.startTime.split(':').map(Number);
-                      const lessonTime = new Date();
-                      lessonTime.setHours(hour, minute, 0, 0);
-                      
-                      const diffMs = lessonTime - now;
-                      const diffMinutes = Math.floor(diffMs / (1000 * 60));
-                      
-                      if (diffMinutes <= 0) return 'מתחיל עכשיו';
-                      if (diffMinutes < 60) return `עוד ${diffMinutes} דקות`;
-                      
-                      const hours = Math.floor(diffMinutes / 60);
-                      const remainingMinutes = diffMinutes % 60;
-                      return remainingMinutes > 0 
-                        ? `עוד ${hours} שעות ו-${remainingMinutes} דקות`
-                        : `עוד ${hours} שעות`;
-                    })()
-                  }</span>
-                </div>
-                <div className="next-class-details">
-                  <div className="detail-item"><span className="detail-label">מורה:</span> <span className="detail-value">{
-                    (() => {
-                      const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
-                      const todayDay = daysOfWeek[new Date().getDay()];
-                      const todayLessons = schedule[todayDay] || [];
-                      const matchingLesson = todayLessons.find(lesson => 
-                        lesson.startTime === nextLesson.startTime && lesson.subject === nextLesson.subject
-                      );
-                      return matchingLesson?.teacherId?.firstName && matchingLesson?.teacherId?.lastName 
-                        ? `${matchingLesson.teacherId.firstName} ${matchingLesson.teacherId.lastName}`
-                        : 'לא ידוע';
-                    })()
-                  }</span></div>
-                  <div className="detail-item"><span className="detail-label">שעה:</span> <span className="detail-value">{nextLesson.startTime} - {nextLesson.endTime}</span></div>
-                  <div className="detail-item"><span className="detail-label">מקצוע:</span> <span className="detail-value">{nextLesson.subject}</span></div>
-                </div>
-              </div>
-            ) : (
-                <p>אין לך עוד שיעורים היום</p>
-              )}
-            
-            {nextLesson && (
-              <div className="upcoming-lessons-section">
-                <h3>שיעורים נוספים היום</h3>
-                {(() => {
-                  const now = new Date();
-                  const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
-                  const todayDay = daysOfWeek[now.getDay()];
-                  const todayLessons = schedule[todayDay] || [];
-                  
-                  // מוצאים את כל השיעורים שעדיין לא התחילו
-                  const allUpcomingLessons = todayLessons.filter(lesson => {
-                    if (!lesson.subject || !lesson.startTime) return false;
-                    const [hour, minute] = lesson.startTime.split(':').map(Number);
-                    const lessonDate = new Date();
-                    lessonDate.setHours(hour, minute, 0, 0);
-                    return lessonDate > now;
-                  }).sort((a, b) => {
-                    // מסדרים לפי שעת התחלה
-                    const timeA = a.startTime.split(':').map(Number);
-                    const timeB = b.startTime.split(':').map(Number);
-                    return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-                  });
-                  
-                  // מציגים רק את השיעורים שבאים אחרי השיעור הבא (ללא השיעור הבא עצמו)
-                  const lessonsAfterNext = allUpcomingLessons.slice(1);
-                  
-                  return lessonsAfterNext.length > 0 ? (
-                    <div className="upcoming-lessons-list">
-                      {lessonsAfterNext.map((lesson, idx) => (
-                        <div key={idx} className="upcoming-lesson-item">
-                          <div className="lesson-time">{lesson.startTime} - {lesson.endTime}</div>
-                          <div className="lesson-info">
-                            <strong>{lesson.subject}</strong>
-                            <small>עם {lesson.teacherId?.firstName} {lesson.teacherId?.lastName}</small>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>אין עוד שיעורים היום</p>
-                  );
-                })()
-                }
-              </div>
-            )}
-          </div>
+          <NextClassSection 
+            nextLesson={nextLesson}
+            loadingNextLesson={false} // התלמיד לא משתמש בלוגיקת הטעינה הזו
+            userType="student"
+            onNavigateToSchedule={() => setActiveSection("schedule")}
+          />
         );
 
     case "schedule":
       return (
         <div className="dashboard-content">
           <h2>המערכת שלי</h2>
-          <ScheduleTable 
-            schedule={schedule}
-            events={events}
-            userInfo={studentInfo}
-            onEventClick={setSelectedEvent}
-            isTeacherView={false}
-          />
+          {schedule ? (
+            <ScheduleTable 
+              schedule={schedule}
+              events={events || []}
+              userInfo={studentInfo}
+              onEventClick={setSelectedEvent}
+              isTeacherView={false}
+            />
+          ) : (
+            <div className="loading-message">
+              <p>טוען מערכת שעות...</p>
+            </div>
+          )}
         </div>
       );
 
 
       case "exams":
-        // שימוש ב-upcomingExams שכבר כולל את פרטי המורה
-        const classExams = upcomingExams.sort((a, b) => {
-          const dateA = new Date(a.date);
-          dateA.setHours(0, 0, 0, 0);
-          const dateB = new Date(b.date);
-          dateB.setHours(0, 0, 0, 0);
-          return dateA - dateB;
-        });
         
         return (
           <div className="dashboard-content">
@@ -285,10 +195,10 @@ const StudentDashboard = ({ onLogout }) => {
             <div className="exams-section">
               <h3>מבחני הכיתה</h3>
               <div className="exams-list">
-                {classExams.length === 0 ? (
+                {sortedExams.length === 0 ? (
                   <p>אין מבחנים מתוכננים לכיתה.</p>
                 ) : (
-                  classExams.map((exam, idx) => {
+                  sortedExams.map((exam, idx) => {
                     return (
                       <div key={idx} className="exam-card upcoming">
                         <div className="exam-header">

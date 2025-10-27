@@ -1,24 +1,49 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import "./Dashboard.css";
 import "./AdminDashboard.css";
-import { getAllTeachers, getAllStudents, getAllSecretaries, getMe, updateUser,registerUser, deleteUser } from "../../services/userService";
-import { getAllClasses, createClass, addStudentToClass,getStudentsByName, removeStudentFromClass, deleteClass, updateHomeroomTeacher } from "../../services/classService";
-import { getEvents, addEvent, deleteEvent, updateEvent } from "../../services/eventService";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { fetchCurrentUser } from "../../store/slices/userSlice";
+import { 
+  fetchAllSchoolData, 
+  fetchTeachers, 
+  fetchStudents, 
+  fetchSecretaries, 
+  fetchClasses, 
+  fetchEvents,
+  addTeacher,
+  updateTeacher,
+  removeTeacher,
+  addStudent,
+  updateStudent,
+  removeStudent,
+  addEvent as addEventToStore,
+  updateEvent as updateEventInStore,
+  removeEvent
+} from "../../store/slices/schoolDataSlice";
+import { fetchTeacherSchedule, fetchClassSchedule } from "../../store/slices/scheduleSlice";
+import { updateUser, deleteUser } from "../../services/userService";
+import { createClass, addStudentToClass, getStudentsByName, removeStudentFromClass, deleteClass, updateHomeroomTeacher } from "../../services/classService";
+import { addEvent, deleteEvent, updateEvent } from "../../services/eventService";
 import { getSubstituteRequests } from "../../services/substituteRequestsSercive";
-// import { getSchoolSchedule } from "../../services/scheduleService";
 import { getSchoolById, updateSchool, deleteSchool } from "../../services/schoolService";
-import { getScheduleByTeacher, getHomeroomClassSchedule } from "../../services/scheduleService";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
 import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
 import ScheduleTable, { TeacherScheduleView } from "./ScheduleTable";
 import EventDetailsModal from "./EventDetailsModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 
 
 const AdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  
+  // Redux state
+  const { currentUser: me, loading: loadingMe } = useAppSelector((state) => state.user);
+  const { teachers, students, secretaries, classes, events, loading } = useAppSelector((state) => state.schoolData);
+  const { teacherSchedules, classSchedules, loading: scheduleLoading } = useAppSelector((state) => state.schedule);
 
   useEffect(() => {
     document.body.classList.add("sidebar-active");
@@ -34,54 +59,32 @@ const AdminDashboard = ({ onLogout }) => {
   const [formData, setFormData] = useState({});
   const [expandedClass, setExpandedClass] = useState(null);
   const [classStudents, setClassStudents] = useState([]); 
-  const [teachers, setTeachers] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [secretaries, setSecretaries] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [events, setEvents] = useState([]);
   const [absences, setAbsences] = useState([]);
-  const [me, setMe] = useState(null);
-  const [loadingMe, setLoadingMe] = useState(true);
   const [schoolInfo, setSchoolInfo] = useState(null);
-  const [schedule, setSchedule] = useState([]);
   const [activeScheduleTab, setActiveScheduleTab] = useState('teachers');
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedTeacherSchedule, setSelectedTeacherSchedule] = useState(null);
-  const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
   const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
   const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', item: null, action: null });
+  
+  // Computed values from Redux
+  const selectedTeacherSchedule = selectedTeacherId ? teacherSchedules[selectedTeacherId]?.schedule : null;
+  const selectedClassSchedule = selectedClassId ? classSchedules[selectedClassId]?.schedule : null;
 
-  // טען נתונים מהשרת
+  // טען נתונים מהשרת דרך Redux
   const fetchAllData = async () => {
-
     try {
-      setLoadingMe(true);
-      const meRes = await getMe();
-      setMe(meRes?.data);
-    } catch (err) {
-      console.error("getMe error", err);
-      setError((e) => e || "שגיאה בטעינת משתמש");
-    } finally {
-      setLoadingMe(false);
-    }
-
-    try {
-      const [ teachersRes, studentsRes, secretariesRes, classesRes, eventsRes, absencesRes
-        // schoolInfoRes, scheduleRes,
-      ] = await Promise.all([
-        getAllTeachers(),getAllStudents(),getAllSecretaries(),getAllClasses(),getEvents(),getSubstituteRequests()
-        // getSchoolById(), getSchoolSchedule(),
-      ]);
-      setTeachers(teachersRes?.data || []);
-      setStudents(studentsRes?.data || []);
-      setSecretaries(secretariesRes?.data || []);
-      setClasses(classesRes || []);
-      setEvents(eventsRes || []);
+      // טעינת נתוני המשתמש הנוכחי
+      await dispatch(fetchCurrentUser());
+      
+      // טעינת כל נתוני בית הספר
+      await dispatch(fetchAllSchoolData());
+      
+      // טעינת בקשות היעדרות (עדיין לא ב-Redux)
+      const absencesRes = await getSubstituteRequests();
       setAbsences(absencesRes || []);
-      // getSchoolById(schoolInfoRes.data || null);
-      // setSchedule(scheduleRes.data || []);
     } catch (err) {
       console.error("שגיאה בשליפת נתונים:", err);
     }
@@ -89,7 +92,7 @@ const AdminDashboard = ({ onLogout }) => {
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [dispatch]);
 
   // Modal control
   const openModal = (type, data = null) => {
@@ -124,22 +127,67 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   // מחיקת משתמש  
-  const handleDeleteUser = async (id) => { //לפי מזהה של מונגו!!
-    await deleteUser(id);
-    fetchAllData();
+  const handleDeleteUser = async (id) => {
+    const userToDelete = [...teachers, ...students, ...secretaries].find(u => u._id === id);
+    setConfirmDelete({
+      show: true,
+      type: 'user',
+      item: userToDelete,
+      action: async () => {
+        try {
+          await deleteUser(id);
+          if (userToDelete) {
+            if (userToDelete.role === 'teacher') {
+              dispatch(removeTeacher(id));
+            } else if (userToDelete.role === 'student') {
+              dispatch(removeStudent(id));
+            }
+          }
+          setConfirmDelete({ show: false, type: '', item: null, action: null });
+        } catch (err) {
+          console.error('Error deleting user:', err);
+        }
+      }
+    });
   };
 
   // עדכון משתמש
   const handleUpdateUser = async (id) => {
-    await updateUser(id, formData);
-    closeModal();
-    fetchAllData();
+    try {
+      await updateUser(id, formData);
+      // עדכון Redux state
+      const userToUpdate = [...teachers, ...students, ...secretaries].find(u => u._id === id);
+      if (userToUpdate) {
+        const updatedUser = { ...userToUpdate, ...formData };
+        if (userToUpdate.role === 'teacher') {
+          dispatch(updateTeacher(updatedUser));
+        } else if (userToUpdate.role === 'student') {
+          dispatch(updateStudent(updatedUser));
+        }
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Error updating user:', err);
+    }
   };
 
    // מחיקת כיתה
   const handleDeleteClass = async (className) => {
-    await deleteClass(className);
-    fetchAllData();
+    const classToDelete = classes.find(c => c.name === className);
+    setConfirmDelete({
+      show: true,
+      type: 'class',
+      item: classToDelete,
+      action: async () => {
+        try {
+          await deleteClass(className);
+          fetchAllData();
+          setConfirmDelete({ show: false, type: '', item: null, action: null });
+        } catch (err) {
+          console.error('Error deleting class:', err);
+        }
+      }
+    });
   };
 
   // יצירת כיתה חדשה
@@ -180,22 +228,42 @@ const AdminDashboard = ({ onLogout }) => {
   // מחיקת אירוע
   const handleDeleteEvent = async (eventMongoId) => {
     const event = events.find(e => e._id === eventMongoId);
-    await deleteEvent(event.eventId);
-    fetchAllData();
+    setConfirmDelete({
+      show: true,
+      type: 'event',
+      item: event,
+      action: async () => {
+        try {
+          await deleteEvent(event.eventId);
+          dispatch(removeEvent(eventMongoId));
+          setConfirmDelete({ show: false, type: '', item: null, action: null });
+        } catch (err) {
+          console.error('Error deleting event:', err);
+        }
+      }
+    });
   };
 
   // יצירת אירוע חדש
   const handleAddEvent = async () => {
-    await addEvent(formData);
-    closeModal();
-    fetchAllData();
+    try {
+      const newEvent = await addEvent(formData);
+      dispatch(addEventToStore(newEvent));
+      closeModal();
+    } catch (err) {
+      console.error('Error adding event:', err);
+    }
   };
 
   // עדכון אירוע
   const handleUpdateEvent = async (id) => {
-    await updateEvent(id, formData);
-    closeModal();
-    fetchAllData();
+    try {
+      const updatedEvent = await updateEvent(id, formData);
+      dispatch(updateEventInStore({ _id: id, ...formData }));
+      closeModal();
+    } catch (err) {
+      console.error('Error updating event:', err);
+    }
   };
 
   // עדכון הגדרות בית ספר
@@ -212,30 +280,21 @@ const AdminDashboard = ({ onLogout }) => {
     onLogout();
   };
 
-  // טעינת מערכת שעות של מורה
+  // טעינת מערכת שעות של מורה דרך Redux
   const loadTeacherSchedule = async (teacherId) => {
     try {
-      const scheduleData = await getScheduleByTeacher(teacherId);
-      const formattedSchedule = formatSchedule(scheduleData);
-      setSelectedTeacherSchedule(formattedSchedule);
+      await dispatch(fetchTeacherSchedule(teacherId));
     } catch (err) {
       console.error('Error loading teacher schedule:', err);
     }
   };
 
-  // טעינת מערכת שעות של כיתה
+  // טעינת מערכת שעות של כיתה דרך Redux
   const loadClassSchedule = async (classId) => {
     try {
-      const scheduleData = await getHomeroomClassSchedule(classId);
-      if (!scheduleData || scheduleData.length === 0) {
-        setSelectedClassSchedule(null);
-        return;
-      }
-      const formattedSchedule = formatSchedule(scheduleData);
-      setSelectedClassSchedule(formattedSchedule);
+      await dispatch(fetchClassSchedule(classId));
     } catch (err) {
-      // אין מערכת שעות לכיתה זו
-      setSelectedClassSchedule(null);
+      console.error('Error loading class schedule:', err);
     }
   };
 
@@ -581,19 +640,78 @@ const AdminDashboard = ({ onLogout }) => {
     { id: "settings", label: "הגדרות בית ספר", icon: "⚙️" },
   ];
 
-  const today = new Date();
-  today.setHours(0,0,0,0); // מאפסים את השעה כדי להשוות תאריכים בלבד
+  // Memoized calculations to prevent unnecessary re-renders
+  const nearestEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-  // מיון האירועים לפי המרחק מהיום (חיובי או שלילי)
-  const sortedByDistance = events
-    .map(event => ({
-      ...event,
-      distance: Math.abs(new Date(event.date).getTime() - today.getTime())
-    }))
-    .sort((a, b) => a.distance - b.distance);
+    const sortedByDistance = events
+      .map(event => ({
+        ...event,
+        distance: Math.abs(new Date(event.date).getTime() - today.getTime())
+      }))
+      .sort((a, b) => a.distance - b.distance);
 
-// לוקחים את שלושת האירועים הקרובים ביותר
-const nearestEvents = sortedByDistance.slice(0, 3);
+    return sortedByDistance.slice(0, 3);
+  }, [events]);
+
+  const { futureEvents, pastEvents } = useMemo(() => {
+    const now = new Date();
+    const future = events
+      .filter(ev => {
+        if (!ev.date) return false;
+        const eventDate = new Date(ev.date);
+        if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+          const [hours, minutes] = ev.endTime.split(':');
+          const eventEndTime = new Date(eventDate);
+          eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+          return eventEndTime > now;
+        }
+        return eventDate > now;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    const past = events
+      .filter(ev => {
+        if (!ev.date) return false;
+        const eventDate = new Date(ev.date);
+        if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+          const [hours, minutes] = ev.endTime.split(':');
+          const eventEndTime = new Date(eventDate);
+          eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+          return eventEndTime <= now;
+        }
+        return eventDate < now;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    return { futureEvents: future, pastEvents: past };
+  }, [events]);
+
+  const { futureAbsences, pastAbsences } = useMemo(() => {
+    if (!absences.requests) return { futureAbsences: [], pastAbsences: [] };
+    
+    const todayAbsences = new Date();
+    todayAbsences.setHours(0, 0, 0, 0);
+    
+    const future = absences.requests
+      .filter(absence => {
+        const absenceDate = new Date(absence.date);
+        absenceDate.setHours(0, 0, 0, 0);
+        return absenceDate >= todayAbsences;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    const past = absences.requests
+      .filter(absence => {
+        const absenceDate = new Date(absence.date);
+        absenceDate.setHours(0, 0, 0, 0);
+        return absenceDate < todayAbsences;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    return { futureAbsences: future, pastAbsences: past };
+  }, [absences]);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -908,7 +1026,31 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                 </div>
                 {selectedTeacherSchedule && (
                   <TeacherScheduleView 
-                    schedule={selectedTeacherSchedule.weekPlan}
+                    schedule={(() => {
+                      // וידוא שהנתונים מעוצבים נכון
+                      if (selectedTeacherSchedule.weekPlan) {
+                        return selectedTeacherSchedule.weekPlan;
+                      }
+                      // אם הנתונים מגיעים בפורמט גולמי, נעצב אותם
+                      const weekPlan = {
+                        sunday: [],
+                        monday: [],
+                        tuesday: [],
+                        wednesday: [],
+                        thursday: [],
+                        friday: [],
+                      };
+                      if (Array.isArray(selectedTeacherSchedule)) {
+                        selectedTeacherSchedule.forEach(dayObj => {
+                          const { day, lessons } = dayObj;
+                          if (day && lessons && weekPlan[day]) {
+                            const sortedLessons = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+                            weekPlan[day] = sortedLessons;
+                          }
+                        });
+                      }
+                      return weekPlan;
+                    })()} 
                     events={events}
                     teacherInfo={teachers.find(t => t._id === selectedTeacherId)}
                     schoolInfo={me?.schoolId}
@@ -941,7 +1083,31 @@ const nearestEvents = sortedByDistance.slice(0, 3);
                   <>
                     {selectedClassSchedule ? (
                       <ScheduleTable 
-                        schedule={selectedClassSchedule.weekPlan}
+                        schedule={(() => {
+                          // וידוא שהנתונים מעוצבים נכון
+                          if (selectedClassSchedule.weekPlan) {
+                            return selectedClassSchedule.weekPlan;
+                          }
+                          // אם הנתונים מגיעים בפורמט גולמי, נעצב אותם
+                          const weekPlan = {
+                            sunday: [],
+                            monday: [],
+                            tuesday: [],
+                            wednesday: [],
+                            thursday: [],
+                            friday: [],
+                          };
+                          if (Array.isArray(selectedClassSchedule)) {
+                            selectedClassSchedule.forEach(dayObj => {
+                              const { day, lessons } = dayObj;
+                              if (day && lessons && weekPlan[day]) {
+                                const sortedLessons = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+                                weekPlan[day] = sortedLessons;
+                              }
+                            });
+                          }
+                          return weekPlan;
+                        })()} 
                         events={events.filter(event => {
                           const selectedClass = classes.find(c => c._id === selectedClassId);
                           return selectedClass && event.classes?.some(cls => cls.name === selectedClass.name);
@@ -977,34 +1143,6 @@ const nearestEvents = sortedByDistance.slice(0, 3);
         );
 
       case "events":
-        // חלוקה לאירועים עתידיים ועבר
-        const now = new Date();
-        const futureEvents = events
-             .filter(ev => {
-            if (!ev.date) return false;
-            const eventDate = new Date(ev.date);
-            if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
-              const [hours, minutes] = ev.endTime.split(':');
-              const eventEndTime = new Date(eventDate);
-              eventEndTime.setHours(parseInt(hours), parseInt(minutes));
-              return eventEndTime > now;
-            }
-            return eventDate > now;
-          })
-          .sort((a, b) => new Date(a.date) - new Date(b.date));
-        const pastEvents = events
-          .filter(ev => {
-            if (!ev.date) return false;
-            const eventDate = new Date(ev.date);
-            if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
-              const [hours, minutes] = ev.endTime.split(':');
-              const eventEndTime = new Date(eventDate);
-              eventEndTime.setHours(parseInt(hours), parseInt(minutes));
-              return eventEndTime <= now;
-            }
-            return eventDate < now;
-          })
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
         return (
           <div className="dashboard-content">
             <div className="section-header">
@@ -1103,24 +1241,6 @@ const nearestEvents = sortedByDistance.slice(0, 3);
         );
 
       case "absences":
-        const todayAbsences = new Date();
-        todayAbsences.setHours(0, 0, 0, 0);
-        
-        const futureAbsences = absences.requests
-          .filter(absence => {
-            const absenceDate = new Date(absence.date);
-            absenceDate.setHours(0, 0, 0, 0);
-            return absenceDate >= todayAbsences;
-          })
-          .sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        const pastAbsences = absences.requests
-          .filter(absence => {
-            const absenceDate = new Date(absence.date);
-            absenceDate.setHours(0, 0, 0, 0);
-            return absenceDate < todayAbsences;
-          })
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const renderAbsenceCard = (absence) => {
           const teacherName =
@@ -1340,6 +1460,18 @@ const nearestEvents = sortedByDistance.slice(0, 3);
       )}
       
       <EventDetailsModal selectedEvent={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.show}
+        onClose={() => setConfirmDelete({ show: false, type: '', item: null, action: null })}
+        onConfirm={confirmDelete.action}
+        title={`מחיקת ${confirmDelete.type === 'user' ? 'משתמש' : confirmDelete.type === 'event' ? 'אירוע' : 'כיתה'}`}
+        message="האם אתה בטוח בביצוע הפעולה הנ'ל?"
+        itemName={confirmDelete.item ? 
+          (confirmDelete.type === 'user' ? `${confirmDelete.item.firstName} ${confirmDelete.item.lastName}` :
+           confirmDelete.type === 'event' ? confirmDelete.item.title :
+           confirmDelete.item.name) : ''}
+      />
     </div>
   );
 };

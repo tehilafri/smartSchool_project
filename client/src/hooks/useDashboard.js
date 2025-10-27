@@ -1,41 +1,28 @@
 import { useState, useEffect } from 'react';
-import { getMe } from '../services/userService';
-import { getScheduleByTeacher, getHomeroomClassSchedule } from '../services/scheduleService';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchTeacherSchedule, fetchClassSchedule } from '../store/slices/scheduleSlice';
 
 export const useDashboard = () => {
+  const dispatch = useAppDispatch();
+  const { teacherSchedules, classSchedules } = useAppSelector((state) => state.schedule);
+  
   const [activeSection, setActiveSection] = useState("overview");
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
   const [modalData, setModalData] = useState(null);
   const [formData, setFormData] = useState({});
-  const [me, setMe] = useState(null);
-  const [loadingMe, setLoadingMe] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   // Schedule related state
   const [activeScheduleTab, setActiveScheduleTab] = useState('teachers');
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedTeacherSchedule, setSelectedTeacherSchedule] = useState(null);
-  const [selectedClassSchedule, setSelectedClassSchedule] = useState(null);
   const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
   const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
-
-  // Load user data
-  useEffect(() => {
-    const loadMe = async () => {
-      try {
-        setLoadingMe(true);
-        const meRes = await getMe();
-        setMe(meRes?.data);
-      } catch (err) {
-        console.error("getMe error", err);
-      } finally {
-        setLoadingMe(false);
-      }
-    };
-    loadMe();
-  }, []);
+  
+  // Computed values from Redux
+  const selectedTeacherSchedule = selectedTeacherId ? teacherSchedules[selectedTeacherId]?.schedule : null;
+  const selectedClassSchedule = selectedClassId ? classSchedules[selectedClassId]?.schedule : null;
 
   // Modal handlers
   const openModal = (type, data = null) => {
@@ -67,12 +54,10 @@ export const useDashboard = () => {
     setFormData({});
   };
 
-  // Schedule handlers
+  // Schedule handlers - עדכון להשתמש ב-Redux
   const loadTeacherSchedule = async (teacherId) => {
     try {
-      const scheduleData = await getScheduleByTeacher(teacherId);
-      const formattedSchedule = formatSchedule(scheduleData);
-      setSelectedTeacherSchedule(formattedSchedule);
+      await dispatch(fetchTeacherSchedule(teacherId));
     } catch (err) {
       console.error('Error loading teacher schedule:', err);
     }
@@ -80,15 +65,9 @@ export const useDashboard = () => {
 
   const loadClassSchedule = async (classId) => {
     try {
-      const scheduleData = await getHomeroomClassSchedule(classId);
-      if (!scheduleData || scheduleData.length === 0) {
-        setSelectedClassSchedule(null);
-        return;
-      }
-      const formattedSchedule = formatSchedule(scheduleData);
-      setSelectedClassSchedule(formattedSchedule);
+      await dispatch(fetchClassSchedule(classId));
     } catch (err) {
-      setSelectedClassSchedule(null);
+      console.error('Error loading class schedule:', err);
     }
   };
 
@@ -139,10 +118,6 @@ export const useDashboard = () => {
     modalData,
     formData,
     setFormData,
-    me,
-    setMe,
-    loadingMe,
-    setLoadingMe,
     selectedEvent,
     setSelectedEvent,
     activeScheduleTab,

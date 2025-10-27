@@ -1,9 +1,10 @@
 import { Navigate } from "react-router-dom";
+import { useAppSelector } from "../../store/hooks";
 
 function ProtectedRoute({ allowedRoles, children}) {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" />;
   }
 

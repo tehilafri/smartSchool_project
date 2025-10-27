@@ -3,7 +3,7 @@ import { getSchoolById } from "../../services/schoolService";
 import { getMe } from "../../services/userService";
 import "./DashboardHeader.css";
 
-const DashboardHeader = ({ schoolId, onLogout }) => {
+const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
   const [logo, setLogo] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [user, setUser] = useState(null);
@@ -106,14 +106,25 @@ const DashboardHeader = ({ schoolId, onLogout }) => {
           <div className="dashboard-header-title">{schoolName}</div>
         </div>
         
-        <div className="account-menu-container">
-          <button 
-            className="account-button"
-            onClick={() => setShowAccountMenu(!showAccountMenu)}
-          >
-            <div className="user-initials">{getInitials()}</div>
-            <span className="account-text"></span>
-          </button>
+        <div className="header-actions">
+          {onRefresh && (
+            <button 
+              className="refresh-button"
+              onClick={onRefresh}
+              title="רענן נתונים"
+            >
+              🔄
+            </button>
+          )}
+          
+          <div className="account-menu-container">
+            <button 
+              className="account-button"
+              onClick={() => setShowAccountMenu(!showAccountMenu)}
+            >
+              <div className="user-initials">{getInitials()}</div>
+              <span className="account-text"></span>
+            </button>
           
           {showAccountMenu && (
             <div className="account-dropdown">
@@ -125,6 +136,7 @@ const DashboardHeader = ({ schoolId, onLogout }) => {
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </header>

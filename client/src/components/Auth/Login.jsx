@@ -1,11 +1,14 @@
 import { useState } from "react"
-import { loginUser } from "../../services/userService"
 import { useNavigate } from "react-router-dom"
+import { useAppDispatch, useAppSelector } from "../../store/hooks"
+import { loginUser, clearError } from "../../store/slices/authSlice"
 import "./Auth.css"
 
 const Login = () => {
-
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { loading, error } = useAppSelector((state) => state.auth);
+
   // פונקציה אחרי התחברות מוצלחת
   const onLogin = (role) => {
     // ניווט לפי תפקיד
@@ -37,7 +40,6 @@ const Login = () => {
     password: "",
     schoolCode: "",
   })
-  const [error, setError] = useState("")
 
    const handleChange = (e) => {
     setFormData({
@@ -47,26 +49,21 @@ const Login = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    dispatch(clearError());
 
     try {
-      const response = await loginUser(
-        formData.userName,
-        formData.password,
-        formData.schoolCode
-      )
-      // שמירת JWT
-      localStorage.setItem("token", response.data.token)
-      localStorage.setItem("user", JSON.stringify(response.data.user)) //שמירת המידע של המשתמש
-      localStorage.setItem("role", response.data.user.role) //שמירת התפקיד של המשתמש
-      localStorage.setItem("schoolCode", response.data.user.schoolCode) //שמירת בית הספר של המשתמש
-      const role = response.data.user.role;
-      // קריאה לפונקציית ההצלחה
-      onLogin(role)
+      const result = await dispatch(loginUser({
+        userName: formData.userName,
+        password: formData.password,
+        schoolCode: formData.schoolCode
+      })).unwrap();
       
+      // קריאה לפונקציית ההצלחה
+      onLogin(result.user.role);
     } catch (err) {
-      setError(err.response?.data?.message || "שגיאה בשרת, נסה שוב")
+      // השגיאה כבר מטופלת ב-Redux
+      console.error('Login error:', err);
     }
   }
 
@@ -120,8 +117,8 @@ const Login = () => {
 
           {error && <p className="error-message">{error}</p>}
 
-          <button type="submit" className="btn btn-primary auth-submit">
-            התחבר
+          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+            {loading ? 'מתחבר...' : 'התחבר'}
           </button>
 
           <div className="auth-links">

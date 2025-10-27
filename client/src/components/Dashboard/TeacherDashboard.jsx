@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import "./Dashboard.css";
 import DashboardHeader from "./DashboardHeader";
 import SchoolDirectionsButton from "../SchoolDirectionsButton";
@@ -6,6 +6,10 @@ import DashboardSidebar from "./DashboardSidebar";
 import OverviewSection from "./OverviewSection";
 import DataTable from "./DataTable";
 import DashboardModal from "./DashboardModal";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { fetchCurrentUser } from "../../store/slices/userSlice";
+import { fetchEvents } from "../../store/slices/schoolDataSlice";
+import { fetchSubstituteRequests, submitAbsenceRequest } from "../../store/slices/substituteSlice";
 import useDashboard from "../../hooks/useDashboard";
 
 import { getAllTeachers, getMe } from "../../services/userService";
@@ -17,8 +21,15 @@ import ScheduleUpdateComponent from "./ScheduleUpdateComponent";
 import ScheduleTable from "./ScheduleTable";
 import {TeacherScheduleView} from "./ScheduleTable";
 import EventDetailsModal from "./EventDetailsModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import NextClassSection from "./NextClassSection";
 
 const TeacherDashboard = ({ onLogout }) => {
+  const dispatch = useAppDispatch();
+  const { currentUser: me, loading: loadingMe } = useAppSelector((state) => state.user);
+  const { events } = useAppSelector((state) => state.schoolData);
+  const { requests: subRequests, loading: substituteLoading } = useAppSelector((state) => state.substitute);
+  
   const {
     activeSection,
     setActiveSection,
@@ -29,43 +40,13 @@ const TeacherDashboard = ({ onLogout }) => {
     modalData,
     formData,
     setFormData,
-    me,
-    setMe,
-    loadingMe,
-    setLoadingMe,
     selectedEvent,
     setSelectedEvent,
     openModal,
     closeModal
   } = useDashboard();
 
-  // token: אפשר לקבל דרך props או localStorage
-  const [currentToken, setCurrentToken] = useState(localStorage.getItem("token"));
-  const token = currentToken;
-  
-  // בדיקה אם ה-token השתנה ב-localStorage
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const newToken = localStorage.getItem("token");
-      if (newToken !== currentToken) {
-        setCurrentToken(newToken);
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    // בדיקה ידנית כל 500ms
-    const interval = setInterval(() => {
-      const newToken = localStorage.getItem("token");
-      if (newToken !== currentToken) {
-        setCurrentToken(newToken);
-      }
-    }, 500);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [currentToken]);
+  // Redux מנהל את ה-token, לא צריך local state
 
   //  // הוספת class ל-body
   useEffect(() => {
@@ -86,11 +67,9 @@ const TeacherDashboard = ({ onLogout }) => {
   const [classesCount, setClassesCount] = useState(0);
   const [loadingCounts, setLoadingCounts] = useState(true);
 
-  const [subRequests, setSubRequests] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(true);
 
   // const [upcomingExams, setUpcomingExams] = useState([]);
-  const [events, setEvents] = useState([]);
   const [exams, setExams] = useState([]);
   const [loadingExams, setLoadingExams] = useState(true);
   const [error, setError] = useState(null);
@@ -103,6 +82,7 @@ const TeacherDashboard = ({ onLogout }) => {
   const [showScheduleUpdate, setShowScheduleUpdate] = useState(false);
   const [selectedClassForStudents, setSelectedClassForStudents] = useState('');
   const [classStudents, setClassStudents] = useState([]);
+  const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', item: null, action: null });
 
 
   const updateForm = (code, field, value) => {
@@ -192,29 +172,18 @@ const TeacherDashboard = ({ onLogout }) => {
 
   useEffect(() => {
     let cancelled = false;
-    
-    // ודא שיש token לפני שמתחילים לטעון
-    const currentToken = token || localStorage.getItem("token");
-    if (!currentToken) {
-      setError("לא נמצא token - אנא התחבר מחדש");
-      return;
-    }
 
     const fetchAll = async () => {
       setError(null);
 
       let fetchedMe = null;
-      // me
+      // me - טעינה דרך Redux
       try {
-        setLoadingMe(true);
-        const meRes = await getMe();
-        fetchedMe=meRes?.data;
-        if (!cancelled) setMe(meRes?.data);
+        const result = await dispatch(fetchCurrentUser()).unwrap();
+        fetchedMe = result;
       } catch (err) {
         console.error("getMe error", err);
-        if (!cancelled) setError((e) => e || "שגיאה בטעינת משתמש");
-      } finally {
-        if (!cancelled) setLoadingMe(false);
+        if (!cancelled) setError("שגיאה בטעינת משתמש");
       }
 
       // schedule
@@ -257,27 +226,23 @@ const TeacherDashboard = ({ onLogout }) => {
         if (!cancelled) setLoadingCounts(false);
       }
 
-      // substitute requests
+      // substitute requests - דרך Redux
       try {
         setLoadingSubs(true);
-        const subs = await getSubstituteRequests();
-        if (!cancelled) setSubRequests(subs?.requests ?? []);
+        await dispatch(fetchSubstituteRequests());
       } catch (err) {
         console.error("getSubstituteRequests error", err);
       } finally {
         if (!cancelled) setLoadingSubs(false);
       }
 
-      // events / exams
+      // events / exams - טעינה דרך Redux
       try {
         setLoadingExams(true);
-        const ev = await getEvents();
+        const eventsResult = await dispatch(fetchEvents()).unwrap();
         if (!cancelled) {
-          const allEvents = Array.isArray(ev) ? ev : ev?.data ?? [];
-          setEvents(allEvents);
-          
           // סינון מבחנים לפי ההיגיון הנדרש
-          const examEvents = allEvents.filter(event => event.type === 'exam');
+          const examEvents = eventsResult.filter(event => event.type === 'exam');
           const examResults = filterExamsByTeacherRole(examEvents, fetchedMe);
           setExams(examResults);
         }
@@ -293,7 +258,7 @@ const TeacherDashboard = ({ onLogout }) => {
     return () => {
       cancelled = true;
     };
-  }, [token]); 
+  }, [dispatch]); 
 
 
 
@@ -386,13 +351,14 @@ const TeacherDashboard = ({ onLogout }) => {
 
   // פונקציה לרענון רשימת המבחנים
   const refreshExams = async () => {
-    const ev = await getEvents();
-    const allEvents = Array.isArray(ev) ? ev : ev?.data ?? [];
-    setEvents(allEvents);
-    
-    const examEvents = allEvents.filter(event => event.type === 'exam');
-    const examResults = filterExamsByTeacherRole(examEvents, me);
-    setExams(examResults);
+    try {
+      const eventsResult = await dispatch(fetchEvents()).unwrap();
+      const examEvents = eventsResult.filter(event => event.type === 'exam');
+      const examResults = filterExamsByTeacherRole(examEvents, me);
+      setExams(examResults);
+    } catch (err) {
+      console.error('Error refreshing exams:', err);
+    }
   };
 
   // עריכת מבחן קיים
@@ -403,21 +369,25 @@ const TeacherDashboard = ({ onLogout }) => {
 
   // מחיקת מבחן
   const handleDeleteExam = async (exam) => {
-    const confirmDelete = async () => {
-      try {
-        await deleteEvent(exam.eventId);
-        showNotification('המבחן נמחק בהצלחה!', 'success');
-        await refreshExams();
-      } catch (err) {
-        console.error('deleteExam error', err);
-        const errorMessage = err.response?.data?.message || err.message || 'שגיאה לא ידועה';
-        const errorDetails = err.response?.data?.error || '';
-        const fullErrorMessage = errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage;
-        showNotification(`שגיאה במחיקת המבחן: ${fullErrorMessage}`, 'error');
+    setConfirmDelete({
+      show: true,
+      type: 'exam',
+      item: exam,
+      action: async () => {
+        try {
+          await deleteEvent(exam.eventId);
+          showNotification('המבחן נמחק בהצלחה!', 'success');
+          await refreshExams();
+          setConfirmDelete({ show: false, type: '', item: null, action: null });
+        } catch (err) {
+          console.error('deleteExam error', err);
+          const errorMessage = err.response?.data?.message || err.message || 'שגיאה לא ידועה';
+          const errorDetails = err.response?.data?.error || '';
+          const fullErrorMessage = errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage;
+          showNotification(`שגיאה במחיקת המבחן: ${fullErrorMessage}`, 'error');
+        }
       }
-    };
-
-    showNotification(`האם אתה בטוח שברצונך למחוק את המבחן "${exam.title || 'מבחן'}"?`, 'confirm', confirmDelete);
+    });
   };
 
   // עדכון מבחן
@@ -509,49 +479,106 @@ const renderScheduleTable = () => {
   );
 };
 
-  const renderNextClass = () => {
-    if (loadingNextLesson) return <p>טוען שיעור הבא...</p>;
-    if (!nextLesson || !nextLesson.subject || Object.keys(nextLesson).length === 0) {
-      return (
-        <div className="next-class-card no-lessons">
-          <div className="next-class-header">
-            <h3>השיעור הבא שלך</h3>
-          </div>
-          <div className="no-lessons-content">
-            <div className="no-lessons-icon">🎉</div>
-            <h4>אין עוד שיעורים היום!</h4>
-            <p>היום הלימודי שלך הסתיים. זמן מצוין להכין למחר!</p>
-          </div>
-          <div className="next-class-actions">
-            <button className="btn btn-outline" onClick={() => setActiveSection("schedule")}>
-            צפה במערכת השלימה
-            </button>
-          </div>
-        </div>
+
+
+  // Memoized calculations to prevent unnecessary re-renders
+  const weeklyEventsCount = useMemo(() => {
+    if (loadingExams) return "...";
+    if (!events || events.length === 0 || !me?.classes) return "0";
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    const dayOffset = today.getDay() === 6 ? 1 : 0;
+    startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    const teacherClassIds = me.classes.map(c => c._id || c);
+    
+    const filteredEvents = events.filter(event => {
+      const eventDate = new Date(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      
+      const isThisWeek = eventDate >= startOfWeek && eventDate <= endOfWeek;
+      const isForMyClasses = event.classes?.some(cls => 
+        teacherClassIds.includes(cls._id || cls)
       );
-    }
-    // נניח המבנה: { subject, className, startTime, endTime, room, topic, minutesUntil }
-    const subject = nextLesson.subject || nextLesson.profession || nextLesson.course || " — ";
-    const className = nextLesson.className || nextLesson.class || nextLesson.grade || " — ";
-    const start = nextLesson.startTime || nextLesson.start || nextLesson.time || " — ";
-    const end = nextLesson.endTime || nextLesson.end || " — ";
-    const topic = nextLesson.topic || nextLesson.subjectTopic || nextLesson.topicName || " — ";
-    const minutesUntil = nextLesson.minutesUntil ?? null;
+      const isNotExam = event.type !== 'exam';
+      
+      return isThisWeek && isForMyClasses && isNotExam;
+    });
+    
+    return filteredEvents.length;
+  }, [loadingExams, events, me?.classes]);
 
-    return (
-      <div className="next-class-card">
-        <div className="next-class-header">
-          <h3>השיעור הבא שלך</h3>
-          <span className="time-remaining">{minutesUntil !== null ? `בעוד ${minutesUntil} דקות` : ""}</span>
-        </div>
+  const upcomingExamsCount = useMemo(() => {
+    if (loadingExams) return "...";
+    if (!exams.myExams && !exams.othersExams) return "0";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingMyExams = (exams.myExams || []).filter(exam => {
+      const examDate = new Date(exam.date);
+      examDate.setHours(0, 0, 0, 0);
+      return examDate >= today;
+    });
+    const upcomingOthersExams = (exams.othersExams || []).filter(exam => {
+      const examDate = new Date(exam.date);
+      examDate.setHours(0, 0, 0, 0);
+      return examDate >= today;
+    });
+    return upcomingMyExams.length + upcomingOthersExams.length;
+  }, [loadingExams, exams]);
 
-        <div className="upcoming-item">
-          <span className="upcoming-time">{start.trim()}{end && end.trim() ? ` - ${end.trim()}` : ""}</span>
-          <span className="upcoming-subject">{subject.trim()} - כיתה {className.trim()}</span>
-        </div>
-      </div>
-    );
-  };
+  const upcomingAbsencesCount = useMemo(() => {
+    return subRequests?.filter(r => new Date(r.date) >= new Date())?.length ?? 0;
+  }, [subRequests]);
+
+  const recentActivities = useMemo(() => {
+    if (!events || events.length === 0) return [];
+    
+    const relevantEvents = events
+      .filter(ev => {
+        const eventDate = new Date(ev.date);
+        eventDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < -3 || diffDays > 7) return false;
+        
+        if (ev.type === 'exam') {
+          const examResults = filterExamsByTeacherRole([ev], me);
+          return examResults.myExams.length > 0 || examResults.othersExams.length > 0;
+        }
+        
+        return true;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 3);
+    
+    return relevantEvents.map((ev, i) => {
+      const eventDate = new Date(ev.date);
+      eventDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
+      
+      let timeText = "";
+      if (diffDays === 0) timeText = "היום";
+      else if (diffDays === 1) timeText = "מחר";
+      else if (diffDays === -1) timeText = "אתמול";
+      else if (diffDays > 0) timeText = `בעוד ${diffDays} ימים`;
+      else timeText = `לפני ${Math.abs(diffDays)} ימים`;
+      
+      const classNames = ev.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה';
+      
+      return {
+        time: timeText,
+        text: `${ev.title} - ${classNames}`
+      };
+    });
+  }, [events, me]);
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
@@ -610,61 +637,17 @@ const renderScheduleTable = () => {
             stats={[
               {
                 icon: "📚",
-                value: (() => {
-                  if (loadingExams) return "...";
-                  if (!events || events.length === 0 || !me?.classes) return "0";
-                  const today = new Date();
-                  const startOfWeek = new Date(today);
-                  const dayOffset = today.getDay() === 6 ? 1 : 0;
-                  startOfWeek.setDate(today.getDate() - today.getDay() + (dayOffset * 7));
-                  startOfWeek.setHours(0, 0, 0, 0);
-                  const endOfWeek = new Date(startOfWeek);
-                  endOfWeek.setDate(startOfWeek.getDate() + 6);
-                  endOfWeek.setHours(23, 59, 59, 999);
-                  
-                  const teacherClassIds = me.classes.map(c => c._id || c);
-                  
-                  const filteredEvents = events.filter(event => {
-                    const eventDate = new Date(event.date);
-                    eventDate.setHours(0, 0, 0, 0);
-                    
-                    const isThisWeek = eventDate >= startOfWeek && eventDate <= endOfWeek;
-                    const isForMyClasses = event.classes?.some(cls => 
-                      teacherClassIds.includes(cls._id || cls)
-                    );
-                    const isNotExam = event.type !== 'exam';
-                    
-                    return isThisWeek && isForMyClasses && isNotExam;
-                  });
-                  
-                  return filteredEvents.length;
-                })(),
+                value: weeklyEventsCount,
                 label: "אירועים השבוע"
               },
               {
                 icon: "📄",
-                value: (() => {
-                  if (loadingExams) return "...";
-                  if (!exams.myExams && !exams.othersExams) return "0";
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const upcomingMyExams = (exams.myExams || []).filter(exam => {
-                    const examDate = new Date(exam.date);
-                    examDate.setHours(0, 0, 0, 0);
-                    return examDate >= today;
-                  });
-                  const upcomingOthersExams = (exams.othersExams || []).filter(exam => {
-                    const examDate = new Date(exam.date);
-                    examDate.setHours(0, 0, 0, 0);
-                    return examDate >= today;
-                  });
-                  return upcomingMyExams.length + upcomingOthersExams.length;
-                })(),
+                value: upcomingExamsCount,
                 label: "מבחנים קרובים"
               },
               {
                 icon: "📝",
-                value: subRequests?.filter(r => new Date(r.date) >= new Date())?.length ?? 0,
+                value: upcomingAbsencesCount,
                 label: "בקשות היעדרות קרובות"
               }
             ]}
@@ -680,51 +663,7 @@ const renderScheduleTable = () => {
                 onClick: () => openModal("scheduleExam")
               }
             ]}
-            recentActivities={(() => {
-              if (!events || events.length === 0) return [];
-              
-              const relevantEvents = events
-                .filter(ev => {
-                  const eventDate = new Date(ev.date);
-                  eventDate.setHours(0, 0, 0, 0);
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
-                  
-                  if (diffDays < -3 || diffDays > 7) return false;
-                  
-                  if (ev.type === 'exam') {
-                    const examResults = filterExamsByTeacherRole([ev], me);
-                    return examResults.myExams.length > 0 || examResults.othersExams.length > 0;
-                  }
-                  
-                  return true;
-                })
-                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                .slice(0, 3);
-              
-              return relevantEvents.map((ev, i) => {
-                const eventDate = new Date(ev.date);
-                eventDate.setHours(0, 0, 0, 0);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const diffDays = Math.floor((eventDate - today) / (1000 * 60 * 60 * 24));
-                
-                let timeText = "";
-                if (diffDays === 0) timeText = "היום";
-                else if (diffDays === 1) timeText = "מחר";
-                else if (diffDays === -1) timeText = "אתמול";
-                else if (diffDays > 0) timeText = `בעוד ${diffDays} ימים`;
-                else timeText = `לפני ${Math.abs(diffDays)} ימים`;
-                
-                const classNames = ev.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה';
-                
-                return {
-                  time: timeText,
-                  text: `${ev.title} - ${classNames}`
-                };
-              });
-            })()}
+            recentActivities={recentActivities}
             userRole="teacher"
           />
         )}
@@ -758,27 +697,12 @@ const renderScheduleTable = () => {
 
 
         {activeSection === "nextClass" && (
-          <div className="dashboard-content">
-            <h2>השיעור הבא</h2>
-            {renderNextClass()}
-
-            {nextLesson && nextLesson.subject && (
-              <div className="upcoming-classes">
-                <h3>השיעורים הבאים היום</h3>
-                <div className="upcoming-list">
-                  {(nextLesson?.upcoming || []).map((u, idx) => (
-                    <div className="upcoming-item" key={idx}>
-                      <span className="upcoming-time">{u.time || `${u.start} - ${u.end}`}</span>
-                      <span className="upcoming-subject">{u.subject || u.course} - כיתה {u.className || u.class || u.grade || "—"}</span>
-                    </div>
-                  ))}
-                  {(!nextLesson?.upcoming || nextLesson.upcoming.length === 0) && (
-                    <p>אין עוד שיעורים היום</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <NextClassSection 
+            nextLesson={nextLesson}
+            loadingNextLesson={loadingNextLesson}
+            userType="teacher"
+            onNavigateToSchedule={() => setActiveSection("schedule")}
+          />
         )}
 
 
@@ -1136,6 +1060,15 @@ const renderScheduleTable = () => {
             me={me}
           />
         </DashboardModal>
+        
+        <ConfirmDeleteModal
+          isOpen={confirmDelete.show}
+          onClose={() => setConfirmDelete({ show: false, type: '', item: null, action: null })}
+          onConfirm={confirmDelete.action}
+          title="מחיקת מבחן"
+          message="האם אתה בטוח בביצוע הפעולה הנ'ל?"
+          itemName={confirmDelete.item?.title || ''}
+        />
       </div>
     </div>
   );

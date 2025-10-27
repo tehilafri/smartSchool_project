@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useAppDispatch } from "./store/hooks";
+import { logout } from "./store/slices/authSlice";
+import { clearPersistedState } from "./store/middleware/persistenceMiddleware";
 import Header from "./components/Header/Header";
 import Footer from "./components/Footer/Footer";
 import Hero from "./components/Hero/Hero";
@@ -21,15 +24,14 @@ import HomePage from "./components/HomePage";
 import ScrollToTop from "./components/ScrollToTop";
 import Layout from "./components/Layout/Layout";
 
-function onLogout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("role");
-  localStorage.removeItem("schoolId");
-  localStorage.removeItem("user");
-  window.location.href = "/";
-}
-
 function Router() {
+  const dispatch = useAppDispatch();
+  
+  const handleLogout = () => {
+    clearPersistedState();
+    dispatch(logout());
+  };
+
   return (
     <BrowserRouter>
       <ScrollToTop />
@@ -56,7 +58,7 @@ function Router() {
           path="/dashboard/admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard onLogout={onLogout} />
+              <AdminDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
@@ -64,7 +66,7 @@ function Router() {
           path="/dashboard/secretary"
           element={
             <ProtectedRoute allowedRoles={["secretary"]}>
-              <SecretaryDashboard onLogout={onLogout} />
+              <SecretaryDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
@@ -72,7 +74,7 @@ function Router() {
           path="/dashboard/teacher"
           element={
             <ProtectedRoute allowedRoles={["teacher"]}>
-              <TeacherDashboard onLogout={onLogout} />
+              <TeacherDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
@@ -80,7 +82,7 @@ function Router() {
           path="/dashboard/student"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
-              <StudentDashboard onLogout={onLogout} />
+              <StudentDashboard onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
