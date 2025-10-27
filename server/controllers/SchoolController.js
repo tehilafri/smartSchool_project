@@ -58,7 +58,8 @@ export const createSchool = async (req, res) => {
     const oldSchool = await School.findById(admin.schoolId);
     console.log('Old school:', oldSchool?.schoolCode);
     
-    if (oldSchool && oldSchool.schoolCode === 'ABCD') {
+    if (oldSchool && oldSchool.schoolCode.startsWith('TEMP_'))  // כל קוד שמתחיל ב-TEMP_
+ {
       console.log('Deleting temporary school and resetting password');
       await School.findByIdAndDelete(admin.schoolId);
       

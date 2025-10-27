@@ -99,10 +99,13 @@ export const approveAdminRequest = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(tempPassword, salt);
 
+    // יצירת קוד בית ספר זמני ייחודי
+    const tempSchoolCode = `TEMP_${generateCode()}`;
+
     // יצירת בית ספר זמני קודם
     const tempSchool = new School({
       name: 'בית ספר זמני',
-      schoolCode: 'ABCD',
+      schoolCode: tempSchoolCode,
       principalId: new mongoose.Types.ObjectId(), // זמני
       address: 'כתובת זמנית',
       phone: adminRequest.phone,
@@ -149,7 +152,7 @@ export const approveAdminRequest = async (req, res) => {
           <ul>
             <li>שם משתמש: ${userName}</li>
             <li>סיסמה זמנית: ${tempPassword}</li>
-            <li>קוד בית ספר זמני: ABCD</li>
+            <li>קוד בית ספר זמני: ${tempSchoolCode}</li>
           </ul>
           <br>
           <p><strong>הוראות:</strong></p>

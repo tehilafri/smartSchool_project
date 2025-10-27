@@ -11,6 +11,13 @@ const Login = () => {
 
   // פונקציה אחרי התחברות מוצלחת
   const onLogin = (role) => {
+    const schoolCode = localStorage.getItem("schoolCode");
+    console.log("-schoolCode:", schoolCode);
+    //אם המנהלת עדיין לא רשמה את בית הספר שלה
+    if (role === "admin" && schoolCode.startsWith('TEMP_')) {
+      navigate("/register_school"); // נווט לדף הרשמת בית ספר
+      return;
+    }
     // ניווט לפי תפקיד
     if (role === "admin") {
       navigate("/dashboard/admin");
