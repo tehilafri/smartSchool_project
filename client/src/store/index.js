@@ -5,7 +5,7 @@ import schoolDataSlice from './slices/schoolDataSlice';
 import scheduleSlice from './slices/scheduleSlice';
 import substituteSlice from './slices/substituteSlice';
 import persistenceMiddleware, { loadFromCache } from './middleware/persistenceMiddleware';
-import { websocketMiddleware } from './middleware/websocketMiddleware';
+
 
 // Load cached data
 const cachedSchoolData = loadFromCache('schoolData');
@@ -26,9 +26,5 @@ export const store = configureStore({
   },
   preloadedState,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['websocket/connect', 'websocket/disconnect'],
-      },
-    }).concat(persistenceMiddleware, websocketMiddleware),
+    getDefaultMiddleware().concat(persistenceMiddleware),
 });
