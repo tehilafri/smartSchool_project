@@ -337,26 +337,29 @@ export const updateUser = async (req, res) => {
       if (!canUpdateClasses) return res.status(403).json({ message: 'You cannot update classes for this user' });
 
       // שמירת הרשימה החדשה
-      const newClassIds = existingClasses.map(c => c._id);
+      const newClassIds = existingClasses.map(c => c._id.toString());
       const oldClassIds = user.classes.map(c => c.toString());
-      user.classes = newClassIds;
+      user.classes = existingClasses.map(c => c._id);
 
       // עדכון השדה לפי תפקיד
       const field = user.role === 'teacher' ? 'teachers' : 'students';
 
       // הוספה בכיתות החדשות
       for (const classDoc of existingClasses) {
-        if (!classDoc[field].includes(user._id)) {
+        if (!classDoc[field].map(id => id.toString()).includes(user._id.toString())) {
           classDoc[field].push(user._id);
           await classDoc.save();
         }
       }
 
-      // הסרה מהכיתות הישנות
-      const removedClasses = await Class.find({ _id: { $in: oldClassIds.filter(id => !newClassIds.includes(id)) } });
-      for (const classDoc of removedClasses) {
-        classDoc[field] = classDoc[field].filter(id => id.toString() !== user._id.toString());
-        await classDoc.save();
+      // הסרה מהכיתות הישנות (רק מכיתות שלא קיימות ברשימה החדשה)
+      const removedClassIds = oldClassIds.filter(id => !newClassIds.includes(id));
+      if (removedClassIds.length > 0) {
+        const removedClasses = await Class.find({ _id: { $in: removedClassIds } });
+        for (const classDoc of removedClasses) {
+          classDoc[field] = classDoc[field].filter(id => id.toString() !== user._id.toString());
+          await classDoc.save();
+        }
       }
     }
 
