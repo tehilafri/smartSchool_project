@@ -1138,6 +1138,20 @@ const SecretaryDashboard = ({ onLogout }) => {
                 targetClassName={scheduleUpdateTarget.type === 'class' ? scheduleUpdateTarget.name : null}
                 onSuccess={handleScheduleUpdateSuccess}
                 me={me}
+                existingSchedule={scheduleUpdateTarget.type === 'class' ? (() => {
+                  if (selectedClassSchedule?.weekPlan) return selectedClassSchedule.weekPlan;
+                  if (Array.isArray(selectedClassSchedule)) {
+                    const weekPlan = { sunday: [], monday: [], tuesday: [], wednesday: [], thursday: [], friday: [] };
+                    selectedClassSchedule.forEach(dayObj => {
+                      const { day, lessons } = dayObj;
+                      if (day && lessons && weekPlan[day]) {
+                        weekPlan[day] = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+                      }
+                    });
+                    return weekPlan;
+                  }
+                  return null;
+                })() : null}
               />
             </div>
           </div>

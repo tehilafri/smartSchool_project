@@ -1058,6 +1058,7 @@ const renderScheduleTable = () => {
             onSuccess={handleScheduleUpdateSuccess}
             showNotification={showNotification}
             me={me}
+            existingSchedule={classSchedule?.weekPlan}
           />
         </DashboardModal>
         

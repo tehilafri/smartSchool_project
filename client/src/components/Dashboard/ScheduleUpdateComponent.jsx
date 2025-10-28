@@ -8,7 +8,8 @@ const ScheduleUpdateComponent = ({
   targetClassName = null, 
   onSuccess, 
   showNotification,
-  me 
+  me,
+  existingSchedule = null
 }) => {
   const [activeTab, setActiveTab] = useState('updateDay');
   const [notification, setNotification] = useState(null);
@@ -85,6 +86,7 @@ const ScheduleUpdateComponent = ({
             me={me}
             targetTeacherId={targetTeacherId}
             targetClassName={targetClassName}
+            existingSchedule={existingSchedule}
           />
         </div>
       )}
@@ -99,6 +101,7 @@ const ScheduleUpdateComponent = ({
             me={me}
             targetTeacherId={targetTeacherId}
             targetClassName={targetClassName}
+            existingSchedule={existingSchedule}
           />
         </div>
       )}
@@ -125,7 +128,7 @@ const ScheduleUpdateComponent = ({
 };
 
 /* --- רכיב עזר ליצירת מערכת שלמה --- */
-function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, targetClassName }) {
+function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, targetClassName, existingSchedule }) {
   const [weekPlan, setWeekPlan] = useState({
     sunday: [],
     monday: [],
@@ -152,19 +155,39 @@ function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, t
       const numHours = me.schoolId.scheduleHours.length;
       const emptyLessons = Array(numHours).fill().map(() => ({ teacherId: "", subject: "" }));
       
-      const initialWeekPlan = {
-        sunday: [...emptyLessons],
-        monday: [...emptyLessons],
-        tuesday: [...emptyLessons],
-        wednesday: [...emptyLessons],
-        thursday: [...emptyLessons],
-        friday: [...emptyLessons]
-      };
+      const initialWeekPlan = {};
+      
+      Object.keys(weekPlan).forEach(day => {
+        if (existingSchedule && existingSchedule[day]) {
+          // אם יש מערכת קיימת, השתמש בה
+          initialWeekPlan[day] = existingSchedule[day].map(lesson => {
+            let teacherId = "";
+            if (lesson.teacherId) {
+              if (typeof lesson.teacherId === 'object') {
+                teacherId = lesson.teacherId._id;
+              } else {
+                teacherId = lesson.teacherId;
+              }
+            }
+            return {
+              teacherId,
+              subject: lesson.subject || ""
+            };
+          });
+          // השלם שעות חסרות אם יש
+          while (initialWeekPlan[day].length < numHours) {
+            initialWeekPlan[day].push({ teacherId: "", subject: "" });
+          }
+        } else {
+          // אם אין מערכת קיימת, צור ריק
+          initialWeekPlan[day] = [...emptyLessons];
+        }
+      });
       
       setWeekPlan(initialWeekPlan);
       setLoading(false);
     }
-  }, [me]);
+  }, [me, existingSchedule, teachers]);
 
   // שליפת רשימת המורים
   useEffect(() => {
@@ -189,22 +212,36 @@ function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, t
   };
 
   const handleSubmit = () => {
+    // המר _id ל-userId וסנן שיעורים ריקים
+    const convertedWeekPlan = {};
+    Object.keys(weekPlan).forEach(day => {
+      convertedWeekPlan[day] = weekPlan[day]
+        .map(lesson => {
+          if (lesson.teacherId) {
+            const teacher = teachers.find(t => t._id === lesson.teacherId);
+            return {
+              ...lesson,
+              teacherId: teacher ? teacher.userId : lesson.teacherId
+            };
+          }
+          return lesson;
+        })
+        .filter(lesson => lesson.teacherId && lesson.subject);
+    });
+    
     let payload;
     
     if (targetClassName) {
-      // עדכון עבור כיתה ספציפית
       payload = { 
         className: targetClassName, 
-        weekPlan 
+        weekPlan: convertedWeekPlan 
       };
     } else if (targetTeacherId) {
-      // עדכון עבור מורה ספציפית
       payload = { 
         teacherId: targetTeacherId, 
-        weekPlan 
+        weekPlan: convertedWeekPlan 
       };
     } else if (me?.ishomeroom) {
-      // עדכון עבור כיתת החינוך של המורה
       const homeroomClass = me?.classes?.find(cls => 
         cls.homeroomTeacher && cls.homeroomTeacher._id === me._id
       );
@@ -218,7 +255,7 @@ function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, t
 
       payload = { 
         className: homeroomClass.name, 
-        weekPlan 
+        weekPlan: convertedWeekPlan 
       };
     } else {
       if (showNotification) {
@@ -274,7 +311,7 @@ function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, t
                     >
                       <option value="">בחר מורה</option>
                       {teachers.map(teacher => (
-                        <option key={teacher._id} value={teacher.userId}>
+                        <option key={teacher._id} value={teacher._id}>
                           {teacher.firstName} {teacher.lastName}
                         </option>
                       ))}
@@ -303,7 +340,7 @@ function CreateScheduleForm({ onSubmit, showNotification, me, targetTeacherId, t
 }
 
 /* --- רכיב עזר לעדכון יום ספציפי --- */
-function UpdateDayForm({ onSubmit, showNotification, me, targetTeacherId, targetClassName }) {
+function UpdateDayForm({ onSubmit, showNotification, me, targetTeacherId, targetClassName, existingSchedule }) {
   const [day, setDay] = useState("sunday");
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -313,11 +350,37 @@ function UpdateDayForm({ onSubmit, showNotification, me, targetTeacherId, target
   useEffect(() => {
     if (me?.schoolId?.scheduleHours) {
       const numHours = me.schoolId.scheduleHours.length;
-      const initialLessons = Array(numHours).fill().map(() => ({ teacherId: "", subject: "" }));
+      let initialLessons;
+      
+      if (existingSchedule && existingSchedule[day]) {
+        // אם יש מערכת קיימת ליום הנבחר, השתמש בה
+        initialLessons = existingSchedule[day].map(lesson => {
+          let teacherId = "";
+          if (lesson.teacherId) {
+            if (typeof lesson.teacherId === 'object') {
+              teacherId = lesson.teacherId._id;
+            } else {
+              teacherId = lesson.teacherId;
+            }
+          }
+          return {
+            teacherId,
+            subject: lesson.subject || ""
+          };
+        });
+        // השלם שעות חסרות אם יש
+        while (initialLessons.length < numHours) {
+          initialLessons.push({ teacherId: "", subject: "" });
+        }
+      } else {
+        // אם אין מערכת קיימת, צור ריק
+        initialLessons = Array(numHours).fill().map(() => ({ teacherId: "", subject: "" }));
+      }
+      
       setLessons(initialLessons);
       setLoading(false);
     }
-  }, [me]);
+  }, [me, day, existingSchedule, teachers]);
 
   // שליפת רשימת המורים
   useEffect(() => {
@@ -348,12 +411,26 @@ function UpdateDayForm({ onSubmit, showNotification, me, targetTeacherId, target
   };
 
   const handleSubmit = () => {
+    // המר _id ל-userId וסנן שיעורים ריקים
+    const convertedLessons = lessons
+      .map(lesson => {
+        if (lesson.teacherId) {
+          const teacher = teachers.find(t => t._id === lesson.teacherId);
+          return {
+            ...lesson,
+            teacherId: teacher ? teacher.userId : lesson.teacherId
+          };
+        }
+        return lesson;
+      })
+      .filter(lesson => lesson.teacherId && lesson.subject);
+    
     let payload;
     
     if (targetClassName) {
-      payload = { className: targetClassName, day, lessons };
+      payload = { className: targetClassName, day, lessons: convertedLessons };
     } else if (targetTeacherId) {
-      payload = { teacherId: targetTeacherId, day, lessons };
+      payload = { teacherId: targetTeacherId, day, lessons: convertedLessons };
     } else if (me?.ishomeroom) {
       const homeroomClass = me?.classes?.find(cls => 
         cls.homeroomTeacher && cls.homeroomTeacher._id === me._id
@@ -366,7 +443,7 @@ function UpdateDayForm({ onSubmit, showNotification, me, targetTeacherId, target
         return;
       }
 
-      payload = { className: homeroomClass.name, day, lessons };
+      payload = { className: homeroomClass.name, day, lessons: convertedLessons };
     } else {
       if (showNotification) {
         showNotification("אין הרשאה לעדכן מערכת שעות", 'error');
@@ -434,7 +511,7 @@ function UpdateDayForm({ onSubmit, showNotification, me, targetTeacherId, target
                   >
                     <option value="">בחר מורה</option>
                     {teachers.map(teacher => (
-                      <option key={teacher._id} value={teacher.userId}>
+                      <option key={teacher._id} value={teacher._id}>
                         {teacher.firstName} {teacher.lastName}
                       </option>
                     ))}
