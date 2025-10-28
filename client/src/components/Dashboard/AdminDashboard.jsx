@@ -774,6 +774,7 @@ const AdminDashboard = ({ onLogout }) => {
                 <thead>
                   <tr>
                     <th>שם</th>
+                    <th>תעודת זהות</th>
                     <th>סל מקצועות</th>
                     <th>כיתות לימוד</th>
                     <th>אימייל</th>
@@ -785,6 +786,7 @@ const AdminDashboard = ({ onLogout }) => {
                   {teachers.map((teacher) => (
                     <tr key={teacher._id}>
                       <td>{teacher.firstName} {teacher.lastName}</td>
+                      <td>{teacher.userId || "-"}</td>
                       <td>{teacher.subjects ? teacher.subjects.join(", ") : "-"}</td>
                       <td>{teacher.classes ? teacher.classes.map(cls => cls.name).join(", ") : "-"}</td>
                       <td>{teacher.email || "-"}</td>

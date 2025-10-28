@@ -480,6 +480,7 @@ const SecretaryDashboard = ({ onLogout }) => {
                   <thead>
                     <tr>
                       <th>שם</th>
+                      <th>תעודת זהות</th>
                       <th>אימייל</th>
                       <th>טלפון</th>
                       <th>פעולות</th>
@@ -489,6 +490,7 @@ const SecretaryDashboard = ({ onLogout }) => {
                     {teachers.map((teacher) => (
                       <tr key={teacher._id}>
                         <td>{teacher.firstName} {teacher.lastName}</td>
+                        <td>{teacher.userId || "-"}</td>
                         <td>{teacher.email || "-"}</td>
                         <td>{teacher.phone || "-"}</td>
                         <td>
