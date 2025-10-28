@@ -578,8 +578,16 @@ const SecretaryDashboard = ({ onLogout }) => {
                         <td>{event.title}</td>
                         <td>{event.description || "-"}</td>
                         <td>
-                          <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>✏️</button>
-                          <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>🗑️</button>
+                          {event.type !== "exam" && (
+                            <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>
+                              ✏️
+                            </button>
+                          )}
+                          {event.type !== "exam" && (
+                            <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>
+                              🗑️
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -958,6 +966,18 @@ const SecretaryDashboard = ({ onLogout }) => {
                   value={formData.phone || ""}
                   onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 />
+                <label>{modalType === "editTeacher" ? 'מלמדת בכיתות:' : 'לומדת בכיתה:'}</label>
+                <input
+                  type="text"
+                  placeholder={modalType === "editTeacher" ? 'כיתות (מופרדות בפסיקים)' : 'לומדת בכיתה:'}
+                  value={formData.classes || ""}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      classes: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
+                    })
+                  }
+                />
                 <button className="btn btn-primary" type="submit">שמור</button>
               </form>
             )}
@@ -1121,7 +1141,7 @@ const SecretaryDashboard = ({ onLogout }) => {
       
       {selectedEvent && (
         <EventDetailsModal 
-          event={selectedEvent}
+          selectedEvent={selectedEvent}
           onClose={() => setSelectedEvent(null)}
         />
       )}
