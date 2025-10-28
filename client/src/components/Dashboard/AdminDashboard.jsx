@@ -155,16 +155,8 @@ const AdminDashboard = ({ onLogout }) => {
   const handleUpdateUser = async (id) => {
     try {
       await updateUser(id, formData);
-      // עדכון Redux state
-      const userToUpdate = [...teachers, ...students, ...secretaries].find(u => u._id === id);
-      if (userToUpdate) {
-        const updatedUser = { ...userToUpdate, ...formData };
-        if (userToUpdate.role === 'teacher') {
-          dispatch(updateTeacher(updatedUser));
-        } else if (userToUpdate.role === 'student') {
-          dispatch(updateStudent(updatedUser));
-        }
-      }
+      // ריענון כל הנתונים כדי לקבל את הכיתות המעודכנות
+      await fetchAllData();
       closeModal();
     } catch (err) {
       console.error('Error updating user:', err);
