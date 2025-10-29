@@ -407,6 +407,22 @@ const SecretaryDashboard = ({ onLogout }) => {
     }
   };
 
+  // Generate grade range based on school settings
+  const getGradeRange = () => {
+    const allGrades = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד'];
+    const minGrade = me?.schoolId?.minGrade;
+    const maxGrade = me?.schoolId?.maxGrade;
+    
+    if (!minGrade || !maxGrade) return allGrades;
+    
+    const minIndex = allGrades.indexOf(minGrade);
+    const maxIndex = allGrades.indexOf(maxGrade);
+    
+    if (minIndex === -1 || maxIndex === -1) return allGrades;
+    
+    return allGrades.slice(minIndex, maxIndex + 1);
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
@@ -929,6 +945,7 @@ const SecretaryDashboard = ({ onLogout }) => {
         <div className="modal-content" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <h3>
+              {modalType === "addClass" && "הוספת כיתה חדשה"}
               {modalType === "editTeacher" && "עריכת מורה"}
               {modalType === "editStudent" && "עריכת תלמיד"}
               {modalType === "addEvent" && "הוספת אירוע חדש"}
@@ -939,6 +956,49 @@ const SecretaryDashboard = ({ onLogout }) => {
             <button className="modal-close" onClick={closeModal}>×</button>
           </div>
           <div className="modal-body">
+            {modalType === "addClass" && (
+              <form onSubmit={e => {
+                e.preventDefault();
+                handleAddClass();
+              }}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>בחר שכבת כיתה</label>
+                    <select
+                      value={formData.gradeLevel || ""}
+                      onChange={e => setFormData({ ...formData, gradeLevel: e.target.value })}
+                      required
+                    >
+                      <option value="">בחר שכבת כיתה</option>
+                      {getGradeRange().map(grade => (
+                        <option key={grade} value={grade}>{grade}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>מספר/תיאור כיתה</label>
+                    <input
+                      type="text"
+                      placeholder="1, 2, א, ב או תיאור אחר"
+                      value={formData.classNumber || ""}
+                      onChange={e => {
+                        const fullName = formData.gradeLevel && e.target.value ? `${formData.gradeLevel}${e.target.value}` : "";
+                        setFormData({ ...formData, classNumber: e.target.value, name: fullName });
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="ת'ז מחנכת"
+                  value={formData.homeroomTeacher || ""}
+                  onChange={e => setFormData({ ...formData, homeroomTeacher: e.target.value })}
+                  required
+                />
+                <button className="btn btn-primary" type="submit">שמור</button>
+              </form>
+            )}
             {(modalType === "editTeacher" || modalType === "editStudent") && (
               <form onSubmit={e => {
                 e.preventDefault();

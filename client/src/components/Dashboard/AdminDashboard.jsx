@@ -335,6 +335,22 @@ const AdminDashboard = ({ onLogout }) => {
     alert(message);
   };
 
+  // Generate grade range based on school settings
+  const getGradeRange = () => {
+    const allGrades = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד'];
+    const minGrade = me?.schoolId?.minGrade;
+    const maxGrade = me?.schoolId?.maxGrade;
+    
+    if (!minGrade || !maxGrade) return allGrades;
+    
+    const minIndex = allGrades.indexOf(minGrade);
+    const maxIndex = allGrades.indexOf(maxGrade);
+    
+    if (minIndex === -1 || maxIndex === -1) return allGrades;
+    
+    return allGrades.slice(minIndex, maxIndex + 1);
+  };
+
 
   // טופס דינמי למודאל
   
@@ -407,13 +423,34 @@ const AdminDashboard = ({ onLogout }) => {
           e.preventDefault();
           handleAddClass();
         }}>
-          <input
-            type="text"
-            placeholder="שם כיתה"
-            value={formData.name || ""}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
+          <div className="form-row">
+            <div className="form-group">
+              <label>בחר שכבת כיתה</label>
+              <select
+                value={formData.gradeLevel || ""}
+                onChange={e => setFormData({ ...formData, gradeLevel: e.target.value })}
+                required
+              >
+                <option value="">בחר שכבת כיתה</option>
+                {getGradeRange().map(grade => (
+                  <option key={grade} value={grade}>{grade}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>מספר/תיאור כיתה</label>
+              <input
+                type="text"
+                placeholder="1, 2, א, ב או תיאור אחר"
+                value={formData.classNumber || ""}
+                onChange={e => {
+                  const fullName = formData.gradeLevel && e.target.value ? `${formData.gradeLevel}${e.target.value}` : "";
+                  setFormData({ ...formData, classNumber: e.target.value, name: fullName });
+                }}
+                required
+              />
+            </div>
+          </div>
           <input type="text" 
           placeholder="ת''ז מחנכת"
           value={formData.homeroomTeacher || ""}

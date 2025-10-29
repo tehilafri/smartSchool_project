@@ -10,7 +10,7 @@ import { createClass,
 import { jwtMiddleware, requireRole } from '../Middlewares.js';
 const router = express.Router();
 
-router.post('/createClass', jwtMiddleware, requireRole('admin'), createClass);
+router.post('/createClass', jwtMiddleware, requireRole('admin','secretary'), createClass);
 router.get('/', jwtMiddleware, getAllClasses);
 router.put('/updateHomeroomTeacher/:className', jwtMiddleware, requireRole('admin', 'secretary'), updateHomeroomTeacher);
 router.post('/addStudent', jwtMiddleware, requireRole('admin', 'secretary'), addStudentToClass);
