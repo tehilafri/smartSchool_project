@@ -236,7 +236,7 @@ export const updateSchool = async (req, res) => {
               // אם יש שיעורים שנמחקו
               if (schedule.weekPlan[day].length !== validLessons.length) {
                 scheduleUpdated = true;
-                console.log(Removed ${schedule.weekPlan[day].length - validLessons.length} lessons from ${day});
+                console.log(`Removed ${schedule.weekPlan[day].length - validLessons.length} lessons from ${day}`);
               }
               
               schedule.weekPlan[day] = validLessons;
@@ -246,11 +246,11 @@ export const updateSchool = async (req, res) => {
           // שמירת המערכת המעודכנת
           if (scheduleUpdated || newScheduleHours.length !== oldScheduleHours.length) {
             await schedule.save();
-            console.log(Updated schedule for class ${schedule.classId});
+            console.log(`Updated schedule for class ${schedule.classId}`);
           }
         }
-        
-        console.log(Updated ${existingSchedules.length} existing schedules);
+
+        console.log(`Updated ${existingSchedules.length} existing schedules`);
       }
     }
 
