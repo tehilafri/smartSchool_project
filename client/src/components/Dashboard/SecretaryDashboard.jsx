@@ -1040,17 +1040,27 @@ const SecretaryDashboard = ({ onLogout }) => {
                     ))}
                   </select>
                 ) : (
-                  <input
-                    type="text"
-                    placeholder="כיתות (מופרדות בפסיקים)"
-                    value={formData.classes || ""}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        classes: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
-                      })
-                    }
-                  />
+                  <div className="checkbox-group">
+                    <label>בחר כיתות:</label>
+                    {(classes || []).map(cls => (
+                      <div key={cls._id}>
+                        <input
+                          type="checkbox"
+                          checked={Array.isArray(formData.classes) ? formData.classes.includes(cls.name) : false}
+                          onChange={e => {
+                            let updated = Array.isArray(formData.classes) ? [...formData.classes] : [];
+                            if (e.target.checked) {
+                              updated = [...updated, cls.name];
+                            } else {
+                              updated = updated.filter(name => name !== cls.name);
+                            }
+                            setFormData({ ...formData, classes: updated });
+                          }}
+                        />
+                        <span>{cls.name}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
                 <button className="btn btn-primary" type="submit">שמור</button>
               </form>
