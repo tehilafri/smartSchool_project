@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { registerUser, getMe } from "../../services/userService";
+import { getAllClasses } from "../../services/classService";
 import DashboardHeader from "../Dashboard/DashboardHeader";
 import "./RegisterUser.css"; 
 import PasswordInput from './PasswordInput';  
@@ -26,12 +27,15 @@ const RegisterUser = () => {
   const [error, setError] = useState("");
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const userData = await getMe();
         setMe(userData?.data);
+        const classesData = await getAllClasses();
+        setClasses(classesData || []);
       } catch (err) {
         console.error('Error fetching user data:', err);
       } finally {
@@ -256,12 +260,16 @@ const RegisterUser = () => {
           {(formData.role === 'student') && (
             <div className="form-group">
               <label>כיתת לימוד</label>
-              <input
-                type="text"
+              <select
                 name="classes"
                 value={formData.classes}
                 onChange={handleChange}
-              />
+              >
+                <option value="">בחר כיתה</option>
+                {classes.map(cls => (
+                  <option key={cls._id} value={cls.name}>{cls.name}</option>
+                ))}
+              </select>
             </div>
           )}
 

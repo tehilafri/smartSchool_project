@@ -372,17 +372,29 @@ const AdminDashboard = ({ onLogout }) => {
           {(modalType === "editTeacher" || modalType === "editStudent") && (
           <>
           <label>{modalType === "editTeacher" ? 'מלמדת בכיתות:' : 'לומדת בכיתה:'}</label>
-          <input
-            type="text"
-            placeholder="כיתות (מופרדות בפסיקים)"
-            value={formData.classes || ""}
-            onChange={e =>
-              setFormData({
-                ...formData,
-                classes: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
-              })
-            }
-          />
+          {modalType === "editStudent" ? (
+            <select
+              value={Array.isArray(formData.classes) ? formData.classes[0] || "" : formData.classes || ""}
+              onChange={e => setFormData({ ...formData, classes: e.target.value ? [e.target.value] : [] })}
+            >
+              <option value="">בחר כיתה</option>
+              {classes.map(cls => (
+                <option key={cls._id} value={cls.name}>{cls.name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              placeholder="כיתות (מופרדות בפסיקים)"
+              value={formData.classes || ""}
+              onChange={e =>
+                setFormData({
+                  ...formData,
+                  classes: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
+                })
+              }
+            />
+          )}
           </>
           )}
           <button className="btn btn-primary" type="submit">שמור</button>
