@@ -196,7 +196,62 @@ export const updateSchool = async (req, res) => {
 
     // ... (המשך הלוגיקה של עדכון מערכת שעות נשאר זהה) ...
     if (updates.scheduleHours) {
-      // ... (לוגיקת עדכון מערכת שעות קיימת) ...
+    const newScheduleHours = school.scheduleHours || [];
+      
+      // בדיקה אם יש שינוי במערכת השעות
+      const hoursChanged = oldScheduleHours.length !== newScheduleHours.length ||
+        oldScheduleHours.some((oldHour, index) => {
+          const newHour = newScheduleHours[index];
+          return !newHour || oldHour.start !== newHour.start || oldHour.end !== newHour.end;
+        });
+
+      if (hoursChanged) {
+        console.log('Schedule hours changed, updating existing schedules...');
+        
+        // מציאת כל המערכות של בית הספר
+        const existingSchedules = await Schedule.find({ schoolId: id });
+        
+        for (const schedule of existingSchedules) {
+          let scheduleUpdated = false;
+          
+          // עדכון כל יום בשבוע
+          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+          
+          for (const day of days) {
+            if (schedule.weekPlan[day] && schedule.weekPlan[day].length > 0) {
+              // סינון שיעורים שעדיין קיימים במערכת החדשה
+              const validLessons = schedule.weekPlan[day].filter(lesson => {
+                return lesson.lessonNumber <= newScheduleHours.length;
+              });
+              
+              // עדכון זמני השיעורים לפי המערכת החדשה
+              validLessons.forEach(lesson => {
+                const hourInfo = newScheduleHours[lesson.lessonNumber - 1];
+                if (hourInfo) {
+                  lesson.startTime = hourInfo.start;
+                  lesson.endTime = hourInfo.end;
+                }
+              });
+              
+              // אם יש שיעורים שנמחקו
+              if (schedule.weekPlan[day].length !== validLessons.length) {
+                scheduleUpdated = true;
+                console.log(Removed ${schedule.weekPlan[day].length - validLessons.length} lessons from ${day});
+              }
+              
+              schedule.weekPlan[day] = validLessons;
+            }
+          }
+          
+          // שמירת המערכת המעודכנת
+          if (scheduleUpdated || newScheduleHours.length !== oldScheduleHours.length) {
+            await schedule.save();
+            console.log(Updated schedule for class ${schedule.classId});
+          }
+        }
+        
+        console.log(Updated ${existingSchedules.length} existing schedules);
+      }
     }
 
     res.json({ message: 'School updated successfully', school });
@@ -205,8 +260,6 @@ export const updateSchool = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
-
-// ... (deleteSchool function remains the same) ...
 
 export const deleteSchool = async (req, res) => {
   try {
