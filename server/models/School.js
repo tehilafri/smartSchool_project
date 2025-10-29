@@ -17,6 +17,11 @@ const schoolSchema = new mongoose.Schema({
   description: { type: String },
   imageUrl: { type: String }, // כתובת התמונה של הלוגו
   scheduleHours: [ScheduleHourSchema],
+  // grade range: store values as Hebrew grade labels, e.g. "א", "ח", "ט", "יב"
+  minGrade: { type: String, default: null },
+  maxGrade: { type: String, default: null },
+  // year number (e.g. 2025) when the last promotion was executed for this school
+  lastPromotedYear: { type: Number, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 

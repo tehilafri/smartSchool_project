@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "../../store/hooks"
 import { loginUser, clearError } from "../../store/slices/authSlice"
 import "./Auth.css"
-
+import PasswordInput from './PasswordInput';  
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -98,8 +98,7 @@ const Login = () => {
 
           <div className="form-group">
             <label htmlFor="password">סיסמה</label>
-            <input
-              type="password"
+            <PasswordInput
               id="password"
               name="password"
               value={formData.password}

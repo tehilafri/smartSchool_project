@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { resetPassword as resetPasswordAPI} from "../../services/userService";
 import "./Auth.css";
+import PasswordInput from './PasswordInput';  
 
 const ResetPassword = () => {
   const { token } = useParams(); // הטוקן מה-URL
@@ -46,20 +47,21 @@ const ResetPassword = () => {
             <h2>איפוס סיסמה</h2>
             <div className="form-group">
               <label htmlFor="password">סיסמה חדשה</label>
-              <input
-                type="password"
+              <PasswordInput
                 id="password"
+                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                placeholder="הכנס סיסמה"
               />
             </div>
 
             <div className="form-group">
               <label htmlFor="confirmPassword">אימות סיסמה</label>
-              <input
-                type="password"
+              <PasswordInput
                 id="confirmPassword"
+                name="confirmPassword"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required

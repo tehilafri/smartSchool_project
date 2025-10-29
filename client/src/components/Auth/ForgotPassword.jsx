@@ -17,10 +17,6 @@ const ForgotPassword = () => {
     try {
       await forgotPasswordAPI(email, userId);  // קריאה לשרת
       setIsSubmitted(true);
-
-      setTimeout(() => {
-        navigate("/reset-password"); // מעבר למסך איפוס סיסמה
-      }, 2000);
     } catch (err) {
       console.error(err);
       // אם יש שגיאה מהשרת, נראה למשתמש

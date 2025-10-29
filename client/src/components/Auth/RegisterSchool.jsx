@@ -1,7 +1,11 @@
 import { useState } from "react"
 import { createSchool } from "../../services/schoolService"
 import "./Auth.css"
+import PasswordInput from './PasswordInput';  
 
+const gradeOptions = [
+  'א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד'
+];
 
 const RegisterSchool = ({ onRegister }) => {
   const [formData, setFormData] = useState({
@@ -14,6 +18,8 @@ const RegisterSchool = ({ onRegister }) => {
     phone: "",
     website: "",
     description: "",
+    minGrade: "א",
+    maxGrade: "ח",
   })
   const [logo, setLogo] = useState(null);
   const [message, setMessage] = useState("");  // הודעה כללית
@@ -61,6 +67,8 @@ const RegisterSchool = ({ onRegister }) => {
       form.append("website", formData.website);
       form.append("description", formData.description);
       form.append("scheduleHours", JSON.stringify(scheduleHours));
+      form.append("minGrade", formData.minGrade);
+      form.append("maxGrade", formData.maxGrade);
       if (logo) {
         form.append("logo", logo);
       }
@@ -112,11 +120,25 @@ const RegisterSchool = ({ onRegister }) => {
           <div className="form-row">
             <div className="form-group">
               <label>סיסמה</label>
-              <input type="password" name="password" value={formData.password} onChange={handleChange} required />
+              <PasswordInput
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="הכנס סיסמה"
+              />
             </div>
             <div className="form-group">
               <label>אימות סיסמה</label>
-              <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required />
+              <PasswordInput
+                id="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                placeholder="הכנס סיסמה"
+              />
             </div>
           </div>
 
@@ -138,6 +160,16 @@ const RegisterSchool = ({ onRegister }) => {
           <div className="form-group">
             <label>תיאור</label>
             <textarea name="description" value={formData.description} onChange={handleChange} />
+          </div>
+
+          <div className="form-group">
+            <label>טווח כיתות (נמוך - גבוה)</label>
+            <select name="minGrade" value={formData.minGrade} onChange={handleChange}>
+              {gradeOptions.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            <select name="maxGrade" value={formData.maxGrade} onChange={handleChange}>
+              {gradeOptions.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
           </div>
 
           <div className="form-group">

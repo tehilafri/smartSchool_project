@@ -510,7 +510,7 @@ const AdminDashboard = ({ onLogout }) => {
         const newHours = scheduleHours.filter((_, i) => i !== index);
         setFormData({ ...formData, scheduleHours: newHours });
       };
-      
+    const allowedGrades = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד'];
       return (
         <form onSubmit={e => {
           e.preventDefault();
@@ -564,7 +564,32 @@ const AdminDashboard = ({ onLogout }) => {
               onChange={e => setFormData({ ...formData, email: e.target.value })}
             />
           </div>
-          
+          <div className="form-group">
+          <label>כיתה נמוכה ביותר (טווח)</label>
+          <select
+            value={formData.minGrade || ""} // הצג (ללא) אם הערך הוא null או ""
+            onChange={e => setFormData({ ...formData, minGrade: e.target.value || null })} // שלח null אם הבחירה ריקה
+          >
+            <option value="">(ללא)</option>
+            {allowedGrades.map(grade => (
+              <option key={`min-${grade}`} value={grade}>{grade}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>כיתה גבוהה ביותר (טווח)</label>
+          <select
+            value={formData.maxGrade || ""}
+            onChange={e => setFormData({ ...formData, maxGrade: e.target.value || null })}
+          >
+            <option value="">(ללא)</option>
+            {allowedGrades.map(grade => (
+              <option key={`max-${grade}`} value={grade}>{grade}</option>
+            ))}
+          </select>
+        </div>
+
           <div className="schedule-hours-section">
             <div className="section-header">
               <h4>מערכת שעות</h4>

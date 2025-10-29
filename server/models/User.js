@@ -48,7 +48,7 @@ userSchema.index(
 );
 userSchema.index(
   { email: 1 },
-  { unique: true, partialFilterExpression: { role: { $in: ['student','admin'] } } }
+  { unique: true, partialFilterExpression: { role: { $in: ['admin'] } } }
 );
 
 // --- פונקציה לשחזור סיסמה ---

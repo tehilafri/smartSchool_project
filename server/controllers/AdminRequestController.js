@@ -11,13 +11,11 @@ export const submitAdminRequest = async (req, res) => {
     console.log('Received admin request:', req.body);
     const { firstName, lastName, email, phone, birthDate, gender, userId } = req.body;
 
-    // בדיקה אם כבר קיימת בקשה עם המייל או תעודת זהות
-    const existingRequest = await AdminRequest.findOne({
-      $or: [{ email }, { userId }]
-    });
-
+    // בדיקה: אסור שתהיה בקשה נוספת עם אותה תעודת זהות (userId).
+    // מותר שיהיו בקשות עם אותו אימייל אם תעודות זהות שונות.
+    const existingRequest = await AdminRequest.findOne({ userId });
     if (existingRequest) {
-      return res.status(400).json({ message: 'בקשה עם פרטים אלה כבר קיימת במערכת' });
+      return res.status(400).json({ message: 'בקשה עם תעודת זהות זו כבר קיימת במערכת' });
     }
 
     // יצירת טוקן אישור
@@ -80,6 +78,11 @@ export const submitAdminRequest = async (req, res) => {
     res.status(201).json({ message: 'הבקשה נשלחה בהצלחה' });
   } catch (err) {
     console.error('Error submitting admin request:', err);
+    // אם זו שגיאת כפילות של MongoDB נחזיר הודעה ידידותית
+    if (err && err.code === 11000) {
+      const field = Object.keys(err.keyValue || {})[0] || 'field';
+      return res.status(400).json({ message: `${field} כבר קיים במערכת` });
+    }
     res.status(500).json({ message: 'שגיאה בשליחת הבקשה' });
   }
 };
@@ -121,20 +124,62 @@ export const approveAdminRequest = async (req, res) => {
 
     // יצירת משתמש מנהלת עם בית הספר
     const userName = `${adminRequest.firstName}${adminRequest.lastName}`;
-    const newAdmin = new User({
-      firstName: adminRequest.firstName,
-      lastName: adminRequest.lastName,
-      schoolId: tempSchool._id,
-      userName,
-      gender: adminRequest.gender,
-      userId: adminRequest.userId,
-      email: adminRequest.email,
-      phone: adminRequest.phone,
-      birthDate: adminRequest.birthDate,
-      password: hashedPassword,
-      role: 'admin'
-    });
-    await newAdmin.save({ session });
+
+    // בדיקה האם כבר יש משתמש בטבלת users עם אותה תעודת זהות (userId)
+    // אם כן - נעדכן אותו ונקשר לבית הספר; אחרת ניצור משתמש חדש.
+    const existingByUserId = await User.findOne({ userId: adminRequest.userId }).session(session);
+    let newAdmin;
+    if (existingByUserId) {
+      existingByUserId.firstName = adminRequest.firstName;
+      existingByUserId.lastName = adminRequest.lastName;
+      existingByUserId.gender = adminRequest.gender;
+      existingByUserId.email = adminRequest.email;
+      existingByUserId.phone = adminRequest.phone;
+      existingByUserId.birthDate = adminRequest.birthDate;
+      existingByUserId.role = 'admin';
+      existingByUserId.schoolId = tempSchool._id;
+      existingByUserId.userName = userName;
+      existingByUserId.password = hashedPassword;
+      await existingByUserId.save({ session });
+      newAdmin = existingByUserId;
+    } else {
+      // אין משתמש עם אותה ת"ז -> יצירת משתמש חדש (מותר אם יש כבר משתמשים אחרים עם אותו אימייל)
+      newAdmin = new User({
+        firstName: adminRequest.firstName,
+        lastName: adminRequest.lastName,
+        schoolId: tempSchool._id,
+        userName,
+        gender: adminRequest.gender,
+        userId: adminRequest.userId,
+        email: adminRequest.email,
+        phone: adminRequest.phone,
+        birthDate: adminRequest.birthDate,
+        password: hashedPassword,
+        role: 'admin'
+      });
+      try {
+        await newAdmin.save({ session });
+      } catch (saveErr) {
+        // במקרה שיש עדיין אינדקס ייחודי על email או חריגה אחרת - ננסה fallback:
+        if (saveErr && saveErr.code === 11000 && saveErr.keyPattern && saveErr.keyPattern.email) {
+          // יצירת אימייל זמני ע"י הוספת +TEMP<code> לפני ה-@
+          const origEmail = adminRequest.email || '';
+          if (origEmail.includes('@')) {
+            const parts = origEmail.split('@');
+            const fallbackEmail = `${parts[0]}+TEMP_${generateCode().slice(0,6)}@${parts[1]}`;
+            newAdmin.email = fallbackEmail;
+            console.warn('Duplicate email detected, using fallback email:', fallbackEmail);
+            // נסיון שנית לשמור (אם עדיין כשל - נזרוק השגיאה המקורית)
+            await newAdmin.save({ session });
+          } else {
+            // אימייל לא תקין - לזרוק את השגיאה המקורית
+            throw saveErr;
+          }
+        } else {
+          throw saveErr;
+        }
+      }
+    }
 
     // עדכון בית הספר עם המנהלת האמיתית
     tempSchool.principalId = newAdmin._id;

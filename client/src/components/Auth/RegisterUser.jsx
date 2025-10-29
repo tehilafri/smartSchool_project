@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { registerUser, getMe } from "../../services/userService";
 import DashboardHeader from "../Dashboard/DashboardHeader";
 import "./RegisterUser.css"; 
+import PasswordInput from './PasswordInput';  
 
 const RegisterUser = () => {
   const [searchParams] = useSearchParams();
@@ -223,14 +224,15 @@ const RegisterUser = () => {
             </div>
             <div className="form-group">
               <label>סיסמה *</label>
-              <input
-                type="password"
+              <PasswordInput
+                id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
+                placeholder="הכנס סיסמה"
               />
-            </div>
+             </div>
           </div>
 
           {!roleParam && (
