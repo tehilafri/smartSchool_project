@@ -1363,6 +1363,14 @@ const AdminDashboard = ({ onLogout }) => {
                       <label>תיאור:</label>
                       <span>{me.schoolId.description || "לא צוין"}</span>
                     </div>
+                    <div className="info-item">
+                      <label>כיתה נמוכה:</label>
+                      <span>{me.schoolId.minGrade || "לא צוין"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>כיתה גבוהה:</label>
+                      <span>{me.schoolId.maxGrade || "לא צוין"}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="settings-actions">
