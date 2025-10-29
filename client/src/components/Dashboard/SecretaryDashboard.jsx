@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardHeader from "./DashboardHeader";
 import DataTable from "./DataTable";
 import ScheduleTable, { TeacherScheduleView } from "./ScheduleTable";
+import ScheduleSection from "./ScheduleSection";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { fetchCurrentUser } from "../../store/slices/userSlice";
 import { 
@@ -776,155 +777,72 @@ const SecretaryDashboard = ({ onLogout }) => {
 
       case "schedule":
         return (
-          <div className="dashboard-content">
-            <h2>מערכת שעות</h2>
-            
-            <div className="schedule-tabs">
-              <button 
-                className={`tab-button ${activeScheduleTab === 'teachers' ? 'active' : ''}`}
-                onClick={() => setActiveScheduleTab('teachers')}
-              >
-                מערכת מורות
-              </button>
-              <button 
-                className={`tab-button ${activeScheduleTab === 'classes' ? 'active' : ''}`}
-                onClick={() => setActiveScheduleTab('classes')}
-              >
-                מערכת כיתות
-              </button>
-            </div>
-            
-            {activeScheduleTab === 'teachers' && (
-              <div className="teachers-schedule-section">
-                <div className="teacher-selector">
-                  <label>בחר מורה:</label>
-                  <select 
-                    value={selectedTeacherId} 
-                    onChange={(e) => {
-                      setSelectedTeacherId(e.target.value);
-                      if (e.target.value) loadTeacherSchedule(e.target.value);
-                    }}
-                  >
-                    <option value="">בחר מורה...</option>
-                    {(teachers || []).map(teacher => (
-                      <option key={teacher._id} value={teacher._id}>
-                        {teacher.firstName} {teacher.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {selectedTeacherSchedule && (
-                  <TeacherScheduleView 
-                    schedule={(() => {
-                      if (selectedTeacherSchedule.weekPlan) {
-                        return selectedTeacherSchedule.weekPlan;
-                      }
-                      const weekPlan = {
-                        sunday: [],
-                        monday: [],
-                        tuesday: [],
-                        wednesday: [],
-                        thursday: [],
-                        friday: [],
-                      };
-                      if (Array.isArray(selectedTeacherSchedule)) {
-                        selectedTeacherSchedule.forEach(dayObj => {
-                          const { day, lessons } = dayObj;
-                          if (day && lessons && weekPlan[day]) {
-                            const sortedLessons = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
-                            weekPlan[day] = sortedLessons;
-                          }
-                        });
-                      }
-                      return weekPlan;
-                    })()} 
-                    events={events || []}
-                    teacherInfo={(teachers || []).find(t => t._id === selectedTeacherId)}
-                    schoolInfo={me?.schoolId}
-                    onEventClick={setSelectedEvent}
-                  />
-                )}
-              </div>
-            )}
-            
-            {activeScheduleTab === 'classes' && (
-              <div className="classes-schedule-section">
-                <div className="class-selector">
-                  <label>בחר כיתה:</label>
-                  <select 
-                    value={selectedClassId} 
-                    onChange={(e) => {
-                      setSelectedClassId(e.target.value);
-                      if (e.target.value) loadClassSchedule(e.target.value);
-                    }}
-                  >
-                    <option value="">בחר כיתה...</option>
-                    {(classes || []).map(cls => (
-                      <option key={cls._id} value={cls._id}>
-                        {cls.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {selectedClassId && (
-                  <>
-                    {selectedClassSchedule ? (
-                      <ScheduleTable 
-                        schedule={(() => {
-                          if (selectedClassSchedule.weekPlan) {
-                            return selectedClassSchedule.weekPlan;
-                          }
-                          const weekPlan = {
-                            sunday: [],
-                            monday: [],
-                            tuesday: [],
-                            wednesday: [],
-                            thursday: [],
-                            friday: [],
-                          };
-                          if (Array.isArray(selectedClassSchedule)) {
-                            selectedClassSchedule.forEach(dayObj => {
-                              const { day, lessons } = dayObj;
-                              if (day && lessons && weekPlan[day]) {
-                                const sortedLessons = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
-                                weekPlan[day] = sortedLessons;
-                              }
-                            });
-                          }
-                          return weekPlan;
-                        })()} 
-                        events={(events || []).filter(event => {
-                          const selectedClass = (classes || []).find(c => c._id === selectedClassId);
-                          return selectedClass && event.classes?.some(cls => cls.name === selectedClass.name);
-                        })}
-                        userInfo={{
-                          ...me,
-                          classes: [(classes || []).find(c => c._id === selectedClassId)]
-                        }}
-                        onEventClick={setSelectedEvent}
-                        isTeacherView={false}
-                      />
-                    ) : (
-                      <div className="no-schedule-message">
-                        <p>לא הוכנסה מערכת שעות לכיתה זו</p>
-                      </div>
-                    )}
-                    <div className="schedule-actions">
-                      <button 
-                        className="btn btn-primary"
-                        onClick={() => {
-                          const selectedClass = (classes || []).find(c => c._id === selectedClassId);
-                          openScheduleUpdate('class', selectedClassId, selectedClass?.name);
-                        }}
-                      >
-                        עדכן מערכת שעות
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          <ScheduleSection
+            activeTab={activeScheduleTab}
+            setActiveTab={setActiveScheduleTab}
+            teachers={teachers || []}
+            classes={classes || []}
+            selectedTeacherId={selectedTeacherId}
+            setSelectedTeacherId={setSelectedTeacherId}
+            selectedClassId={selectedClassId}
+            setSelectedClassId={setSelectedClassId}
+            selectedTeacherSchedule={selectedTeacherSchedule ? {
+              weekPlan: (() => {
+                if (selectedTeacherSchedule.weekPlan) {
+                  return selectedTeacherSchedule.weekPlan;
+                }
+                const weekPlan = {
+                  sunday: [],
+                  monday: [],
+                  tuesday: [],
+                  wednesday: [],
+                  thursday: [],
+                  friday: [],
+                };
+                if (Array.isArray(selectedTeacherSchedule)) {
+                  selectedTeacherSchedule.forEach(dayObj => {
+                    const { day, lessons } = dayObj;
+                    if (day && lessons && weekPlan[day]) {
+                      const sortedLessons = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+                      weekPlan[day] = sortedLessons;
+                    }
+                  });
+                }
+                return weekPlan;
+              })()
+            } : null}
+            selectedClassSchedule={selectedClassSchedule ? {
+              weekPlan: (() => {
+                if (selectedClassSchedule.weekPlan) {
+                  return selectedClassSchedule.weekPlan;
+                }
+                const weekPlan = {
+                  sunday: [],
+                  monday: [],
+                  tuesday: [],
+                  wednesday: [],
+                  thursday: [],
+                  friday: [],
+                };
+                if (Array.isArray(selectedClassSchedule)) {
+                  selectedClassSchedule.forEach(dayObj => {
+                    const { day, lessons } = dayObj;
+                    if (day && lessons && weekPlan[day]) {
+                      const sortedLessons = [...lessons].sort((a, b) => (a.lessonNumber ?? 0) - (b.lessonNumber ?? 0));
+                      weekPlan[day] = sortedLessons;
+                    }
+                  });
+                }
+                return weekPlan;
+              })()
+            } : null}
+            events={events || []}
+            me={me}
+            onEventClick={setSelectedEvent}
+            onLoadTeacherSchedule={loadTeacherSchedule}
+            onLoadClassSchedule={loadClassSchedule}
+            onOpenScheduleUpdate={openScheduleUpdate}
+          />
         );
 
       default:

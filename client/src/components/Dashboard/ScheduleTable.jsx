@@ -315,7 +315,7 @@ export const TeacherScheduleView = ({
                         (event.startTime <= hourInfo.end && event.endTime >= hourInfo.start);
 
                       // בדיקה אם המבחן קשור למורה
-                      const isTeacherExam = String(event.createdBy._id) === String(teacherInfo?._id )
+                      const isTeacherExam = event.createdBy && String(event.createdBy._id) === String(teacherInfo?._id)
                       
                       return isSameDate && isLessonMatch && isTeacherExam;
                     });

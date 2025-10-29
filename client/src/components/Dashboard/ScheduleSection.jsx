@@ -57,14 +57,22 @@ const ScheduleSection = ({
               ))}
             </select>
           </div>
-          {selectedTeacherSchedule && (
-            <TeacherScheduleView 
-              schedule={selectedTeacherSchedule.weekPlan}
-              events={events}
-              teacherInfo={teachers.find(t => t._id === selectedTeacherId)}
-              schoolInfo={me?.schoolId}
-              onEventClick={onEventClick}
-            />
+          {selectedTeacherId && (
+            <>
+              {selectedTeacherSchedule ? (
+                <TeacherScheduleView 
+                  schedule={selectedTeacherSchedule.weekPlan}
+                  events={events}
+                  teacherInfo={teachers.find(t => t._id === selectedTeacherId)}
+                  schoolInfo={me?.schoolId}
+                  onEventClick={onEventClick}
+                />
+              ) : (
+                <div className="no-schedule-message">
+                  <p>לא הוכנסה מערכת שעות למורה זו</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
