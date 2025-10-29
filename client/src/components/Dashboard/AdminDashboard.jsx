@@ -942,6 +942,7 @@ const AdminDashboard = ({ onLogout }) => {
                     <th>כיתה</th>
                     <th>טלפון</th>
                     <th>אימייל</th>
+                    <th>סטטוס</th>
                     <th>פעולות</th>
                   </tr>
                 </thead>
@@ -952,6 +953,7 @@ const AdminDashboard = ({ onLogout }) => {
                       <td>{student.classes ? student.classes.map(cls => cls.name).join(", ") : "-"}</td>
                       <td>{student.phone || "-"}</td>
                       <td>{student.email || "-"}</td>
+                      <td>{student.status || "-"}</td>
                       <td>
                         <button className="btn-small btn-outline" onClick={() => openModal("editStudent", student)}>✏️</button>
                         <button className="btn-small btn-danger" onClick={() => handleDeleteUser(student._id)}>🗑️</button>
