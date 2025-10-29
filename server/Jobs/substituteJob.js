@@ -66,17 +66,25 @@ const sendSubstituteEmail = async (teacher, request, formattedDate) => {
 
   const className = classInfo ? classInfo.name : 'Unknown Class';
 
-  await sendEmail(
-    teacher.email,
-    `Substitute Request: ${request.subject}`,
-    `Hello ${teacher.firstName},
+  // Check for valid teacher email before sending
+  if (!teacher.email) {
+    console.warn(`No email defined for teacher: ${teacher.firstName} ${teacher.lastName} (ID: ${teacher._id})`);
+    return;
+  }
 
-We are looking for someone to cover ${request.subject} lesson for class ${className} on ${formattedDate} from ${request.startTime} to ${request.endTime}.
-If you can cover it, please confirm by filling out the form here: ${request.formLink}
+  await sendEmail({
+    to: teacher.email,
+    subject: `Substitute Request: ${request.subject}`,
+    html:
+     `<h2>Hello ${teacher.firstName},</h2>
 
-Thank you!`
-  );
-};
+      <p>We are looking for someone to cover ${request.subject} lesson for class ${className} on ${formattedDate} from ${request.startTime} to ${request.endTime}.</p>
+      <p>If you can cover it, please confirm by filling out the form here: ${request.formLink}</p>
+
+      <p>Thank you!</p>`
+  });
+
+}
 
 export const checkPendingSubstituteRequests = async () => {
   const now = new Date();
@@ -109,9 +117,9 @@ export const checkPendingSubstituteRequests = async () => {
   }
 };
 
-// יריץ כל דקה (*/1 * * * *)
+// יריץ כל 10 דקות (*/10 * * * *)
 export function startCheckJob() {
-  cron.schedule("*/1 * * * *", async () => {
+  cron.schedule("*/10 * * * *", async () => {
     try {
       const rows = await readSheet(SHEET_ID, SHEET_RANGE);
       if (!rows || rows.length < 2) {
@@ -193,9 +201,14 @@ ${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה,
 המערכת, smartSchool.`;
 
           try {
-            await sendEmail(teacherEmail, subject, text);
-            const colLetter = columnToLetter(processedColIndex + 1);
-            updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["נשלח למורה"]] });
+            // Extra check for valid email
+            if (!teacherEmail) {
+              console.warn(`No email defined for original teacher (absenceCode: ${absenceCode})`);
+            } else {
+              await sendEmail(teacherEmail, subject, text);
+              const colLetter = columnToLetter(processedColIndex + 1);
+              updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["נשלח למורה"]] });
+            }
           } catch (e) {
             console.error("Failed to send notification email:", e);
             const colLetter = columnToLetter(processedColIndex + 1);
