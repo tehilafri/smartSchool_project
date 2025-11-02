@@ -9,8 +9,7 @@ const AdminRequestSchema = new mongoose.Schema({
   gender: { type: String, enum: ['male', 'female'], required: true },
   userId: { type: String, required: true },
   approvalToken: { type: String, unique: true },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-  tatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' }
 }, { timestamps: true });
 
 const AdminRequest = mongoose.models.AdminRequest || mongoose.model('AdminRequest', AdminRequestSchema);

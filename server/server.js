@@ -18,6 +18,7 @@ import adminRequestRoutes from './routes/adminRequestRoutes.js';
 import { resetPastSubstitutes } from './Jobs/substituteJob.js';
 import { checkPendingSubstituteRequests, startCheckJob } from './Jobs/substituteJob.js';
 import formRoutes from "./routes/formRouter.js";
+import { startPromotionJob } from './Jobs/promotionJob.js';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const server = express();
@@ -67,7 +68,7 @@ mongoose.connection.once("open", () => {
 });
 
 // כל שעה – בדיקת בקשות ממתינות
-cron.schedule('43 * * * *', async () => {
+cron.schedule('8 * * * *', async () => {
   await checkPendingSubstituteRequests();
 });
 
@@ -77,6 +78,12 @@ cron.schedule('0 16 * * *', async () => {
 });
 
 startCheckJob(); // מפעיל את הג'וב ברקע
+
+try {
+  startPromotionJob(); // מפעיל את ג'וב הקידום ברקע
+} catch (err) {
+  console.error('Failed to start promotion job:', err);
+}
 
 mongoose.connection.on("error", (error) => {
   console.error("********** MongoDB connection error **********");

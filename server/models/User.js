@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
   birthDate: { type: Date },
   password: { type: String, required: true }, // לא ייחודי
   role: { type: String, enum: ['student','teacher','admin','secretary'], required: true },
+  status: {type: String, enum: ['active', 'graduate'], default: 'active' },
   classes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
   subjects: [{ type: String }],
   ishomeroom: { type: Boolean, default: false },

@@ -87,8 +87,8 @@ const sendSubstituteEmail = async (teacher, request, formattedDate) => {
 }
 
 export const checkPendingSubstituteRequests = async () => {
+  
   const now = new Date();
-
   const pendingRequests = await SubstituteRequest.find({ status: 'pending', checked: false });
 
   for (const request of pendingRequests) {
@@ -187,25 +187,29 @@ export function startCheckJob() {
         const teacherEmail = request.originalTeacherId?.email;
         if (teacherEmail) {
           const subject = `ממלא/ת מקום חדש/ה לבקשה: ${absenceCode}`;
-          const text = `שלום ${request.originalTeacherId.firstName} ${request.originalTeacherId.lastName},
+          const html = `
+          <div>
+            <h2>שלום ${request.originalTeacherId.firstName} ${request.originalTeacherId.lastName},</h2>
 
-נרשם מועמד/ת חדש/ה למלא מקום:
-שם: ${firstName} ${lastName}
-ת"ז: ${idNumber || "-"}
-אימייל: ${email || "-"}
-טלפון: ${phone || "-"}
-הערות: ${notes || "-"}
+            <p>נרשם מועמד/ת חדש/ה למלא מקום:</p>
+            <ul>
+              <li>שם: ${firstName} ${lastName}</li>
+              <li>ת"ז: ${idNumber || "-"}</li>
+              <li>אימייל: ${email || "-"}</li>
+              <li>טלפון: ${phone || "-"}</li>
+              <li>הערות: ${notes || "-"}</li>
+            </ul>
+            <p>${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה, אנא שמרי את הפרטים של המועמדת הנ"ל במערכת בבקשת היעדרות בעלת הקוד</p>
 
-${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה, אנא שמרי את הפרטים של המועמדת הנ"ל במערכת בבקשת היעדרות בעלת הקוד
-
-המערכת, smartSchool.`;
+            <p>המערכת, smartSchool.</p>
+          </div>`;
 
           try {
             // Extra check for valid email
             if (!teacherEmail) {
               console.warn(`No email defined for original teacher (absenceCode: ${absenceCode})`);
             } else {
-              await sendEmail(teacherEmail, subject, text);
+              await sendEmail(teacherEmail, subject, html);
               const colLetter = columnToLetter(processedColIndex + 1);
               updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["נשלח למורה"]] });
             }

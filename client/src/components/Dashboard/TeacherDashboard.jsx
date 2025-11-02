@@ -330,9 +330,7 @@ const TeacherDashboard = ({ onLogout }) => {
       await reportAbsence(absenceData);
       showNotification("הבקשה נשלחה בהצלחה!", 'success');
       // רענון בקשות
-      const subs = await getSubstituteRequests();
-      setSubRequests(subs?.requests ?? []);
-      // עדכון הסקשן ל"ההיעדרויות שלי" כדי להציג מיד את הבקשה החדשה
+      await dispatch(fetchSubstituteRequests());
       setActiveSection("myAbsences");
       closeModal();
     } catch (err) {
