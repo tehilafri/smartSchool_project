@@ -4,6 +4,33 @@ import EventService from '../services/EventService.js';
 import { generateCode } from '../utils/generatedCode.js';
 import User from '../models/User.js';
 import { markRowsProcessedByAbsenceCode } from '../utils/googleSheets.js';
+import axios from "axios";
+
+export const reviewEventAI = async (req, res) => {
+  try {
+    const { type, date, startTime, endTime, classes, subject } = req.body;
+    const schoolId = req.schoolId;
+
+    // קריאה ל-FastAPI שמבצע את ניתוח ה-AI
+    const aiResponse = await axios.post("http://127.0.0.1:5002/analyze_event", {
+      type,
+      date,
+      startTime,
+      endTime,
+      classes,
+      subject,
+      schoolId,
+    });
+
+    const recommendations = aiResponse.data.recommendations;
+
+    res.status(200).json({ recommendations });
+  } catch (err) {
+    console.error("AI review error:", err);
+    res.status(500).json({ message: "AI review failed", error: err.message });
+  }
+};
+
 
 export const checkEventOverlap = async ({ date, startTime, endTime, classIds, excludeEventId = null }) => {
   const query = {

@@ -1,4 +1,3 @@
-// fetchCollections.js
 import axios from 'axios';
 
 async function fetchCollections() {

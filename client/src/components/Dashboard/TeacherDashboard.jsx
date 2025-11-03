@@ -23,6 +23,7 @@ import {TeacherScheduleView} from "./ScheduleTable";
 import EventDetailsModal from "./EventDetailsModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import NextClassSection from "./NextClassSection";
+import {reviewEventAI} from "../../services/eventService";
 
 const TeacherDashboard = ({ onLogout }) => {
   const dispatch = useAppDispatch();
@@ -83,6 +84,8 @@ const TeacherDashboard = ({ onLogout }) => {
   const [selectedClassForStudents, setSelectedClassForStudents] = useState('');
   const [classStudents, setClassStudents] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', item: null, action: null });
+  const [aiSuggestions, setAiSuggestions] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
 
 
   const updateForm = (code, field, value) => {
@@ -416,6 +419,43 @@ const TeacherDashboard = ({ onLogout }) => {
       console.error("updateExam error", err);
       const errorMessage = err.response?.data?.message || err.message || 'שגיאה לא ידועה';
       showNotification(`שגיאה בעדכון המבחן: ${errorMessage}`, 'error');
+    }
+  };
+
+  // קבלת הצעות AI למבחן
+  const handleGetAISuggestions = async (examData) => {
+    try {
+      setLoadingAI(true);
+      setModalType("aiSuggestions");
+      
+      // הכנת נתוני המבחן לשליחה
+      const eventData = {
+        type: 'exam',
+        title: examData.title || '',
+        subject: examData.subject || '',
+        classes: examData.classes || [],
+        date: examData.date || '',
+        startTime: examData.startTime || '',
+        endTime: examData.endTime || '',
+        selectedLessons: examData.selectedLessons || [],
+        notes: examData.notes || '',
+        targetTeacher: examData.targetTeacher || '',
+        teacherInfo: {
+          name: `${me?.firstName} ${me?.lastName}`,
+          subjects: me?.subjects || [],
+          classes: me?.classes?.map(cls => cls.name) || [],
+          isHomeroom: me?.ishomeroom || false
+        },
+        requestType: 'exam_suggestions'
+      };
+      
+      const response = await reviewEventAI(eventData);
+      setAiSuggestions(response.recommendations || response.messages || 'לא התקבלו הצעות');
+    } catch (err) {
+      console.error('AI suggestions error:', err);
+      setAiSuggestions('שגיאה בקבלת הצעות AI. אנא נסה שוב מאוחר יותר.');
+    } finally {
+      setLoadingAI(false);
     }
   };
 
@@ -1030,17 +1070,43 @@ const renderScheduleTable = () => {
           title={
             modalType === "reportAbsence" ? "דיווח היעדרות" :
             modalType === "scheduleExam" ? "קביעת מבחן" :
-            modalType === "editExam" ? "עריכת מבחן" : ""
+            modalType === "editExam" ? "עריכת מבחן" :
+            modalType === "aiSuggestions" ? "הצעות AI לקביעת מבחן" : ""
           }
         >
           {modalType === "reportAbsence" && (
             <AbsenceForm onSubmit={handleSubmitAbsence} onCancel={closeModal} showNotification={showNotification} />
           )}
           {modalType === "scheduleExam" && (
-            <ExamForm onSubmit={handleCreateExam} onCancel={closeModal} showNotification={showNotification} me={me} />
+            <ExamForm onSubmit={handleCreateExam} onCancel={closeModal} showNotification={showNotification} me={me} onGetAISuggestions={handleGetAISuggestions} />
           )}
           {modalType === "editExam" && (
-            <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} />
+            <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} onGetAISuggestions={handleGetAISuggestions} />
+          )}
+          {modalType === "aiSuggestions" && (
+            <div className="ai-suggestions-content">
+              {loadingAI ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>מקבל הצעות מ-AI...</p>
+                </div>
+              ) : (
+                <div className="ai-suggestions-text">
+                  <p>{aiSuggestions}</p>
+                </div>
+              )}
+              <div className="modal-actions">
+                <button className="btn btn-outline" onClick={() => {
+                  setModalType(editingExam ? "editExam" : "scheduleExam");
+                  setAiSuggestions('');
+                }}>
+                  {editingExam ? "חזור לעריכת מבחן" : "חזור ליצירת מבחן"}
+                </button>
+                <button className="btn btn-outline" onClick={closeModal}>
+                  סגור
+                </button>
+              </div>
+            </div>
           )}
         </DashboardModal>
 
@@ -1068,6 +1134,8 @@ const renderScheduleTable = () => {
           message="האם אתה בטוח בביצוע הפעולה הנ'ל?"
           itemName={confirmDelete.item?.title || ''}
         />
+        
+
       </div>
     </div>
   );
@@ -1127,7 +1195,7 @@ function AbsenceForm({ onSubmit, onCancel, showNotification }) {
 }
 
 /* --- רכיב עזר לטופס יצירת/עריכת מבחן --- */
-function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam }) {
+function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGetAISuggestions }) {
   const [title, setTitle] = useState(editingExam?.title || "");
   const [subject, setSubject] = useState(editingExam?.subject || "");
   const [selectedClasses, setSelectedClasses] = useState(editingExam?.classes?.map(c => c.name) || []);
@@ -1217,6 +1285,31 @@ function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam }) {
       targetTeacher: targetTeacher || undefined
     };
     onSubmit(payload);
+  };
+
+  const handleGetAISuggestions = () => {
+    // חישוב שעות לפי השיעורים הנבחרים
+    const schoolHours = me?.schoolId?.scheduleHours || [];
+    const minLesson = selectedLessons.length > 0 ? Math.min(...selectedLessons) : 1;
+    const maxLesson = selectedLessons.length > 0 ? Math.max(...selectedLessons) : 1;
+    const startHour = schoolHours[minLesson - 1];
+    const endHour = schoolHours[maxLesson - 1];
+    
+    const examData = {
+      title,
+      subject,
+      classes: selectedClasses,
+      date,
+      startTime: startHour?.start || "09:00",
+      endTime: endHour?.end || "10:00",
+      selectedLessons,
+      notes,
+      targetTeacher: targetTeacher || undefined
+    };
+    
+    if (onGetAISuggestions) {
+      onGetAISuggestions(examData);
+    }
   };
 
   return (
@@ -1346,6 +1439,11 @@ function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam }) {
         <button className="btn btn-primary" onClick={handleSubmit}>
           {editingExam ? "עדכן מבחן" : "קבע מבחן"}
         </button>
+        {onGetAISuggestions && (
+          <button className="btn btn-secondary" onClick={handleGetAISuggestions}>
+            הצעות AI למבחן
+          </button>
+        )}
         <button className="btn btn-outline" onClick={onCancel}>ביטול</button>
       </div>
     </div>

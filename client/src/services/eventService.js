@@ -1,5 +1,11 @@
 import api from "./api";
 
+//הצעת AI לשיפור הוספת אירועים בצורה חכמה...
+export const reviewEventAI = async (eventData) => {
+  const response = await api.post("/events/reviewEventAI", eventData);
+  return response.data;
+};
+
 // יצירת אירוע חדש
 export const addEvent = async (eventData) => {
   const response = await api.post("/events/addEvent", eventData);

@@ -25,7 +25,7 @@ import {
 } from "../../store/slices/substituteSlice";
 import { updateUser, deleteUser } from "../../services/userService";
 import { addStudentToClass, removeStudentFromClass, getStudentsByName } from "../../services/classService";
-import { addEvent, deleteEvent, updateEvent } from "../../services/eventService";
+import { addEvent, deleteEvent, updateEvent, reviewEventAI } from "../../services/eventService";
 import api from "../../services/api"; // << add fallback API import
 import { createClass, deleteClass, updateHomeroomTeacher } from "../../services/classService"; // <-- added
 import SchoolDirectionsButton from "../SchoolDirectionsButton"; // <-- added
@@ -147,6 +147,8 @@ const SecretaryDashboard = ({ onLogout }) => {
   const [expandedClass, setExpandedClass] = useState(null);
   const [classStudents, setClassStudents] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', item: null, action: null });
+  const [aiSuggestions, setAiSuggestions] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
   
   // Schedule loading functions
   const loadTeacherSchedule = async (teacherId) => {
@@ -233,6 +235,39 @@ const SecretaryDashboard = ({ onLogout }) => {
     return sortedByDistance.slice(0, 3);
   }, [events]);
 
+  const { futureEvents, pastEvents } = useMemo(() => {
+    const now = new Date();
+    const future = events
+      .filter(ev => {
+        if (!ev.date) return false;
+        const eventDate = new Date(ev.date);
+        if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+          const [hours, minutes] = ev.endTime.split(':');
+          const eventEndTime = new Date(eventDate);
+          eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+          return eventEndTime > now;
+        }
+        return eventDate > now;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    const past = events
+      .filter(ev => {
+        if (!ev.date) return false;
+        const eventDate = new Date(ev.date);
+        if (eventDate.toDateString() === now.toDateString() && ev.endTime) {
+          const [hours, minutes] = ev.endTime.split(':');
+          const eventEndTime = new Date(eventDate);
+          eventEndTime.setHours(parseInt(hours), parseInt(minutes));
+          return eventEndTime <= now;
+        }
+        return eventDate < now;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    return { futureEvents: future, pastEvents: past };
+  }, [events]);
+
   const handleDeleteUser = async (id) => {
     const allUsers = [...(teachers || []), ...(students || [])];
     const user = allUsers.find(u => u._id === id);
@@ -269,6 +304,32 @@ const SecretaryDashboard = ({ onLogout }) => {
       closeModal();
     } catch (err) {
       console.error('Error adding event:', err);
+    }
+  };
+
+  const handleGetEventAISuggestions = async () => {
+    try {
+      setLoadingAI(true);
+      setModalType("aiEventSuggestions");
+      
+      const eventData = {
+        type: formData.type || '',
+        title: formData.title || '',
+        description: formData.description || '',
+        date: formData.date || '',
+        startTime: formData.startTime || '',
+        endTime: formData.endTime || '',
+        classes: formData.classes || [],
+        schoolId: me?.schoolId?._id
+      };
+      
+      const response = await reviewEventAI(eventData);
+      setAiSuggestions(response.recommendations || 'לא התקבלו הצעות');
+    } catch (err) {
+      console.error('AI suggestions error:', err);
+      setAiSuggestions('שגיאה בקבלת הצעות AI. אנא נסה שוב מאוחר יותר.');
+    } finally {
+      setLoadingAI(false);
     }
   };
 
@@ -580,40 +641,91 @@ const SecretaryDashboard = ({ onLogout }) => {
                 <h2>ניהול אירועים</h2>
                 <button className="btn btn-primary" onClick={() => openModal("addEvent")}>הוסף אירוע חדש</button>
               </div>
-              <div className="data-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>תאריך</th>
-                      <th>סוג</th>
-                      <th>כותרת</th>
-                      <th>הערות</th>
-                      <th>פעולות</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {events.map((event) => (
-                      <tr key={event._id}>
-                        <td>{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "-"}</td>
-                        <td>{event.type}</td>
-                        <td>{event.title}</td>
-                        <td>{event.description || "-"}</td>
-                        <td>
-                          {event.type !== "exam" && (
-                            <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>
-                              ✏️
-                            </button>
-                          )}
-                          {event.type !== "exam" && (
-                            <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>
-                              🗑️
-                            </button>
-                          )}
-                        </td>
+              <div className="events-section">
+                <h3>אירועים עתידיים</h3>
+                <div className="data-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>תאריך</th>
+                        <th>סוג</th>
+                        <th>כותרת</th>
+                        <th>הערות</th>
+                        <th>שעת התחלה</th>
+                        <th>שעת סיום</th>
+                        <th>כיתות</th>
+                        <th>פעולות</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {futureEvents.map((event) => (
+                        <tr key={event._id}>
+                          <td>{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "-"}</td>
+                          <td>{event.type}</td>
+                          <td>{event.title}</td>
+                          <td>{event.description || "-"}</td>
+                          <td>{event.startTime}</td>
+                          <td>{event.endTime}</td>
+                          <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
+                          <td>
+                            {event.type !== "exam" && (
+                              <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>
+                                ✏️
+                              </button>
+                            )}
+                            {event.type !== "exam" && (
+                              <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>
+                                🗑️
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <h3 style={{marginTop: "2em"}}>אירועים קודמים</h3>
+                <div className="data-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>תאריך</th>
+                        <th>סוג</th>
+                        <th>כותרת</th>
+                        <th>הערות</th>
+                        <th>שעת התחלה</th>
+                        <th>שעת סיום</th>
+                        <th>כיתות</th>
+                        <th>פעולות</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pastEvents.map((event) => (
+                        <tr key={event._id}>
+                          <td>{event.date ? new Date(event.date).toLocaleDateString('he-IL') : "-"}</td>
+                          <td>{event.type}</td>
+                          <td>{event.title}</td>
+                          <td>{event.description || "-"}</td>
+                          <td>{event.startTime}</td>
+                          <td>{event.endTime}</td>
+                          <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
+                          <td>
+                            {event.type !== "exam" && (
+                              <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>
+                                ✏️
+                              </button>
+                            )}
+                            {event.type !== "exam" && (
+                              <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>
+                                🗑️
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )
@@ -870,6 +982,7 @@ const SecretaryDashboard = ({ onLogout }) => {
               {modalType === "editStudent" && "עריכת תלמיד"}
               {modalType === "addEvent" && "הוספת אירוע חדש"}
               {modalType === "editEvent" && "עריכת אירוע"}
+              {modalType === "aiEventSuggestions" && "הצעות AI לאירוע"}
               {modalType === "addSubstitute" && "הוספת ממלא מקום"}
               {modalType === "editSubstitute" && "עריכת ממלא מקום"}
             </h3>
@@ -1053,8 +1166,40 @@ const SecretaryDashboard = ({ onLogout }) => {
                     </div>
                   ))}
                 </div>
-                <button className="btn btn-primary" type="submit">שמור</button>
+                <div className="modal-actions">
+                  <button className="btn btn-primary" type="submit">שמור</button>
+                  {(modalType === "addEvent" || modalType === "editEvent") && (
+                    <button className="btn btn-secondary" type="button" onClick={handleGetEventAISuggestions}>
+                      הצעות AI לאירוע
+                    </button>
+                  )}
+                </div>
               </form>
+            )}
+            {modalType === "aiEventSuggestions" && (
+              <div className="ai-suggestions-content">
+                {loadingAI ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>מקבל הצעות מ-AI...</p>
+                  </div>
+                ) : (
+                  <div className="ai-suggestions-text">
+                    <p>{aiSuggestions}</p>
+                  </div>
+                )}
+                <div className="modal-actions">
+                  <button className="btn btn-outline" onClick={() => {
+                    setModalType(modalData ? "editEvent" : "addEvent");
+                    setAiSuggestions('');
+                  }}>
+                    {modalData ? "חזור לעריכת אירוע" : "חזור ליצירת אירוע"}
+                  </button>
+                  <button className="btn btn-outline" onClick={closeModal}>
+                    סגור
+                  </button>
+                </div>
+              </div>
             )}
             {(modalType === "addSubstitute" || modalType === "editSubstitute") && (
               <form onSubmit={e => {

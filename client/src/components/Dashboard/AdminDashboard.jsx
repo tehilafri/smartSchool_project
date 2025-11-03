@@ -23,7 +23,7 @@ import {
 import { fetchTeacherSchedule, fetchClassSchedule } from "../../store/slices/scheduleSlice";
 import { updateUser, deleteUser } from "../../services/userService";
 import { createClass, addStudentToClass, getStudentsByName, removeStudentFromClass, deleteClass, updateHomeroomTeacher } from "../../services/classService";
-import { addEvent, deleteEvent, updateEvent } from "../../services/eventService";
+import { addEvent, deleteEvent, updateEvent, reviewEventAI } from "../../services/eventService";
 import { getSubstituteRequests } from "../../services/substituteRequestsSercive";
 import { getSchoolById, updateSchool, deleteSchool } from "../../services/schoolService";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +69,8 @@ const AdminDashboard = ({ onLogout }) => {
   const [scheduleUpdateTarget, setScheduleUpdateTarget] = useState({ type: null, id: null, name: null });
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', item: null, action: null });
+  const [aiSuggestions, setAiSuggestions] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
   
   // Computed values from Redux
   const selectedTeacherSchedule = selectedTeacherId ? teacherSchedules[selectedTeacherId]?.schedule : null;
@@ -245,6 +247,32 @@ const AdminDashboard = ({ onLogout }) => {
       closeModal();
     } catch (err) {
       console.error('Error adding event:', err);
+    }
+  };
+
+  const handleGetEventAISuggestions = async () => {
+    try {
+      setLoadingAI(true);
+      setModalType("aiEventSuggestions");
+      
+      const eventData = {
+        type: formData.type || '',
+        title: formData.title || '',
+        description: formData.description || '',
+        date: formData.date || '',
+        startTime: formData.startTime || '',
+        endTime: formData.endTime || '',
+        classes: formData.classes || [],
+        schoolId: me?.schoolId?._id
+      };
+      
+      const response = await reviewEventAI(eventData);
+      setAiSuggestions(response.recommendations || 'לא התקבלו הצעות');
+    } catch (err) {
+      console.error('AI suggestions error:', err);
+      setAiSuggestions('שגיאה בקבלת הצעות AI. אנא נסה שוב מאוחר יותר.');
+    } finally {
+      setLoadingAI(false);
     }
   };
 
@@ -548,7 +576,14 @@ const AdminDashboard = ({ onLogout }) => {
             ))}
           </div>
 
-          <button className="btn btn-primary" type="submit">שמור</button>
+          <div className="modal-actions">
+            <button className="btn btn-primary" type="submit">שמור</button>
+            {(modalType === "addEvent" || modalType === "editEvent") && (
+              <button className="btn btn-secondary" type="button" onClick={handleGetEventAISuggestions}>
+                הצעות AI לאירוע
+              </button>
+            )}
+          </div>
         </form>
       );
 }
@@ -1387,13 +1422,40 @@ const AdminDashboard = ({ onLogout }) => {
               {modalType === "editClass" && "עריכת כיתה"}
               {modalType === "addEvent" && "הוספת אירוע חדש"}
               {modalType === "editEvent" && "עריכת אירוע"}
+              {modalType === "aiEventSuggestions" && "הצעות AI לאירוע"}
               {modalType === "editSchool" && "עריכת הגדרות בית ספר"}
               {modalType === "deleteSchool" && "מחיקת בית ספר"}
             </h3>
             <button className="modal-close" onClick={closeModal}>×</button>
           </div>
           <div className="modal-body">
-            {renderModalForm()}
+            {modalType === "aiEventSuggestions" ? (
+              <div className="ai-suggestions-content">
+                {loadingAI ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>מקבל הצעות מ-AI...</p>
+                  </div>
+                ) : (
+                  <div className="ai-suggestions-text">
+                    <p>{aiSuggestions}</p>
+                  </div>
+                )}
+                <div className="modal-actions">
+                  <button className="btn btn-outline" onClick={() => {
+                    setModalType(modalData ? "editEvent" : "addEvent");
+                    setAiSuggestions('');
+                  }}>
+                    {modalData ? "חזור לעריכת אירוע" : "חזור ליצירת אירוע"}
+                  </button>
+                  <button className="btn btn-outline" onClick={closeModal}>
+                    סגור
+                  </button>
+                </div>
+              </div>
+            ) : (
+              renderModalForm()
+            )}
           </div>
         </div>
       </div>
