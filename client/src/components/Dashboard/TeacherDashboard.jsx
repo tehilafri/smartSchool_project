@@ -53,6 +53,17 @@ const TeacherDashboard = ({ onLogout }) => {
   useEffect(() => {
     document.body.classList.add("sidebar-active");
 
+    // בדיקת פרמטרים מה-URL להצגת הודעה
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get('message');
+    const type = urlParams.get('type');
+    
+    if (message === 'approved' && type === 'success') {
+      showNotification('בקשת מילוי המקום אושרה בהצלחה!', 'success');
+      // ניקוי הפרמטרים מה-URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     return () => {
       // מנקים את ה-class כשמורידים את הקומפוננטה
       document.body.classList.remove("sidebar-active");

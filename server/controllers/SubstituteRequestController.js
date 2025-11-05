@@ -43,6 +43,37 @@ export const approveReplacement = async (req, res) => {
   }
 };
 
+export const approveReplacementByEmail = async (req, res) => {
+  try {
+    console.log('👏approveReplacementByEmail called with params:', req.params, 'and query:', req.query);
+    const { absenceCode } = req.params;
+    const { firstName, lastName, email, notes, identityNumber, phone } = req.query;
+
+    const absence = await SubstituteRequest.findOne({ absenceCode });
+    if (!absence) {
+      return res.status(404).send('<h3>בקשה לא נמצאה</h3>');
+    }
+
+    const result = await handleApproveReplacement({
+      absenceCode,
+      approverId: absence.originalTeacherId.toString(),
+      firstName,
+      lastName,
+      email,
+      notes,
+      identityNumber,
+      phone
+    }, absence.schoolId);
+
+    const dashboardUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${dashboardUrl}/dashboard/teacher?message=approved&type=success`);
+  } catch (err) {
+    console.error(err);
+    const dashboardUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${dashboardUrl}/dashboard/teacher?message=${encodeURIComponent(err.message)}&type=error`);
+  }
+};
+
 export const getSubstituteRequests = async (req, res) => {
   try {
     let filter = { schoolId: req.schoolId };

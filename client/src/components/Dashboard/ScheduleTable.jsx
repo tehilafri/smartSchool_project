@@ -124,24 +124,24 @@ const ScheduleTable = ({
                             <strong>{lesson.subject}</strong><br/>
                             <small>
                               {lesson.substitute ? (
-                                <span style={{color: '#f6ad55'}}>מחליף: {lesson.substitute.firstName} {lesson.substitute.lastName}</span>
+                                <span style={{color: '#f6ad55'}}>ממלא מקום: {lesson.substitute.firstName} {lesson.substitute.lastName}</span>
                               ) : isTeacherView ? (
                                 lesson.teacherId ? `מורה: ${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}` : "—"
                               ) : (
                                 lesson.teacherId ? `${lesson.teacherId.firstName} ${lesson.teacherId.lastName}` : "---"
                               )}
                             </small>
-                            {lesson.status === 'replaced' && (
+                            {/* {lesson.status === 'replaced' && (
                               <div style={{fontSize: '10px', color: '#f6ad55', marginTop: '2px'}}>
                                 מוחלף
                               </div>
-                            )}
+                            )} */}
                             {hasEvents && (
                               <div className="slot-events">
                                 {slotEvents.map((event, idx) => (
                                   <div key={idx} className={`event-indicator ${event.type} clickable`} onClick={() => onEventClick(event)}>
                                     <div>{event.type === 'exam' ? '📄' : '🎯'} {event.title}</div>
-                                    <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small>
+                                    {/* <small className="event-classes">כיתות משתתפות: {event.classes?.map(c => c.name).join(', ') || 'כיתה לא ידועה'}</small> */}
                                   </div>
                                 ))}
                               </div>
@@ -328,17 +328,22 @@ export const TeacherScheduleView = ({
                           <>
                             <strong>{lesson.subject}</strong><br/>
                             <small>
-                              {lesson.substitute ? (
-                                <span style={{color: '#f6ad55'}}>מחליף: {lesson.substitute.firstName} {lesson.substitute.lastName}</span>
-                              ) : (
-                                lesson.classId ? `כיתה ${lesson.classId.name}` : "—"
+                              {lesson.substitute && (
+                                <div style={{color: '#f6ad55'}}>
+                                  ממלא מקום: {lesson.substitute.firstName} {lesson.substitute.lastName}
+                                </div>
+                              )}
+                              {lesson.classId && (
+                                <div>
+                                  כיתה {lesson.classId.name}
+                                </div>
                               )}
                             </small>
-                            {lesson.status === 'replaced' && (
+                            {/* {lesson.status === 'replaced' && (
                               <div style={{fontSize: '10px', color: '#f6ad55', marginTop: '2px'}}>
                                 מוחלף
                               </div>
-                            )}
+                            )} */}
                             {hasEvents && (
                               <div className="slot-events">
                                 {teacherEvents.map((event, idx) => (

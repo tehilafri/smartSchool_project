@@ -82,10 +82,11 @@ const EventService = {
         const teacher = await User.findById(lesson.teacherId);
         if (teacher) {
           await sendEmail(
-            teacher.email,
-            `אירוע חדש: ${type} בתאריך ${date.toDateString()}`,
-            `שלום ${teacher.name},\nיש לך שינוי בשיעור: ${lesson.subject} בתאריך ${date.toDateString()}.\nסוג האירוע: ${type}`
-          );
+            {
+              to: teacher.email,
+              subject: `אירוע חדש: ${type} בתאריך ${date.toDateString()}`,
+              html: `שלום ${teacher.name},<br>יש לך שינוי בשיעור: ${lesson.subject} בתאריך ${date.toDateString()}.<br>סוג האירוע: ${type}`
+            });
         }
 
         const classDoc = await Class.findById(schedule.classId);
@@ -93,10 +94,11 @@ const EventService = {
           const students = await User.find({ _id: { $in: classDoc.students } });
           for (let student of students) {
             await sendEmail(
-              student.email,
-              `אירוע חדש בכיתה שלך: ${type} בתאריך ${date.toDateString()}`,
-              `שלום ${student.name},\nיש שינוי בשיעור: ${lesson.subject} בתאריך ${date.toDateString()}.\nסוג האירוע: ${type}`
-            );
+              {
+                to: student.email,
+                subject: `אירוע חדש בכיתה שלך: ${type} בתאריך ${date.toDateString()}`,
+                html: `שלום ${student.name},<br>יש שינוי בשיעור: ${lesson.subject} בתאריך ${date.toDateString()}.<br>סוג האירוע: ${type}`
+              });
           }
         }
       }

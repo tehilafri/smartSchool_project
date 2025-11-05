@@ -61,10 +61,17 @@ export const resetPastSubstitutes = async () => {// רץ כל שעה ומחזי�
 };
 
 const sendSubstituteEmail = async (teacher, request, formattedDate) => {
-  // מוצאים את הכיתה לפי ID
-  const classInfo = await Class.findOne({ _id: request.classId , schoolId: request.schoolId });
+  // שליפת פרטים מלאים
+  const fullRequest = await SubstituteRequest.findById(request._id)
+    .populate('originalTeacherId')
+    .populate('schoolId')
+    .populate('classId');
 
-  const className = classInfo ? classInfo.name : 'Unknown Class';
+  const className = fullRequest.classId?.name || 'Unknown Class';
+  const schoolName = fullRequest.schoolId?.name || 'לא ידוע';
+  const schoolAddress = fullRequest.schoolId?.address || 'לא ידוע';
+  const schoolPhone = fullRequest.schoolId?.phone || 'לא ידוע';
+  const originalTeacher = fullRequest.originalTeacherId;
 
   // Check for valid teacher email before sending
   if (!teacher.email) {
@@ -74,14 +81,41 @@ const sendSubstituteEmail = async (teacher, request, formattedDate) => {
 
   await sendEmail({
     to: teacher.email,
-    subject: `Substitute Request: ${request.subject}`,
-    html:
-     `<h2>Hello ${teacher.firstName},</h2>
+    subject: `בקשת מילוי מקום - ${request.subject}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+        <h2>שלום ${teacher.firstName},</h2>
 
-      <p>We are looking for someone to cover ${request.subject} lesson for class ${className} on ${formattedDate} from ${request.startTime} to ${request.endTime}.</p>
-      <p>If you can cover it, please confirm by filling out the form here: ${request.formLink}</p>
+        <p>אנחנו מחפשים מישהו למלא מקום בשיעור ${request.subject} לכיתה ${className}.</p>
+        
+        <h3>פרטי השיעור:</h3>
+        <ul>
+          <li><strong>תאריך:</strong> ${formattedDate}</li>
+          <li><strong>שעות:</strong> ${request.startTime} - ${request.endTime}</li>
+          <li><strong>מקצוע:</strong> ${request.subject}</li>
+          <li><strong>כיתה:</strong> ${className}</li>
+        </ul>
+        
+        <h3>פרטי בית הספר:</h3>
+        <ul>
+          <li><strong>שם:</strong> ${schoolName}</li>
+          <li><strong>כתובת:</strong> ${schoolAddress}</li>
+          <li><strong>טלפון:</strong> ${schoolPhone}</li>
+        </ul>
+        
+        <h3>פרטי המורה המקורית:</h3>
+        <ul>
+          <li><strong>שם:</strong> ${originalTeacher?.firstName} ${originalTeacher?.lastName}</li>
+          <li><strong>אימייל:</strong> ${originalTeacher?.email || 'לא ידוע'}</li>
+          <li><strong>טלפון:</strong> ${originalTeacher?.phone || 'לא ידוע'}</li>
+        </ul>
+        
+        <p>אם את/ה יכול/ה למלא מקום, אנא אשר/י על ידי מילוי הטופס כאן:</p>
+        <p><a href="${request.formLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">מלא/י טופס</a></p>
 
-      <p>Thank you!</p>`
+        <p>תודה!</p>
+      </div>
+    `
   });
 
 }
@@ -119,7 +153,7 @@ export const checkPendingSubstituteRequests = async () => {
 
 // יריץ כל 10 דקות (*/10 * * * *)
 export function startCheckJob() {
-  cron.schedule("*/10 * * * *", async () => {
+  cron.schedule("*/1 * * * *", async () => {
     try {
       const rows = await readSheet(SHEET_ID, SHEET_RANGE);
       if (!rows || rows.length < 2) {
@@ -187,20 +221,25 @@ export function startCheckJob() {
         const teacherEmail = request.originalTeacherId?.email;
         if (teacherEmail) {
           const subject = `ממלא/ת מקום חדש/ה לבקשה: ${absenceCode}`;
+          const appBase = process.env.APP_BASE_URL || "http://localhost:1000";
+          const approveUrl = `${appBase}/api/substitute-requests/approve-email/${absenceCode}?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&email=${encodeURIComponent(email || "")}&phone=${encodeURIComponent(phone || "")}&identityNumber=${encodeURIComponent(idNumber || "")}&notes=${encodeURIComponent(notes || "")}`;
+          
           const html = `
-          <div>
+          <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
             <h2>שלום ${request.originalTeacherId.firstName} ${request.originalTeacherId.lastName},</h2>
 
             <p>נרשם מועמד/ת חדש/ה למלא מקום:</p>
             <ul>
-              <li>שם: ${firstName} ${lastName}</li>
-              <li>ת"ז: ${idNumber || "-"}</li>
-              <li>אימייל: ${email || "-"}</li>
-              <li>טלפון: ${phone || "-"}</li>
-              <li>הערות: ${notes || "-"}</li>
+              <li><strong>שם:</strong> ${firstName} ${lastName}</li>
+              <li><strong>ת"ז:</strong> ${idNumber || "-"}</li>
+              <li><strong>אימייל:</strong> ${email || "-"}</li>
+              <li><strong>טלפון:</strong> ${phone || "-"}</li>
+              <li><strong>הערות:</strong> ${notes || "-"}</li>
             </ul>
-            <p>${absenceCode}:אם את/ה רוצה לאשר את מילוי המקום הזה, אנא שמרי את הפרטים של המועמדת הנ"ל במערכת בבקשת היעדרות בעלת הקוד</p>
-
+            <p><strong>קוד בקשה:</strong> ${absenceCode}</p>
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${approveUrl}" style="background-color: #4CAF50; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 4px;">אשר בקשה</a>
+            </div>
             <p>המערכת, smartSchool.</p>
           </div>`;
 
@@ -209,7 +248,7 @@ export function startCheckJob() {
             if (!teacherEmail) {
               console.warn(`No email defined for original teacher (absenceCode: ${absenceCode})`);
             } else {
-              await sendEmail(teacherEmail, subject, html);
+              await sendEmail({to: teacherEmail, subject, html});
               const colLetter = columnToLetter(processedColIndex + 1);
               updates.push({ range: `${SHEET_TAB}!${colLetter}${sheetRowNumber}`, values: [["נשלח למורה"]] });
             }
