@@ -14,25 +14,30 @@ export const sendWelcomeEmail = async (user) => {
     }
 
     const subject = "ברוך הבא למערכת בית הספר";
-    const text = `
-שלום ${user.firstName} ${user.lastName},
+    const html = `
+      <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+        <h2>ברוך הבא למערכת smartSchool!</h2>
+        
+        <p>שלום ${user.firstName} ${user.lastName},</p>
+        
+        <p>הצטרפת בהצלחה למערכת בית הספר "${school.name}".</p>
+        
+        <h3>פרטי התחברות:</h3>
+        <ul>
+          <li><strong>שם משתמש:</strong> ${user.userName}</li>
+          <li><strong>סיסמה:</strong> ${user.password}</li>
+          <li><strong>קוד בית הספר:</strong> ${school.schoolCode}</li>
+        </ul>
+        
+        <p>להתחברות למערכת:</p>
+        <p><a href="${process.env.FRONTEND_URL}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">היכנס/י למערכת</a></p>
+        
+        <p>בברכה,<br>
+        צוות smartSchool</p>
+      </div>
+    `;
 
-הצטרפת בהצלחה למערכת בית הספר "${school.name}".
-
-פרטי ההתחברות שלך:
-שם משתמש: ${user.userName}
-סיסמה: ${user.password}
-קוד בית הספר: ${school.schoolCode}
-
-להתחברות למערכת היכנסי לכתובת:
-${process.env.FRONTEND_URL}
-
-בברכה,
-צוות בית הספר
-`;
-
-
-    await sendEmail(user.email, subject, text);
+    await sendEmail({ to: user.email, subject, html });
   } catch (err) {
     console.error("Failed to send welcome email:", err.message);
     // אפשר לבחור לא לזרוק הלאה כדי לא להפיל את כל יצירת המשתמש

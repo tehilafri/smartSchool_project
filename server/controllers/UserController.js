@@ -414,8 +414,16 @@ export const forgotPassword = async (req, res) => {
     try {
       await sendEmail({
         to: user.email,
-        subject: 'Password Reset',
-        html: `<p>You requested a password reset. Click here: <a href="${resetUrl}">Reset Password</a></p>`
+        subject: 'איפוס סיסמה',
+        html: `
+          <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+            <h2>בקשת איפוס סיסמה</h2>
+            <p>שלום ${user.firstName},</p>
+            <p>ביקשת איפוס סיסמה. לחץ/י כאן לאיפוס:</p>
+            <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">אפס/י סיסמה</a></p>
+            <p>בהצלחה,<br>צוות smartSchool</p>
+          </div>
+        `
       });
 
       res.status(200).json({ message: 'Email sent' });
@@ -492,8 +500,14 @@ export const resetPassword = async (req, res) => {
     try {
       await sendEmail({
         to: user.email,
-        subject: 'Password Reset Successful',
-        html: `<p>Hello ${user.firstName},</p><p>Your password has been successfully reset.</p>`
+        subject: 'איפוס סיסמה בוצע בהצלחה',
+        html: `
+          <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right;">
+            <h2>שלום ${user.firstName},</h2>
+            <p>הסיסמה שלך אופסה בהצלחה.</p>
+            <p>בהצלחה,<br>צוות smartSchool</p>
+          </div>
+        `
       });
       console.log('Confirmation email sent');
     } catch (err) {
