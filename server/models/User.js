@@ -47,10 +47,6 @@ userSchema.index(
   { userId: 1 },
   { unique: true, partialFilterExpression: { role: { $in: ['student','admin'] } } }
 );
-userSchema.index(
-  { email: 1 },
-  { unique: true, partialFilterExpression: { role: { $in: ['admin'] } } }
-);
 
 // --- פונקציה לשחזור סיסמה ---
 userSchema.methods.getResetPasswordToken = function() {
