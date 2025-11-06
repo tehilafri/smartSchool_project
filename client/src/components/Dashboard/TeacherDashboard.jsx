@@ -785,7 +785,7 @@ const renderScheduleTable = () => {
                           <p><strong>תאריך:</strong> {formatDateFriendly(r.date)}</p>
                           <p><strong>שעות:</strong> {r.startTime} - {r.endTime}</p>
                           <p><strong>סיבה:</strong> {r.reason}</p>
-                          <p><strong>ממלא מקום:</strong> 
+                          <p><strong>ממלא מקום: </strong> 
                             {r.substituteTeacher 
                               ? `${r.substituteTeacher.firstName || ""} ${r.substituteTeacher.lastName || ""}` 
                               : "טרם נמצא"}

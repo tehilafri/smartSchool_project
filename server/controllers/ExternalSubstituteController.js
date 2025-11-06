@@ -85,3 +85,16 @@ export const getExternalSubstituteByIdNumber = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const getExternalSubstituteByIDOfMongo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const substitute = await ExternalSubstitute.findById(id);
+    if (!substitute) 
+      return res.status(404).json({ message: "External substitute not found" });
+    res.json(substitute);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

@@ -5,6 +5,11 @@ export const getAllExternalSubstitutes = async () => {
   return response.data;
 };
 
+export const getExternalSubstituteByIDOfMongo = async (id) => {
+  const response = await api.get(`/external-substitutes/${id}`);
+  return response.data;
+};
+
 export const getExternalSubstituteByIdNumber = async (identityNumber) => {
   const response = await api.get(`/external-substitutes/identity/${identityNumber}`);
   return response.data;

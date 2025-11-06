@@ -32,7 +32,7 @@ const EventService = {
       const overlaps = lessonEnd > eventStart && lessonStart < eventEnd;
 
       if (overlaps) {
-        // שיעור חופף לאירוע → עדכון סטטוס/נוט/קישור לאירוע
+        // שיעור חופף לאירוע - עדכון סטטוס/נוט/קישור לאירוע
         if (type === 'trip') {
           lesson.status = 'cancelled';
           lesson.note = 'טיול';

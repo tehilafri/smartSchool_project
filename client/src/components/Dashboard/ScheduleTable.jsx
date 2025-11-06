@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import HolidayIndicator from './HolidayIndicator';
+import {getExternalSubstituteByIDOfMongo} from '../../services/externalSubstituteService';
+import { getUserById } from '../../services/userService';
 
 const ScheduleTable = ({ 
   schedule, 
@@ -124,7 +126,7 @@ const ScheduleTable = ({
                             <strong>{lesson.subject}</strong><br/>
                             <small>
                               {lesson.substitute ? (
-                                <span style={{color: '#f6ad55'}}>ממלא מקום: {lesson.substitute.firstName} {lesson.substitute.lastName}</span>
+                                <SubstituteDisplay substituteId={lesson.substitute} />
                               ) : isTeacherView ? (
                                 lesson.teacherId ? `מורה: ${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}` : "—"
                               ) : (
@@ -330,7 +332,7 @@ export const TeacherScheduleView = ({
                             <small>
                               {lesson.substitute && (
                                 <div style={{color: '#f6ad55'}}>
-                                  ממלא מקום: {lesson.substitute.firstName} {lesson.substitute.lastName}
+                                  <SubstituteDisplay substituteId={lesson.substitute} />
                                 </div>
                               )}
                               {lesson.classId && (
@@ -400,6 +402,36 @@ export const TeacherScheduleView = ({
         </table>
       </div>
     </div>
+  );
+};
+
+const SubstituteDisplay = ({ substituteId }) => {
+  const [substituteName, setSubstituteName] = useState('');
+
+  useEffect(() => {
+    const fetchSubstitute = async () => {
+      try {
+        // ניסיון ראשון - בדיקה אם זה user פנימי
+        const response = await getUserById(substituteId);
+        setSubstituteName(`${response.data.firstName} ${response.data.lastName}`);
+      } catch (error) {
+        try {
+          // ניסיון שני - בדיקה אם זה ממלא מקום חיצוני
+          const substitute = await getExternalSubstituteByIDOfMongo(substituteId);
+          setSubstituteName(`${substitute.firstName} ${substitute.lastName}`);
+        } catch (error) {
+          setSubstituteName('ממלא מקום');
+        }
+      }
+    };
+    
+    if (substituteId) {
+      fetchSubstitute();
+    }
+  }, [substituteId]);
+
+  return (
+    <span style={{color: '#f6ad55'}}>ממלא מקום: {substituteName}</span>
   );
 };
 
