@@ -118,14 +118,18 @@ const ScheduleTable = ({
                     });
                     
                     const hasEvents = slotEvents.length > 0;
-                    
+                    const replacementDate = lesson?.replacementDate ? new Date(lesson.replacementDate) : null;
+                    if (replacementDate)
+                      replacementDate.setHours(0, 0, 0, 0);
+
+                    const isReplacementThisWeek = replacementDate && replacementDate >= startOfWeek && replacementDate <= endOfWeek;
                     return (
                       <td key={day} className={`class-slot ${hasLesson ? "" : "empty"} ${hasEvents ? "has-events" : ""}`}>
                         {hasLesson ? (
                           <>
                             <strong>{lesson.subject}</strong><br/>
                             <small>
-                              {lesson.substitute ? (
+                              {lesson.substitute && isReplacementThisWeek ? (//ההחלפה בשבוע הנוכחי
                                 <SubstituteDisplay substituteId={lesson.substitute} />
                               ) : isTeacherView ? (
                                 lesson.teacherId ? `מורה: ${lesson.teacherId.firstName || ''} ${lesson.teacherId.lastName || lesson.teacherId}` : "—"
