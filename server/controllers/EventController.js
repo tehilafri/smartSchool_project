@@ -121,18 +121,18 @@ export const addEvent = async (req, res) => {
     }
     await event.save();
 
-    //  כאן מזמנים את הלוגיקה העסקית
-    try {
-      await EventService.applyEventImpact(event);
-    } catch (serviceErr) {
-      console.error('EventService.applyEventImpact error:', serviceErr);
-      // מחיקת האירוע אם הלוגיקה העסקית נכשלת
-      await event.deleteOne();
-      return res.status(500).json({ 
-        message: 'שגיאה ביישום הלוגיקה העסקית', 
-        error: serviceErr.message || serviceErr 
-      });
-    }
+    // כאן מזמנים את הלוגיקה העסקית - כרגע זה לא משפיע על התצוגה לכן לא קריטי
+    // try {
+    //   await EventService.applyEventImpact(event);
+    // } catch (serviceErr) {
+    //   console.error('EventService.applyEventImpact error:', serviceErr);
+    //   // מחיקת האירוע אם הלוגיקה העסקית נכשלת
+    //   await event.deleteOne();
+    //   return res.status(500).json({ 
+    //     message: 'שגיאה ביישום הלוגיקה העסקית', 
+    //     error: serviceErr.message || serviceErr 
+    //   });
+    // }
     // await EventService.sendNotifications(event);
 
     res.status(201).json({ message: 'Event added', event });

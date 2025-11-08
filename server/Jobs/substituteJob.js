@@ -13,34 +13,35 @@ const SHEET_RANGE =`'${SHEET_TAB}'!A:Z`; // מספיק רחב כדי לכלול 
 
 export const resetPastSubstitutes = async () => {// רץ כל שעה ומחזיר את הסטטוס של שיעורים שהיו מוחלפים אם התאריך והזמן עברו
   try {
+    console.log('Starting resetPastSubstitutes job...');
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
     const schedules = await Schedule.find({
-      $or: [
-        { 'weekPlan.sunday.status': 'replaced' },
-        { 'weekPlan.monday.status': 'replaced' },
-        { 'weekPlan.tuesday.status': 'replaced' },
-        { 'weekPlan.wednesday.status': 'replaced' },
-        { 'weekPlan.thursday.status': 'replaced' },
-        { 'weekPlan.friday.status': 'replaced' }
-      ]
-    });
+    $or: [
+      { 'weekPlan.sunday.replacementDate': { $exists: true, $ne: null } },
+      { 'weekPlan.monday.replacementDate': { $exists: true, $ne: null } },
+      { 'weekPlan.tuesday.replacementDate': { $exists: true, $ne: null } },
+      { 'weekPlan.wednesday.replacementDate': { $exists: true, $ne: null } },
+      { 'weekPlan.thursday.replacementDate': { $exists: true, $ne: null } },
+      { 'weekPlan.friday.replacementDate': { $exists: true, $ne: null } }
+    ]
+  });
 
     for (const schedule of schedules) {
       let updated = false;
 
       for (const [day, lessons] of Object.entries(schedule.weekPlan)) {
         for (const lesson of lessons) {
-          if (lesson.status === 'replaced' && lesson.replacementDate) {
+          if (lesson.replacementDate) {
             const lessonDateStr = lesson.replacementDate.toISOString().split('T')[0];
 
             const isPastDate = lessonDateStr < todayStr;
             const isTodayPastTime = lessonDateStr === todayStr && lesson.endTime <= currentTime;
 
             if (isPastDate || isTodayPastTime) {
-              lesson.status = 'normal';
+              lesson.status = lesson.status === 'replaced' ? 'normal' : lesson.status;
               lesson.substitute = null;
               lesson.substituteModel = null;
               lesson.replacementDate = null;
@@ -129,7 +130,7 @@ export const checkPendingSubstituteRequests = async () => {
     const weekBefore = new Date(request.date);
     weekBefore.setDate(weekBefore.getDate() - 7);
    
-    if (now >= weekBefore) {
+    if (now > weekBefore) {
       const { availableInternal, availableExternal } = await findCandidates(request);
 
       

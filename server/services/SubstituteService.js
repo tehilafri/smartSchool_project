@@ -63,15 +63,26 @@ export const findCandidates = async (substituteRequest) => {
 
   // סינון חיצוניים שכבר מחליפים שיעור אחר באותו יום ושעה
   const availableExternal = [];
+  const day = date.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
 
   for (const extSub of externalCandidatesRaw) {
-    // שולף את כל לוחות השיעורים של אותו יום
-    const schedules = await Schedule.find({
-      [`weekPlan.${date.toLocaleString('en-US', { weekday: 'long' }).toLowerCase()}.substitute`]: extSub._id
+    // בדיקה אם המורה החיצוני פנוי בשעות הספציפיות
+    const overlappingLesson = await Schedule.findOne({
+      [`weekPlan.${day}`]: {
+        $elemMatch: {
+          substitute: extSub._id,
+          $or: [
+            { 
+              startTime: { $lt: endTime },
+              endTime: { $gt: startTime }
+            }
+          ]
+        }
+      }
     });
 
-    // אם לא מצאנו שיעור שהם כבר מחליפים באותו יום – פנוי
-    if (schedules.length === 0) {
+    // אם לא מצאנו שיעור חופף – המורה פנוי
+    if (!overlappingLesson) {
       availableExternal.push(extSub);
     }
   }
