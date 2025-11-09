@@ -18,7 +18,8 @@ const NextClassSection = ({
           <div className="no-lessons-content">
             <div className="no-lessons-icon">🎉</div>
             <h4>אין עוד שיעורים היום!</h4>
-            <p>היום הלימודי שלך הסתיים. זמן מצוין להכין למחר!</p>
+            <p>היום הלימודי שלך הסתיים !</p>
+           {userType === 'teacher' && <p>זמן מצוין להכין למחר!</p>}
           </div>
           <div className="next-class-actions">
             <button className="btn btn-outline" onClick={onNavigateToSchedule}>
@@ -41,7 +42,9 @@ const NextClassSection = ({
       <div className="next-class-card">
         <div className="next-class-header">
           <h3>השיעור הבא שלך</h3>
-          <span className="time-remaining">{minutesUntil !== null ? `בעוד ${minutesUntil} דקות` : ""}</span>
+          {userType === 'teacher' && minutesUntil !== null && (
+            <span className="time-remaining">בעוד {minutesUntil} דקות</span>
+          )}
         </div>
 
         <div className="upcoming-item">

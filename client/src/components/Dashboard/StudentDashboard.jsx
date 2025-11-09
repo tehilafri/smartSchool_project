@@ -159,7 +159,7 @@ const StudentDashboard = ({ onLogout }) => {
       case "nextClass":
         return (
           <NextClassSection 
-            nextLesson={nextLesson}
+            nextLesson={nextLesson?.nextLesson || nextLesson}
             loadingNextLesson={false} // התלמיד לא משתמש בלוגיקת הטעינה הזו
             userType="student"
             onNavigateToSchedule={() => setActiveSection("schedule")}
