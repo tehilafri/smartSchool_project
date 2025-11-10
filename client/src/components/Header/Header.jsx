@@ -48,8 +48,8 @@ const Header = () => {
             <Link to="/login" className="btn btn-outline">
               התחברות למערכת
             </Link>
-            <Link to="/register_school" className="btn btn-primary">
-              הרשמת בית ספר
+            <Link to="/admin-registration" className="btn btn-primary btn-large">
+              בקשת הרשמת בית ספר חדש  
             </Link>
           </div>
 

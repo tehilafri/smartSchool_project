@@ -76,7 +76,7 @@ const AdminRegistration = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h2>הרשמה למנהלת חדשה</h2>
+          <h2>הרשמה כמנהל חדש</h2>
           <p>מלא את פרטיך כדי ליצור בית ספר חדש</p>
         </div>
 

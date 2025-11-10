@@ -32,9 +32,9 @@ const Login = () => {
     }
   };
 
-  // מעבר לדף הרשמה
+  // מעבר לבקשת הרשמה
   const onSwitchToRegister = () => {
-    navigate("/register_school");
+    navigate("/admin-registration");
   };
 
   // מעבר לדף איפוס סיסמה
@@ -132,7 +132,7 @@ const Login = () => {
               שכחתי סיסמה
             </button>
             <button type="button" className="link-button" onClick={onSwitchToRegister}>
-              אין לך חשבון? הירשם כאן
+              אין לך חשבון? בקש הרשמת בית ספר כאן
             </button>
           </div>
         </form>
