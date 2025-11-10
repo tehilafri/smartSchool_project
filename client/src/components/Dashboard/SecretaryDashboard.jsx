@@ -711,11 +711,6 @@ const SecretaryDashboard = ({ onLogout }) => {
                           <td>{event.classes?.map(c => c.name).join(", ") || "-"}</td>
                           <td>
                             {event.type !== "exam" && (
-                              <button className="btn-small btn-outline" onClick={() => openModal("editEvent", event)}>
-                                ✏️
-                              </button>
-                            )}
-                            {event.type !== "exam" && (
                               <button className="btn-small btn-danger" onClick={() => handleDeleteEvent(event._id)}>
                                 🗑️
                               </button>

@@ -1008,7 +1008,9 @@ const renderScheduleTable = () => {
                               <p><strong>שעה:</strong> {exam.startTime || '—'} - {exam.endTime || '—'}</p>
                             </div>
                             <div className="exam-actions">
-                              <button className="btn-small btn-outline" onClick={() => handleEditExam(exam)}>ערוך</button>
+                              {isUpcoming && (
+                                <button className="btn-small btn-outline" onClick={() => handleEditExam(exam)}>ערוך</button>
+                              )}
                               <button className="btn-small btn-danger" onClick={() => handleDeleteExam(exam)}>מחק</button>
                             </div>
                           </div>
