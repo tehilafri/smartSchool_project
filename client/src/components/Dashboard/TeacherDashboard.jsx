@@ -97,7 +97,6 @@ const TeacherDashboard = ({ onLogout }) => {
   const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', item: null, action: null });
   const [aiSuggestions, setAiSuggestions] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
-  const [examFormData, setExamFormData] = useState(null);
 
 
   const updateForm = (code, field, value) => {
@@ -426,6 +425,8 @@ const TeacherDashboard = ({ onLogout }) => {
       await refreshExams();
       
       setEditingExam(null);
+      // ניקוי formData לאחר עדכון מוצלח
+      setFormData({});
       closeModal();
     } catch (err) {
       console.error("updateExam error", err);
@@ -437,7 +438,6 @@ const TeacherDashboard = ({ onLogout }) => {
   // קבלת הצעות AI למבחן
   const handleGetAISuggestions = async (examData) => {
     try {
-      setExamFormData(examData); // שמירת נתוני הטופס
       setLoadingAI(true);
       setModalType("aiSuggestions");
       
@@ -494,6 +494,8 @@ const TeacherDashboard = ({ onLogout }) => {
       
       await refreshExams();
       
+      // ניקוי formData לאחר יצירה מוצלחת
+      setFormData({});
       closeModal();
 
     } catch (err) {
@@ -1091,10 +1093,10 @@ const renderScheduleTable = () => {
             <AbsenceForm onSubmit={handleSubmitAbsence} onCancel={closeModal} showNotification={showNotification} />
           )}
           {modalType === "scheduleExam" && (
-            <ExamForm onSubmit={handleCreateExam} onCancel={closeModal} showNotification={showNotification} me={me} onGetAISuggestions={handleGetAISuggestions} savedFormData={examFormData} />
+            <ExamForm onSubmit={handleCreateExam} onCancel={closeModal} showNotification={showNotification} me={me} onGetAISuggestions={handleGetAISuggestions} formData={formData} setFormData={setFormData} />
           )}
           {modalType === "editExam" && (
-            <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} onGetAISuggestions={handleGetAISuggestions} savedFormData={examFormData} />
+            <ExamForm onSubmit={handleUpdateExam} onCancel={closeModal} showNotification={showNotification} me={me} editingExam={editingExam} onGetAISuggestions={handleGetAISuggestions} formData={formData} setFormData={setFormData} />
           )}
           {modalType === "aiSuggestions" && (
             <div className="ai-suggestions-content">
@@ -1208,18 +1210,28 @@ function AbsenceForm({ onSubmit, onCancel, showNotification }) {
 }
 
 /* --- רכיב עזר לטופס יצירת/עריכת מבחן --- */
-function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGetAISuggestions, savedFormData }) {
-  const [title, setTitle] = useState(savedFormData?.title || editingExam?.title || "");
-  const [subject, setSubject] = useState(savedFormData?.subject || editingExam?.subject || "");
-  const [selectedClasses, setSelectedClasses] = useState(savedFormData?.classes || editingExam?.classes?.map(c => c.name) || []);
-  const [date, setDate] = useState(savedFormData?.date || (editingExam?.date ? new Date(editingExam.date).toISOString().slice(0,10) : new Date().toISOString().slice(0,10)));
+function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGetAISuggestions, formData, setFormData }) {
+  const [title, setTitle] = useState(editingExam?.title || "");
+  const [subject, setSubject] = useState(editingExam?.subject || "");
+  const [selectedClasses, setSelectedClasses] = useState(editingExam?.classes?.map(c => c.name) || []);
+  const [date, setDate] = useState(editingExam?.date ? new Date(editingExam.date).toISOString().slice(0,10) : new Date().toISOString().slice(0,10));
   const [selectedLessons, setSelectedLessons] = useState(() => {
-    if (savedFormData?.selectedLessons) return savedFormData.selectedLessons;
     if (editingExam?.selectedLessons) return editingExam.selectedLessons;
     return [1];
   });
-  const [notes, setNotes] = useState(savedFormData?.notes || editingExam?.notes || "");
-  const [targetTeacher, setTargetTeacher] = useState(savedFormData?.targetTeacher || editingExam?.targetTeacher || "");
+  const [notes, setNotes] = useState(editingExam?.notes || "");
+  const [targetTeacher, setTargetTeacher] = useState(editingExam?.targetTeacher || "");
+
+  // טעינת נתונים מ-formData בעת פתיחת המודל
+  useEffect(() => {
+    if (formData?.title !== undefined) setTitle(formData.title);
+    if (formData?.subject !== undefined) setSubject(formData.subject);
+    if (formData?.selectedClasses !== undefined) setSelectedClasses(formData.selectedClasses);
+    if (formData?.date !== undefined) setDate(formData.date);
+    if (formData?.selectedLessons !== undefined) setSelectedLessons(formData.selectedLessons);
+    if (formData?.notes !== undefined) setNotes(formData.notes);
+    if (formData?.targetTeacher !== undefined) setTargetTeacher(formData.targetTeacher);
+  }, [formData]);
   const [classScheduleSubjects, setClassScheduleSubjects] = useState([]);
   const [classScheduleTeachers, setClassScheduleTeachers] = useState([]);
 
@@ -1259,6 +1271,11 @@ function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGet
         ? prev.filter(c => c !== className)
         : [...prev, className]
     );
+  };
+
+  // עדכון formData כשמשנים ערכים
+  const updateFormData = (field, value) => {
+    setFormData(current => ({ ...current, [field]: value }));
   };
 
   const handleSubmit = () => {
@@ -1302,6 +1319,18 @@ function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGet
   };
 
   const handleGetAISuggestions = () => {
+    // שמירת הנתונים הנוכחיים ב-formData לפני מעבר ל-AI
+    const currentFormData = {
+      title,
+      subject,
+      selectedClasses,
+      date,
+      selectedLessons,
+      notes,
+      targetTeacher
+    };
+    setFormData(currentFormData);
+    
     // חישוב שעות לפי השיעורים הנבחרים
     const schoolHours = me?.schoolId?.scheduleHours || [];
     const minLesson = selectedLessons.length > 0 ? Math.min(...selectedLessons) : 1;
@@ -1507,5 +1536,3 @@ const formatDateFriendly = (dateString) => {
 };
 
 export default TeacherDashboard;
-
-
