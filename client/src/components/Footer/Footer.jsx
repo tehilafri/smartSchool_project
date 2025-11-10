@@ -1,6 +1,32 @@
+import { useState } from "react"
+import api from "../../services/api"
 import "./Footer.css"
 
 const Footer = () => {
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault()
+    if (!email.trim()) {
+      setMessage('אנא הכנס כתובת אימייל')
+      return
+    }
+    
+    setLoading(true)
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:1000';
+      await api.post('/mailing-list/subscribe', { email })
+      setMessage('נרשמת בהצלחה לרשימת התפוצה!')
+      setEmail('')
+    } catch (err) {
+      setMessage('שגיאה בהרשמה. נסה שוב')
+    } finally {
+      setLoading(false)
+      setTimeout(() => setMessage(''), 3000)
+    }
+  }
   return (
     <footer id="contact" className="footer">
       <div className="container">
@@ -65,17 +91,35 @@ const Footer = () => {
             </div>
             <div className="newsletter">
               <h5>הירשמו לעדכונים</h5>
-              <div className="newsletter-form">
-                <input type="email" placeholder="כתובת אימייל" className="newsletter-input" />
-                <button className="btn btn-primary newsletter-btn">הרשמה</button>
-              </div>
+              <form className="newsletter-form" onSubmit={handleSubscribe}>
+                <input 
+                  type="email" 
+                  placeholder="כתובת אימייל" 
+                  className="newsletter-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+                <button 
+                  type="submit" 
+                  className="btn btn-primary newsletter-btn"
+                  disabled={loading}
+                >
+                  {loading ? 'מרשם...' : 'הרשמה'}
+                </button>
+              </form>
+              {message && (
+                <p className={`newsletter-message ${message.includes('שגיאה') ? 'error' : 'success'}`}>
+                  {message}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
         <div className="footer-bottom">
           <div className="footer-bottom-content">
-            <p>&copy; 2024 Smart School. כל הזכויות שמורות.</p>
+            <p>&copy; 2025 Smart School. כל הזכויות שמורות.</p>
             <div className="footer-bottom-links">
               <a href="#privacy">מדיניות פרטיות</a>
               <a href="#terms">תנאי שימוש</a>

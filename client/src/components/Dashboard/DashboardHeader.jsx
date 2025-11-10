@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getSchoolById } from "../../services/schoolService";
 import { getMe } from "../../services/userService";
+import UserProfile from "./UserProfile";
 import "./DashboardHeader.css";
 
 const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
@@ -8,6 +9,7 @@ const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
   const [schoolName, setSchoolName] = useState("");
   const [user, setUser] = useState(null);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -131,6 +133,15 @@ const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
               <div className="user-info">
                 <span>{user?.firstName} {user?.lastName}</span>
               </div>
+              <button 
+                className="profile-button" 
+                onClick={() => {
+                  setShowProfile(true);
+                  setShowAccountMenu(false);
+                }}
+              >
+                צפייה בפרופיל
+              </button>
               <button className="logout-button" onClick={handleLogout}>
                 יציאה
               </button>
@@ -139,6 +150,14 @@ const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
           </div>
         </div>
       </div>
+      
+      {showProfile && (
+        <UserProfile 
+          user={user}
+          onClose={() => setShowProfile(false)}
+          onUserUpdate={(updatedUser) => setUser(updatedUser)}
+        />
+      )}
     </header>
   );
 };

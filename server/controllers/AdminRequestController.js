@@ -7,15 +7,22 @@ import { sendEmail } from '../utils/email.js';
 import { generateCode } from '../utils/generatedCode.js';
 
 export const submitAdminRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     console.log('Received admin request:', req.body);
     const { firstName, lastName, email, phone, birthDate, gender, userId } = req.body;
 
-    // בדיקה: אסור שתהיה בקשה נוספת עם אותה תעודת זהות (userId).
-    // מותר שיהיו בקשות עם אותו אימייל אם תעודות זהות שונות.
-    const existingRequest = await AdminRequest.findOne({ userId });
+  // בדיקת כפילויות על פי תעודת זהות ואימייל
+      const existingRequest = await AdminRequest.findOne({ 
+      $or: [{ userId }, { email }] 
+    }).session(session);
+
     if (existingRequest) {
-      return res.status(400).json({ message: 'בקשה עם תעודת זהות זו כבר קיימת במערכת' });
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'בקשה עם תעודת זהות או אימייל זה כבר קיימת במערכת' });
     }
 
     // יצירת טוקן אישור
@@ -33,7 +40,7 @@ export const submitAdminRequest = async (req, res) => {
       approvalToken
     });
 
-    await adminRequest.save();
+    await adminRequest.save({ session });
 
     // שליחת מייל למנהלת
     await sendEmail({
@@ -75,8 +82,14 @@ export const submitAdminRequest = async (req, res) => {
       `
     });
 
+    // אם הכל עבר בהצלחה, commit לטרנזקציה
+    await session.commitTransaction();
+    session.endSession();
+
     res.status(201).json({ message: 'הבקשה נשלחה בהצלחה' });
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('Error submitting admin request:', err);
     // אם זו שגיאת כפילות של MongoDB נחזיר הודעה ידידותית
     if (err && err.code === 11000) {

@@ -1,6 +1,7 @@
 import { Provider } from 'react-redux';
 import { store } from './store';
 import Router from "./Router";
+import ErrorNotification from './components/ErrorNotification';
 import "./App.css";
 
 function App() {
@@ -8,6 +9,7 @@ function App() {
     <Provider store={store}>
       <div className="App">
         <Router />
+        <ErrorNotification />
       </div>
     </Provider>
   );

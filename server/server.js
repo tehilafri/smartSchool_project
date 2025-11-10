@@ -15,6 +15,7 @@ import EventRouter from './routes/EventRouter.js';
 import ExternalSubstituteRouter from './routes/ExternalSubstituteRouter.js';
 import SchoolRouter from './routes/SchoolRouter.js';
 import adminRequestRoutes from './routes/adminRequestRoutes.js';
+import MailingListRouter from './routes/MailingListRouter.js';
 import { resetPastSubstitutes } from './Jobs/substituteJob.js';
 import { checkPendingSubstituteRequests, startCheckJob } from './Jobs/substituteJob.js';
 import formRoutes from "./routes/formRouter.js";
@@ -57,6 +58,7 @@ server.use('/api/external-substitutes', ExternalSubstituteRouter);
 server.use('/api/schools', SchoolRouter);
 console.log('Registering admin-requests routes');
 server.use('/api/admin-requests', adminRequestRoutes);
+server.use('/api/mailing-list', MailingListRouter);
 server.use("/form", formRoutes);
 
 // מאזינים לאירועים של מסד הנתונים
@@ -68,7 +70,7 @@ mongoose.connection.once("open", () => {
 });
 
 // כל שעה – בדיקת בקשות ממתינות
-cron.schedule('8 * * * *', async () => {
+cron.schedule('45 * * * *', async () => {
   await checkPendingSubstituteRequests();
 });
 

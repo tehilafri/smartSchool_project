@@ -52,11 +52,6 @@ const RegisterSchool = ({ onRegister }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (formData.password !== formData.confirmPassword) {
-      alert("הסיסמאות אינן תואמות")
-      return
-    }
-
     try {
       const form = new FormData();
       form.append("name", formData.schoolName);
@@ -115,31 +110,6 @@ const RegisterSchool = ({ onRegister }) => {
           <div className="form-group">
             <label>כתובת אימייל</label>
             <input type="email" name="email" value={formData.email} onChange={handleChange} required />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>סיסמה</label>
-              <PasswordInput
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                placeholder="הכנס סיסמה"
-              />
-            </div>
-            <div className="form-group">
-              <label>אימות סיסמה</label>
-              <PasswordInput
-                id="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                placeholder="הכנס סיסמה"
-              />
-            </div>
           </div>
 
           <div className="form-group">

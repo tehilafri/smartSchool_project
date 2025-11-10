@@ -655,8 +655,6 @@ const renderScheduleTable = () => {
         <div className="dashboard-header">
           <h1>{me?.gender=="female"?"ברוכה הבאה": "ברוך הבא"}, המורה {loadingMe ? "טוען..." : (me?.firstName )} {me?.lastName}</h1>
           <div className="header-actions">
-            <button className="btn btn-outline">הודעות</button>
-            <button className="btn btn-primary">צ'אט</button>
             {me?.schoolId?.address && <SchoolDirectionsButton schoolAddress={me.schoolId.address} />}
           </div>
         </div>

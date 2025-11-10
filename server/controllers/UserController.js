@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import {sendEmail} from '../utils/email.js';
 import { sendWelcomeEmail } from '../services/UserService.js';
+import { addToMailingList } from '../controllers/MailingListController.js';
 
 export const register = async (req, res) => {
   try {
@@ -43,10 +44,12 @@ export const register = async (req, res) => {
           { email, schoolId: req.schoolId }
         ]
       });
-    } else if (['student', 'admin'].includes(role)) {
+      } else if (role === 'admin') {
       existingUser = await User.findOne({
         $or: [{ userId }, { email }]
       });
+    } else if (role === 'student') {
+      existingUser = await User.findOne({ userId });
     }
 
     if (existingUser) {
@@ -78,6 +81,11 @@ export const register = async (req, res) => {
     });
 
     await newUser.save();
+
+    // הוספה לרשימת תפוצה
+    if (email) {
+      await addToMailingList(email, 'user', newUser._id);
+    }
 
     // אם תלמיד – לעדכן את הכיתה
     if (role === 'student' && validClasses.length > 0) {
