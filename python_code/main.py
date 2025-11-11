@@ -65,20 +65,44 @@ def clean_bson(obj):
     return obj
 
 
-def get_schedules(school_obj_id: ObjectId, class_ids: List[ObjectId]):
-    # המרת מחרוזות ה-classId ל-ObjectId (הנחה: ה-classes מכילים ObjectId's כסטרינג)
-    # try:
-    #     class_obj_ids = [c_id for c_id in class_ids]
-    # except Exception:
-    #     return []
-
-    schedules_cursor = db["schedules"].find({
+def get_schedules(school_obj_id: ObjectId, class_names: List[str]):
+    print(f"DEBUG: get_schedules called with school_obj_id={school_obj_id}, class_names={class_names}")
+    
+    # חיפוש כיתות לפי שם
+    classes_query = {
         "schoolId": school_obj_id,
-        "classId": {"$in": class_ids}
-    })
-
+        "name": {"$in": class_names}
+    }
+    print(f"DEBUG: Classes query: {classes_query}")
+    
+    classes_cursor = db["classes"].find(classes_query)
+    classes_list = list(classes_cursor)
+    print(f"DEBUG: Found {len(classes_list)} classes")
+    
+    if not classes_list:
+        print("DEBUG: No classes found with given names")
+        return []
+    
+    # חילוץ ObjectId של הכיתות
+    class_obj_ids = [cls["_id"] for cls in classes_list]
+    print(f"DEBUG: Class ObjectIds: {class_obj_ids}")
+    
+    # חיפוש מערכות שעות לפי classId
+    schedules_query = {
+        "schoolId": school_obj_id,
+        "classId": {"$in": class_obj_ids}
+    }
+    print(f"DEBUG: Schedules query: {schedules_query}")
+    
+    schedules_cursor = db["schedules"].find(schedules_query)
+    schedules_list = list(schedules_cursor)
+    print(f"DEBUG: Found {len(schedules_list)} schedules")
+    print(f"DEBUG: schedules raw data: {schedules_list}")
+    
     # ניקוי הנתונים לפני שליחה למודל
-    return clean_bson(list(schedules_cursor))
+    cleaned_schedules = clean_bson(schedules_list)
+    print(f"DEBUG: cleaned schedules: {cleaned_schedules}")
+    return cleaned_schedules
 
 
 def query_gemini(prompt: str, system_instruction: str | None = None):
@@ -126,62 +150,65 @@ def analyze_event(event: EventData):
             raise HTTPException(status_code=400, detail="schoolId is not a valid ObjectId")
 
         # שליפת אירועים קיימים
+        print(f"DEBUG: Searching for existing events with schoolId: {school_obj_id}")
         existing_events = list(db["events"].find({"schoolId": school_obj_id}))
+        print(f"DEBUG: Found {len(existing_events)} existing events")
         existing_events = clean_bson(existing_events)
+        print(f"DEBUG: event.classes before get_schedules: {event.classes}")
+        print(f"DEBUG: event.classes type: {type(event.classes)}")
         schedules = get_schedules(school_obj_id, event.classes)
+        print(f"DEBUG: schedules returned: {schedules}")
 
         system_instruction = """
-        אתה יועץ תזמון אסטרטגי ומדויק למוסדות חינוך, מומחה בניהול יומנים ובשמירה על איזון לימודי ורגשי לתלמידים ולמורים.
+אתה יועץ תזמון אסטרטגי ומדויק למוסדות חינוך, מומחה בניהול יומנים ובשמירה על איזון לימודי ורגשי לתלמידים ולמורים.        
+        משימה: נתח הצעה לאירוע חדש (מבחן / פעילות / טיול) לפי הכללים,  מול האירועים הקיימים בלוח השנה.
 
-        **משימתך:** לנתח הצעה לאירוע חדש (מבחן / פעילות / טיול) בהתאם לאירועים הקיימים בלוח השנה של בית הספר.
+        מבנה קלט:
+        - event: האירוע החדש (type, date, classes, subject).
+        - existing_events_list: רשימת אירועים קיימים.
+        - schedules: מערכת השעות של הכיתות לפי יום (sunday–friday) ושעה (startTime, subject).
 
-        **מבנה הקלט:**
-        - "event": האירוע החדש שמבקשים לקבוע (שדות: type, date, classes, subject אם רלוונטי).
-        - "existing_events_list": רשימת האירועים הקיימים (עם אותם שדות).
-        - "schedules": מערכת השעות השבועית של הכיתות המעורבות. השדות מופיעים לפי יום (sunday, monday...) וכוללים שעה (startTime) ומקצוע (subject).
+        כללים:
+        1. מבחנים:
+           - אין שני מבחנים באותו יום לאותה כיתה.
+           - אין מבחנים יומיים רצופים.
+           - עד שני מבחנים בשבוע.
+           - אם ביום שלפני יש פעילות מעבר לשעות הלימוד או טיול — אל תקבע מבחן.
+           - אם אין שיעור במקצוע המבחן ביום המבוקש – התרע.
+        2. פעילויות:
+           - אין פעילות אחר הצהריים יום לפני מבחן.
+           - אין פעילויות רצופות.
+           - עד שתי פעילויות בשבוע.
+        3. טיולים:
+           - אין טיול אחרי הצהריים אם למחרת מבחן.
+           - אין שני טיולים באותו שבוע.
 
-        **הכללים:**
-        1. **מבחנים:**
-           - אסור שני מבחנים באותו יום לאותה כיתה.
-           - אסור מבחנים יומיים רצופים.
-           - מותר עד שני מבחנים בשבוע (ראשון–שישי).
-           - אם ביום שלפני יש פעילות מעבר לשעות הלימודים או טיול בצהריים — אין לקבוע מבחן.
-           -בדוק במערכת של הכיתה הנ''ל האם יש לה שיעור במקצוע המבחן בשעות וביום הרצוי ,במידה ולא, התרה על כך.
-           
-        2. **פעילויות:**
-           - אין לקבוע פעילות אחר הצהריים יום לפני מבחן של אותה כיתה.
-           - אין לקבוע פעילויות יומיות רצופות.
-           - מותר עד שתי פעילויות בשבוע לאותה כיתה.
-           
-        3. **טיולים:**
-           - אין לקבוע טיול אחרי הצהריים אם למחרת יש מבחן.
-           - אין לקבוע שני טיולים באותו שבוע לאותה כיתה.
+        אם האירוע מפר כללים:
+        - is_suitable: false
+        - recommendations: הסבר תמציתי (עד 6 שורות) עם סיבה והצעת תאריך חלופי.
+        - אם זה מבחן – הצע יום שיש בו שיעור במקצוע המבחן.
 
-        **אם האירוע המבוקש מפר את הכללים:**
-        - כתוב "is_suitable": false
-        - הוסף הסבר תמציתי בשדה "recommendations" (עד 6 שורות בסך הכול) שמפרט את הסיבה,
-        - הוסף גם הצעה לתאריך חלופי שמתאים לפי הכללים.
-        
-        -במידה ומדובר במבחן, הצע תאריך שבו יש לכיתה שיעור במקצוע של המבחן.
-        -אם מדובר בקביעת מבחן ביום ובשעה שאין בה שיעור במקצוע של המבחן לכיתה הזו, התרה על כך.
+        אם עומד בכללים:
+        - is_suitable: true
+        - recommendations: נימוק קצר לאישור.
 
-        **אם האירוע עומד בכללים:**
-        - כתוב "is_suitable": true
-        - הסבר קצר מדוע ניתן לאשר.
-
-        **פלט מחייב – תמיד בפורמט JSON הבא בלבד:**
+        פלט ב-JSON בלבד:
         {
           "is_suitable": [true/false],
-          "recommendations": ["תשובה תמציתית ומוסברת עד 6 שורות כולל הצעה חלופית אם נדרש"]
+          "recommendations": ["הסבר קצר עד 6 שורות"]
         }
 
-        התמקד אך ורק בניתוח האירוע החדש ביחס לאירועים הקיימים ב-DB.
-        אל תחרוג ממסגרת הפורמט והאורך.
+        הסתמך רק על הנתונים שנמסרו, בלי חריגה מהפורמט.
         """
 
+        event_data = clean_bson(event.model_dump())
+        print(f"DEBUG: Event data for Gemini: {event_data}")
+        print(f"DEBUG: Existing events count: {len(existing_events)}")
+        print(f"DEBUG: Schedules count: {len(schedules)}")
+        
         prompt_content = f"""
         אירוע חדש מוצע:
-        {json.dumps(clean_bson(event.model_dump()), ensure_ascii=False, indent=2)}
+        {json.dumps(event_data, ensure_ascii=False, indent=2)}
         
         אירועים קיימים בבית הספר:
         {json.dumps(existing_events, ensure_ascii=False, indent=2)}
@@ -192,9 +219,13 @@ def analyze_event(event: EventData):
             בהתבסס על הנתונים לעיל, נתח האם האירוע החדש המוצע הוא מתאים.
             אם האירוע לא מתאים, ציין את הסיבה העיקרית- בלי התפלספויות מיותרות. אם הוא מתאים, ציין זאת.
         """
+        
+        print(f"DEBUG: Full prompt content length: {len(prompt_content)}")
 
         # קריאה למודל
+        print("DEBUG: Calling Gemini API...")
         analysis_result = query_gemini(prompt_content, system_instruction)
+        print(f"DEBUG: Gemini response: {analysis_result}")
 
         # החזרת תשובה ללקוח
         return analysis_result
