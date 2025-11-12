@@ -1,12 +1,28 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { loginUser as loginAPI } from '../../services/userService';
 
+// פונקציה לניסיון חוזר
+const retryLogin = async (loginFn, maxRetries = 3, delay = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await loginFn();
+    } catch (error) {
+      if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
+        if (i === maxRetries - 1) throw error;
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
 // Async thunk for login
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ userName, password, schoolCode }, { rejectWithValue }) => {
     try {
-      const response = await loginAPI(userName, password, schoolCode);
+      const response = await retryLogin(() => loginAPI(userName, password, schoolCode));
       const { token, user } = response.data;
       
       // Save to localStorage
@@ -17,7 +33,10 @@ export const loginUser = createAsyncThunk(
       
       return { token, user };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'שגיאה בהתחברות');
+      const message = error.code === 'ERR_CONNECTION_REFUSED' || error.code === 'ERR_NETWORK' 
+        ? 'השרת לא זמין כרגע, נסה שוב'
+        : error.response?.data?.message || 'שגיאה בהתחברות';
+      return rejectWithValue(message);
     }
   }
 );

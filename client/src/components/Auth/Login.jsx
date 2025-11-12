@@ -69,8 +69,7 @@ const Login = () => {
       // קריאה לפונקציית ההצלחה
       onLogin(result.user.role);
     } catch (err) {
-      // השגיאה כבר מטופלת ב-Redux
-      console.error('Login error:', err);
+      // השגיאה מוצגת דרך Redux state
     }
   }
 
