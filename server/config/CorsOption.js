@@ -1,5 +1,5 @@
 const allowedOrigins = [
-     'https://smartschool-project-react.onrender.com'
+     'https://smartschool-project-react.onrender.com', 'http://localhost:5173'
   ];
   
   const corsOptions = {
