@@ -14,4 +14,4 @@ COPY . .
 # הוא יאזין ל-main:app (כמו שאמרת)
 # הוא יאזין לפורט ש-Render נותן ($PORT)
 # הוא ירוץ על 0.0.0.0 (כדי להיות זמין מחוץ לקונטיינר)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
