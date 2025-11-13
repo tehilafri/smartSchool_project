@@ -4,9 +4,9 @@ import path from "path";
 
 const SHEET_TAB = process.env.SHEET_TAB_NAME;
 
-const credentialsPath = path.join(process.cwd(), "config", "credentials.json");
+const credentialsPath = "./credentials.json";
 if (!fs.existsSync(credentialsPath)) {
-  throw new Error("Missing Google service account credentials.json at config/credentials.json");
+  throw new Error("Missing Google service account credentials.json at credentials.json");
 }
 const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]; // קריאה + כתיבה
