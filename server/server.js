@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import connectDB from "./config/dbConn.js";
-import corsOptions from "./config/corsOption.js";
+import corsOptions from "./config/CorsOption.js";
 import UserRouter from './routes/UserRouter.js';
 import SubstituteRequestRouter from './routes/SubstituteRequestRouter.js';
 import ClassRouter from './routes/ClassRouter.js';
