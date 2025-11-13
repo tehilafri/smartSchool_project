@@ -6,5 +6,5 @@ server/.env
 client/.env
 python_code/.venv/
 python_code/.env
-server/config/credentials.json
+server/credentials.json
 .idea/
