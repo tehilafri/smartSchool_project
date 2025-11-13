@@ -12,7 +12,7 @@ export const reviewEventAI = async (req, res) => {
     const schoolId = req.schoolId;
 
     // קריאה ל-FastAPI שמבצע את ניתוח ה-AI
-    const aiResponse = await axios.post("http://127.0.0.1:5002/analyze_event", {
+    const aiResponse = await axios.post("https://smartschool-project-python.onrender.com/analyze_event", {
       type,
       date,
       startTime,

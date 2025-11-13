@@ -65,11 +65,11 @@ export const approveReplacementByEmail = async (req, res) => {
       phone
     }, absence.schoolId);
 
-    const dashboardUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const dashboardUrl = process.env.FRONTEND_URL ;
     res.redirect(`${dashboardUrl}/dashboard/teacher?message=approved&type=success`);
   } catch (err) {
     console.error(err);
-    const dashboardUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const dashboardUrl = process.env.FRONTEND_URL ;
     res.redirect(`${dashboardUrl}/dashboard/teacher?message=${encodeURIComponent(err.message)}&type=error`);
   }
 };
