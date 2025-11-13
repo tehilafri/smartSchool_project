@@ -1,20 +1,17 @@
-# Python service
+# (Python/Gemini Service Dockerfile - מתוקן)
 FROM python:3.10.0-slim
-
 WORKDIR /app
 
-# העתקת קובץ תלותים והתקנה
-COPY requirements.txt .
+# העתק והתקן דרישות
+COPY requirements.txt ./
+# ודאי ש-uvicorn נמצא בקובץ הדרישות שלך!
 RUN pip install --no-cache-dir -r requirements.txt
 
-# העתקת שאר הקוד
 COPY . .
 
-EXPOSE 5002
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5002/health || exit 1
-
-
-# פקודת הרצה
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5002"]
+# --- התיקון הקריטי כאן ---
+# נשתמש ב-uvicorn (כמו שאת רגילה) ולא ב-gunicorn
+# הוא יאזין ל-main:app (כמו שאמרת)
+# הוא יאזין לפורט ש-Render נותן ($PORT)
+# הוא ירוץ על 0.0.0.0 (כדי להיות זמין מחוץ לקונטיינר)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT}"]

@@ -1,36 +1,24 @@
-# # Node backend
-# FROM node:22.19.0-alpine
+# (Node.js Server Dockerfile)
+# 1. בחר אימג' בסיס רשמי של נוד
+FROM node:22.19.0-slim
 
-# # הגדרת תיקייה לעבודה בקונטיינר
-# WORKDIR /app
-
-# # העתקת קבצי החבילות והתקנת תלותים
-# COPY package*.json ./
-# RUN npm install 
-
-# # העתקת שאר הקוד
-# COPY . .
-
-# # חשיפת פורט
-# EXPOSE 1000
-
-# HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-#   CMD wget --no-verbose --tries=1 --spider http://localhost:1000 || exit 1
-
-# # פקודת הרצה
-# CMD ["node", "server.js"]
-
-
-FROM node:22.19.0-alpine
-
+# 2. הגדר את ספריית העבודה
 WORKDIR /app
 
+# 3. העתק את קבצי ה-package.json
 COPY package*.json ./
-RUN npm ci --production
 
+# 4. התקן תלויות
+RUN npm install --production
+
+# 5. העתק את שאר קוד השרת
 COPY . .
 
+# 6. הגדר משתנה סביבה ל-PORT
+#    זהו הפורט *בתוך* הקונטיינר. הקוד שלך צריך להאזין לו.
+#    Render ישתמש בפורט זה כברירת מחדל אם לא יספק אחד משלו.
+ENV PORT 1000
 EXPOSE 1000
 
-CMD ["node", "server.js"]
-
+# 7. פקודת ההרצה
+CMD [ "node", "server.js" ]
