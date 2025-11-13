@@ -12,7 +12,7 @@ RUN npm install --only=production
 COPY . .
 
 # חשיפת פורט
-EXPOSE 4000
+EXPOSE 1000
 
 # פקודת הרצה
 CMD ["node", "server.js"]
