@@ -2,7 +2,7 @@ import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
 const api = axios.create({
-  baseURL: 'http://localhost:1000/api', // כתובת השרת שלך
+  baseURL: process.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
