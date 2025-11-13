@@ -5,6 +5,7 @@ client/dist
 server/.env
 client/.env
 python_code/.venv/
+python_code/__pycache__/
 python_code/.env
 server/credentials.json
 .idea/
