@@ -6,7 +6,7 @@ WORKDIR /app
 
 # העתקת קבצי החבילות והתקנת תלותים
 COPY package*.json ./
-RUN npm install --only=production
+RUN npm install 
 
 # העתקת שאר הקוד
 COPY . .
