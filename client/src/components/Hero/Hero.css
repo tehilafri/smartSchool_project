@@ -1,11 +1,12 @@
 .hero {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(100vh - 100px);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   overflow: hidden;
+  padding-top: 100px;
 }
 
 .hero-background {
@@ -95,15 +96,16 @@
 /* Mobile Styles */
 @media (max-width: 768px) {
   .hero {
+    min-height: calc(100vh - 120px);
     padding-top: 120px;
   }
 
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 
   .hero-subtitle {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .hero-actions {
@@ -116,7 +118,7 @@
   }
 
   .stat-number {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 }
 
