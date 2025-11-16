@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
-const SERVER_URL ='https://smartschool-project-node.onrender.com';
+const SERVER_URL ='8888';
 console.log([...SERVER_URL]);
 console.log('SERVER_URL type:', typeof SERVER_URL);
 console.log('SERVER_URL length:', SERVER_URL?.length);
+console.log('VITE_API_URL', import.meta.env.VITE_API_URL);
 
 const api = axios.create({
   baseURL: `${SERVER_URL}/api`,
