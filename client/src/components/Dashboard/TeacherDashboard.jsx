@@ -521,6 +521,9 @@ const renderClassScheduleTable = () => {
 };
 
 const renderScheduleTable = () => {
+  if (loadingSchedule) return <p>טוען מערכת שעות...</p>;
+  if (!schedule || !schedule.weekPlan) return <p>לא נמצאה מערכת שעות.</p>;
+  
   return (
     <TeacherScheduleView 
       schedule={schedule.weekPlan}
