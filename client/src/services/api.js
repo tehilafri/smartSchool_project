@@ -1,12 +1,17 @@
 import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://smartschool-project-node.onrender.com';
+console.log('API Base URL:', API_URL);
+
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL}/api`,
+  baseURL: `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+console.log('Final baseURL:', api.defaults.baseURL);
 
 // כאן אנחנו מוסיפים את הטוקן אוטומטית לכל בקשה
 api.interceptors.request.use((config) => {

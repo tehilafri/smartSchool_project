@@ -3,7 +3,7 @@ services:
   server:
     build: ./server
     ports:
-      - "4000:4000"
+      - "1000:1000"
     env_file:
       - ./server/.env
 
