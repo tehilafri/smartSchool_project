@@ -26,11 +26,23 @@ export const loginUser = createAsyncThunk(
       const { token, user } = response.data;
       
       // Save to localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('role', user.role);
-      localStorage.setItem('schoolCode', user.schoolCode);
-      
+      if (token && user) {
+        // --- הקוד שלך נכנס לכאן ---
+        // Save to localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('role', user.role);
+        localStorage.setItem('schoolCode', user.schoolCode);
+        // -------------------------
+      } else {
+        // אם אנחנו כאן, זה אומר שהלוגין נכשל או שהמשתמש התנתק
+        // זה המקום לנקות את ה-storage, לא לכתוב "undefined"
+        console.error("ניסיון לשמור משתמש ריק ב-localStorage. מנקה את ה-storage...");
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('role');
+        localStorage.removeItem('schoolCode');
+      }  
       return { token, user };
     } catch (error) {
       const message = error.code === 'ERR_CONNECTION_REFUSED' || error.code === 'ERR_NETWORK' 
