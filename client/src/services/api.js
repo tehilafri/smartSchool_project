@@ -1,13 +1,13 @@
 import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
-const API_URL = 'https://smartschool-project-node.onrender.com';
-console.log('API Base URL:', API_URL);
-console.log('API_URL type:', typeof API_URL);
-console.log('API_URL length:', API_URL?.length);
+const SERVER_URL = 'https://smartschool-project-node.onrender.com';
+console.log('SERVER URL:', SERVER_URL);
+console.log('SERVER_URL type:', typeof SERVER_URL);
+console.log('SERVER_URL length:', SERVER_URL?.length);
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${SERVER_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
