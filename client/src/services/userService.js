@@ -2,7 +2,7 @@ import api from './api';
 
 // Authentication
 export const loginUser = (userName, password, schoolCode) => {
-  console.log("❤️" , import.meta.env.VITE_API_URL || 'https://smartschool-project-node.onrender.com');
+  console.log("❤️" , import.meta.env.VITE_API_URL);
   return api.post('/users/login', { userName, password, schoolCode });
 };
 
