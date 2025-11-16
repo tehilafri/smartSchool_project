@@ -25,24 +25,12 @@ export const loginUser = createAsyncThunk(
       const response = await retryLogin(() => loginAPI(userName, password, schoolCode));
       const { token, user } = response.data;
       
-      // Save to localStorage
-      if (token && user) {
-        // --- הקוד שלך נכנס לכאן ---
-        // Save to localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('role', user.role);
-        localStorage.setItem('schoolCode', user.schoolCode);
-        // -------------------------
-      } else {
-        // אם אנחנו כאן, זה אומר שהלוגין נכשל או שהמשתמש התנתק
-        // זה המקום לנקות את ה-storage, לא לכתוב "undefined"
-        console.error("ניסיון לשמור משתמש ריק ב-localStorage. מנקה את ה-storage...");
+      
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('role');
         localStorage.removeItem('schoolCode');
-      }  
+      
       return { token, user };
     } catch (error) {
       const message = error.code === 'ERR_CONNECTION_REFUSED' || error.code === 'ERR_NETWORK' 
@@ -62,28 +50,10 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   window.location.href = '/';
 });
 
-// פונקציה בטוחה לקריאת JSON מה-localStorage
-const getSafeUserFromStorage = () => {
-  const storedUser = localStorage.getItem('user');
 
-  // אם אין כלום, או שיש זבל ("undefined" או "null" כמחרוזת)
-  if (!storedUser || storedUser === 'undefined' || storedUser === 'null') {
-    localStorage.removeItem('user'); // מנקה את ה-storage בשבילך!
-    return null;
-  }
-
-  // אם יש משהו, נסה לנתח אותו
-  try {
-    return JSON.parse(storedUser);
-  } catch (error) {
-    console.error("נכשל בניתוח 'user' מה-localStorage, מנקה...", error);
-    localStorage.removeItem('user'); // מנקה את ה-storage בשבילך!
-    return null;
-  }
-};
 
 const initialState = {
-  user: getSafeUserFromStorage(),
+  user: JSON.parse(localStorage.getItem('user')) || null,
   token: localStorage.getItem('token') || null,
   role: localStorage.getItem('role') || null,
   schoolCode: localStorage.getItem('schoolCode') || null,
