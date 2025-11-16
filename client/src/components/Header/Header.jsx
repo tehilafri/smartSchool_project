@@ -49,7 +49,7 @@ const Header = () => {
               התחברות למערכת
             </Link>
             <Link to="/admin-registration" className="btn btn-primary btn-large">
-              בקשת הרשמת בית ספר חדש  
+              הרשמה למערכת
             </Link>
           </div>
 
