@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://smartschool-project-node.onrender.com';
+console.log('API Base URL:', API_URL);
+
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || 'https://smartschool-project-node.onrender.com'}/api`,
+  baseURL: `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
