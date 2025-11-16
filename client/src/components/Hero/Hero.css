@@ -113,6 +113,11 @@
     align-items: center;
   }
 
+  .btn-large {
+    font-size: 0.9rem;
+    padding: 12px 24px;
+  }
+
   .hero-stats {
     gap: 2rem;
   }
