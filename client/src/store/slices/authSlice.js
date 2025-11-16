@@ -50,8 +50,28 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   window.location.href = '/';
 });
 
+// פונקציה בטוחה לקריאת JSON מה-localStorage
+const getSafeUserFromStorage = () => {
+  const storedUser = localStorage.getItem('user');
+
+  // אם אין כלום, או שיש זבל ("undefined" או "null" כמחרוזת)
+  if (!storedUser || storedUser === 'undefined' || storedUser === 'null') {
+    localStorage.removeItem('user'); // מנקה את ה-storage בשבילך!
+    return null;
+  }
+
+  // אם יש משהו, נסה לנתח אותו
+  try {
+    return JSON.parse(storedUser);
+  } catch (error) {
+    console.error("נכשל בניתוח 'user' מה-localStorage, מנקה...", error);
+    localStorage.removeItem('user'); // מנקה את ה-storage בשבילך!
+    return null;
+  }
+};
+
 const initialState = {
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  user: getSafeUserFromStorage(),
   token: localStorage.getItem('token') || null,
   role: localStorage.getItem('role') || null,
   schoolCode: localStorage.getItem('schoolCode') || null,
