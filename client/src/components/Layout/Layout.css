@@ -6,7 +6,13 @@
 
 .main-with-header {
   flex: 1;
-  padding-top: 60px;
+  padding-top: 100px;
+}
+
+@media (max-width: 768px) {
+  .main-with-header {
+    padding-top: 120px;
+  }
 }
 
 .main-without-header {

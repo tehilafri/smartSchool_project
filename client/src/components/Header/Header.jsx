@@ -22,22 +22,22 @@ const Header = () => {
           <nav className={`nav ${isMenuOpen ? "nav-open" : ""}`}>
             <ul className="nav-list">
               <li>
-                <Link to="/#features" className="nav-link">
+                <Link to="/#features" className="nav-link" onClick={() => setIsMenuOpen(false)}>
                   תכונות
                 </Link>
               </li>
               <li>
-                <Link to="/#about" className="nav-link">
+                <Link to="/#about" className="nav-link" onClick={() => setIsMenuOpen(false)}>
                   אודות
                 </Link>
               </li>
               <li>
-                <Link to="/#testimonials" className="nav-link">
+                <Link to="/#testimonials" className="nav-link" onClick={() => setIsMenuOpen(false)}>
                   המלצות
                 </Link>
               </li>
               <li>
-                <Link to="/#contact" className="nav-link">
+                <Link to="/#contact" className="nav-link" onClick={() => setIsMenuOpen(false)}>
                   צור קשר
                 </Link>
               </li>

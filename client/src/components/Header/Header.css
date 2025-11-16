@@ -89,6 +89,14 @@
 
 /* Mobile Styles */
 @media (max-width: 768px) {
+  .header-content {
+    padding: 0.75rem 0;
+  }
+
+  .logo-img {
+    height: 50px;
+  }
+
   .nav {
     position: absolute;
     top: 100%;
@@ -100,6 +108,7 @@
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    z-index: 999;
   }
 
   .nav-open {
@@ -120,5 +129,10 @@
 
   .mobile-menu-btn {
     display: flex;
+  }
+
+  .btn-large {
+    font-size: 14px;
+    padding: 10px 12px;
   }
 }
