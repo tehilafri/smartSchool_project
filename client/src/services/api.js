@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
-const SERVER_URL = 'https://smartschool-project-node.onrender.com';
+const SERVER_URL ='https://smartschool-project-node.onrender.com';
 console.log([...SERVER_URL]);
 console.log('SERVER_URL type:', typeof SERVER_URL);
 console.log('SERVER_URL length:', SERVER_URL?.length);
