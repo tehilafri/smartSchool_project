@@ -9,6 +9,9 @@ const api = axios.create({
 });
 
 console.log('Final baseURL:', api.defaults.baseURL);
+console.log("LEN:", api.defaults.baseURL.length);
+console.log("HEX:", api.defaults.baseURL.split("").map(c => c.charCodeAt(0)));
+console.log("JSON:", JSON.stringify(api.defaults.baseURL));
 
 // כאן אנחנו מוסיפים את הטוקן אוטומטית לכל בקשה
 api.interceptors.request.use((config) => {
