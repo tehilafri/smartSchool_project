@@ -8,6 +8,9 @@ const api = axios.create({
   },
 });
 
+const x='https://smartschool-project-node.onrender.com/api';
+console.log('Base URL string:', x);
+
 console.log('Final baseURL:', api.defaults.baseURL);
 console.log("LEN:", api.defaults.baseURL.length);
 console.log("HEX:", api.defaults.baseURL.split("").map(c => c.charCodeAt(0)));
