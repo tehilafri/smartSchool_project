@@ -74,6 +74,8 @@ cron.schedule('45 * * * *', async () => {
   await checkPendingSubstituteRequests();
 });
 
+console.log("frontend url: ",process.env.FRONTEND_URL);
+
 // פעם ביום אחרי שעות הלימודים – איפוס שיעורים שעברו
 cron.schedule('0 16 * * *', async () => {
   await resetPastSubstitutes();
