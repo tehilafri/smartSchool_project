@@ -19,7 +19,7 @@ const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
         const school = await getSchoolById(schoolCode);
         let logoUrl = school.imageUrl;
         if (logoUrl && logoUrl.startsWith("/uploads/")) {
-          logoUrl = `${import.meta.env.VITE_API_URL}${logoUrl}`;
+          logoUrl = "https://smartschool-project-node.onrender.com" + logoUrl;
         }
         // if (logoUrl) {
         //   const extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"];

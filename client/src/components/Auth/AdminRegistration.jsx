@@ -30,7 +30,7 @@ const AdminRegistration = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin-requests/submit`, {
+      const response = await fetch("https://smartschool-project-node.onrender.com/api/admin-requests/submit", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
