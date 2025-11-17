@@ -1,10 +1,14 @@
 import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
-const API_URL = import.meta.env.VITE_API_URL ;
+
+export function setApiBaseUrl() {
+  return "https://smartschool-project-node.onrender.com";
+}
+
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${setApiBaseUrl()}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

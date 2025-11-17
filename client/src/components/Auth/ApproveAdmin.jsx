@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./Auth.css";
+import {setApiBaseUrl} from "../../services/api";
 
 const ApproveAdmin = () => {
   const { token } = useParams();
@@ -12,7 +13,7 @@ const ApproveAdmin = () => {
   useEffect(() => {
     const approveRequest = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin-requests/approve/${token}`);
+        const response = await fetch(`${setApiBaseUrl()}/api/admin-requests/approve/${token}`);
         const data = await response.json();
 
         if (response.ok) {

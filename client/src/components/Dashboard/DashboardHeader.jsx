@@ -3,6 +3,7 @@ import { getSchoolById } from "../../services/schoolService";
 import { getMe } from "../../services/userService";
 import UserProfile from "./UserProfile";
 import "./DashboardHeader.css";
+import {setApiBaseUrl} from "../../services/api";
 
 const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
   const [logo, setLogo] = useState("");
@@ -19,7 +20,7 @@ const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
         const school = await getSchoolById(schoolCode);
         let logoUrl = school.imageUrl;
         if (logoUrl && logoUrl.startsWith("/uploads/")) {
-          logoUrl = `${import.meta.env.VITE_API_URL}${logoUrl}`;
+          logoUrl = `${setApiBaseUrl()}${logoUrl}`;
         }
         // if (logoUrl) {
         //   const extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"];

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Auth.css";
+import {setApiBaseUrl} from "../../services/api";
 
 const AdminRegistration = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const AdminRegistration = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin-requests/submit`, {
+      const response = await fetch(`${setApiBaseUrl()}/api/admin-requests/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
