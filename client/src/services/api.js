@@ -17,9 +17,11 @@ console.log("HEX:", api.defaults.baseURL.split("").map(c => c.charCodeAt(0)));
 console.log("JSON:", JSON.stringify(api.defaults.baseURL));
 
 // כאן אנחנו מוסיפים את הטוקן אוטומטית לכל בקשה
+// ✅ כאן מוסיפים את ה-interceptor לתיקון הבעיה
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token"); // קריאה ל-localStorage בכל בקשה מחדש
-  if (token) {
+  const token = localStorage.getItem("token");
+  // אל תשלחי Authorization אם זו בקשת login
+  if (token && !config.url.includes('/users/login')) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
