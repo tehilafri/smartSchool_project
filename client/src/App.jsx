@@ -8,6 +8,7 @@ function App() {
   return (
     <Provider store={store}>
       <div className="App">
+        {console.log(import.meta.env.VITE_TEHILA_SARA)}
         <Router />
         <ErrorNotification />
       </div>
