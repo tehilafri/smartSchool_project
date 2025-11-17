@@ -1,7 +1,6 @@
 import { useState } from "react"
 import api from "../../services/api"
 import "./Footer.css"
-import { setApiBaseUrl } from "../../services/api"
 
 const Footer = () => {
   const [email, setEmail] = useState('')
@@ -17,7 +16,7 @@ const Footer = () => {
     
     setLoading(true)
     try {
-      const apiUrl = setApiBaseUrl();
+      const apiUrl = import.meta.env.VITE_API_URL;
       await api.post('/mailing-list/subscribe', { email })
       setMessage('נרשמת בהצלחה לרשימת התפוצה!')
       setEmail('')
