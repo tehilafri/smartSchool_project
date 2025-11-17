@@ -8,7 +8,7 @@ function App() {
   return (
     <Provider store={store}>
       <div className="App">
-        {console.log(import.meta.env.VITE_NODE_URL)}
+        {console.log(import.meta.env.VITE_API_URL)}
         <Router />
         <ErrorNotification />
       </div>
