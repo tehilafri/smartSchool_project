@@ -25,11 +25,11 @@ export const loginUser = createAsyncThunk(
       const response = await retryLogin(() => loginAPI(userName, password, schoolCode));
       const { token, user } = response.data;
       
-      
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('role');
-        localStorage.removeItem('schoolCode');
+      // שמירת הנתונים ב-localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('role', user.role);
+      localStorage.setItem('schoolCode', user.schoolCode);
       
       return { token, user };
     } catch (error) {
