@@ -121,6 +121,8 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
+  console.log('🚀 SERVER: Login function called!');
+  console.log('🚀 SERVER: Request body:', req.body);
   try {
     const { userName, password, schoolCode } = req.body;
     console.log('Login attempt:', { userName, schoolCode, hasPassword: !!password });
