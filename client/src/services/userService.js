@@ -2,8 +2,7 @@ import api from './api';
 
 // Authentication
 export const loginUser = (userName, password, schoolCode) => {
-  const x= "https://smartschool-project-node.onrender.com";
-  console.log("❤️",x[0],"❤️");
+  console.log('https://smartschool-project-node.onrender.com');
   return api.post('/users/login', { userName, password, schoolCode });
 };
 
