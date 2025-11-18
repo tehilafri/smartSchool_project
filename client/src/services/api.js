@@ -2,7 +2,7 @@ import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
 const api = axios.create({
-  // baseURL: 'https://smartschool-project-node.onrender.com/api'.trim(),
+  baseURL: 'https://smartschool-project-node.onrender.com/api'.trim(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,8 +12,8 @@ const x='https://smartschool-project-node.onrender.com/api';
 console.log('Base URL string:', x);
 
 console.log('Final baseURL:', api.defaults.baseURL);
-// console.log("LEN:", api.defaults.baseURL.length);
-// console.log("HEX:", api.defaults.baseURL.split("").map(c => c.charCodeAt(0)));
+console.log("LEN:", api.defaults.baseURL.length);
+console.log("HEX:", api.defaults.baseURL.split("").map(c => c.charCodeAt(0)));
 console.log("JSON:", JSON.stringify(api.defaults.baseURL));
 
 // כאן אנחנו מוסיפים את הטוקן אוטומטית לכל בקשה
