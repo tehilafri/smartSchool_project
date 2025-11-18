@@ -2,7 +2,7 @@ import axios from 'axios';
 import { showError } from '../components/ErrorNotification';
 
 const api = axios.create({
-  baseURL: 'https://smartschool-project-node.onrender.com/api'.trim(),
+  baseURL: 'http://localhost:1000/api'.trim(),
   headers: {
     'Content-Type': 'application/json',
   },
