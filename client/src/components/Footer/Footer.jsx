@@ -16,7 +16,7 @@ const Footer = () => {
     
     setLoading(true)
     try {
-      const apiUrl = "https://smartschool-project-node.onrender.com";
+      const apiUrl = import.meta.env.VITE_API_URL;
       await api.post('/mailing-list/subscribe', { email })
       setMessage('נרשמת בהצלחה לרשימת התפוצה!')
       setEmail('')

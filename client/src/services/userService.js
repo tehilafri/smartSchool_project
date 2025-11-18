@@ -2,7 +2,8 @@ import api from './api';
 
 // Authentication
 export const loginUser = (userName, password, schoolCode) => {
-  console.log('https://smartschool-project-node.onrender.com');
+  const x= import.meta.env.VITE_API_URL;
+  console.log('Login Base URL string:', x);
   return api.post('/users/login', { userName, password, schoolCode });
 };
 

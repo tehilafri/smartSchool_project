@@ -12,7 +12,7 @@ const ApproveAdmin = () => {
   useEffect(() => {
     const approveRequest = async () => {
       try {
-        const response = await fetch(`https://smartschool-project-node.onrender.com/api/admin-requests/approve/${token}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin-requests/approve/${token}`);
         const data = await response.json();
 
         if (response.ok) {

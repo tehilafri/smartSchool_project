@@ -8,7 +8,7 @@ function App() {
   return (
     <Provider store={store}>
       <div className="App">
-        {console.log("https://smartschool-project-node.onrender.com")}
+        {/* {console.log("https://smartschool-project-node.onrender.com")} */}
         <Router />
         <ErrorNotification />
       </div>
