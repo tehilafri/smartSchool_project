@@ -30,7 +30,13 @@ const PORT = process.env.PORT ;
 connectDB();
 
 // הגדרת מדיניות CORS מותאמת
-server.use(cors(corsOptions));
+// server.use(cors(corsOptions));
+server.use(cors({
+    origin: '*', // מאפשר גישה מכל דומיין
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    optionsSuccessStatus: 204
+}));
 
 // תמיכה בפריסת JSON בבקשות
 server.use(express.json());
