@@ -263,7 +263,8 @@ const AdminDashboard = ({ onLogout }) => {
         startTime: formData.startTime || '',
         endTime: formData.endTime || '',
         classes: formData.classes || [],
-        schoolId: me?.schoolId?._id
+        schoolId: me?.schoolId?._id,
+        mode: modalData ? 'edit' : 'add'
       };
       
       const response = await reviewEventAI(eventData);

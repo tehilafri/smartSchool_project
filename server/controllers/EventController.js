@@ -8,7 +8,7 @@ import axios from "axios";
 
 export const reviewEventAI = async (req, res) => {
   try {
-    const { type, date, startTime, endTime, classes, subject } = req.body;
+    const { type, date, startTime, endTime, classes, subject, mode } = req.body;
     const schoolId = req.schoolId;
 
     // קריאה ל-FastAPI שמבצע את ניתוח ה-AI
@@ -20,6 +20,7 @@ export const reviewEventAI = async (req, res) => {
       classes,
       subject,
       schoolId,
+      mode,
     });
 
     const recommendations = aiResponse.data.recommendations;

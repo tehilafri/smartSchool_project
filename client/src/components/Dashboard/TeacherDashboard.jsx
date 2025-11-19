@@ -459,7 +459,8 @@ const TeacherDashboard = ({ onLogout }) => {
           classes: me?.classes?.map(cls => cls.name) || [],
           isHomeroom: me?.ishomeroom || false
         },
-        requestType: 'exam_suggestions'
+        requestType: 'exam_suggestions',
+        mode: editingExam ? 'edit' : 'add'
       };
       
       const response = await reviewEventAI(eventData);

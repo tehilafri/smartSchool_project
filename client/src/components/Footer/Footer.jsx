@@ -105,7 +105,7 @@ const Footer = () => {
                   className="btn btn-primary newsletter-btn"
                   disabled={loading}
                 >
-                  {loading ? 'מרשם...' : 'הרשמה'}
+                  {loading ? 'נרשם...' : 'הרשמה'}
                 </button>
               </form>
               {message && (
