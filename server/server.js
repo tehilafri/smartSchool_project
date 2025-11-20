@@ -51,8 +51,8 @@ const __dirname = path.dirname(__filename);
 server.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // מסלול ראשי בסיסי
-server.get("/", (req, res) => {
-  res.send("Welcome to the main page");
+server.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
 server.use('/api/users', UserRouter);
