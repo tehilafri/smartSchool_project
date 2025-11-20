@@ -26,15 +26,17 @@ export const sendEmail = async (options) => {
 
     // יוצרים את ה‑transporter של nodemailer
     const transporter = nodemailer.createTransport({
-      service: "gmail",
-      family: 4,
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // חובה להיות false בפורט 587
+      requireTLS: true, // מכריח הצפנה
       auth: {
         type: "OAuth2",
         user: process.env.EMAIL_USER,
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-        accessToken,
+        accessToken, // הטוקן ששלפת
       },
     });
 
