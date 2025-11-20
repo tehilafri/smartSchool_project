@@ -267,7 +267,7 @@ export async function handleTeacherAbsences({ teacherId, date, startTime, endTim
         });
 
         // --- כאן יוצרים את הקישור ל-Google Form ---
-        const appBase = process.env.APP_BASE_URL || "http://localhost:3000"; // חובה לשים URL ציבורי אם רוצים לגשת חיצונית (ngrok/heroku וכו')
+        const appBase = process.env.VITE_API_URL || "http://localhost:3000"; // חובה לשים URL ציבורי אם רוצים לגשת חיצונית (ngrok/heroku וכו')
         const formBaseUrl = `${appBase}/form`; // ראוט חדש בשרת שמטפל בבדיקה/הפניה
         const formLink = `${formBaseUrl}?absenceCode=${encodeURIComponent(absenceCode)}`;
         absence.formLink = formLink;
