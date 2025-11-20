@@ -1,60 +1,52 @@
-import nodemailer from "nodemailer";
 import { google } from "googleapis";
+import nodemailer from "nodemailer"; // נשאר רק בשביל יצירת MIME, לא בשביל SMTP
+import MailComposer from "nodemailer/lib/mail-composer/index.js";
 
-export const sendEmail = async (options) => {
-  const { to, subject, text, html } = options;
+export const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    // יוצרים את ה‑OAuth2Client בתוך הפונקציה
     const oAuth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI || "https://developers.google.com/oauthplayground"
+      process.env.GOOGLE_REDIRECT_URI
     );
 
-    // מגדירים את ה‑refresh token
     oAuth2Client.setCredentials({
       refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
     });
 
-    // שולפים את ה‑access token
-    const at = await oAuth2Client.getAccessToken();
-    const accessToken = typeof at === "string" ? at : at?.token;
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-    if (!accessToken) {
-      throw new Error("Failed to get access token from OAuth2 client");
-    }
-
-    // יוצרים את ה‑transporter של nodemailer
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // חובה להיות false בפורט 587
-      requireTLS: true, // מכריח הצפנה
-      auth: {
-        type: "OAuth2",
-        user: process.env.EMAIL_USER,
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-        accessToken, // הטוקן ששלפת
-      },
-    });
-
-    // מגדירים את המייל
-    const mailOptions = {
+    // נבנה MIME באמצעות nodemailer (לא שולחים דרכו)
+    const mail = new MailComposer({
       from: process.env.EMAIL_USER,
       to,
       subject,
+      html,
       text,
-      html
-    };
+    });
 
-    // שולחים את המייל
-    const info = await transporter.sendMail(mailOptions);
-    return info;
+    const mimeMessage = await mail.compile().build();
+
+    // המרה ל־base64 תקין לפי דרישות Google
+    const encodedMessage = Buffer
+      .from(mimeMessage)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    // שליחה לגוגל API
+    const response = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: {
+        raw: encodedMessage,
+      },
+    });
+
+    return response.data;
+
   } catch (err) {
-    console.error("Error sending email:", err);
+    console.error("Error sending email via Gmail API:", err);
     throw err;
   }
 };
-
