@@ -222,7 +222,7 @@ export function startCheckJob() {
         const teacherEmail = request.originalTeacherId?.email;
         if (teacherEmail) {
           const subject = `ממלא/ת מקום חדש/ה לבקשה: ${absenceCode}`;
-          const appBase = process.env.APP_BASE_URL || "http://localhost:1000";
+          const appBase = process.env.APP_BASE_URL || "http://localhost:3000";
           const approveUrl = `${appBase}/api/substitute-requests/approve-email/${absenceCode}?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&email=${encodeURIComponent(email || "")}&phone=${encodeURIComponent(phone || "")}&identityNumber=${encodeURIComponent(idNumber || "")}&notes=${encodeURIComponent(notes || "")}`;
           
           const html = `
