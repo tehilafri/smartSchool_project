@@ -27,6 +27,7 @@ export const sendEmail = async (options) => {
     // יוצרים את ה‑transporter של nodemailer
     const transporter = nodemailer.createTransport({
       service: "gmail",
+      family: 4,
       auth: {
         type: "OAuth2",
         user: process.env.EMAIL_USER,
