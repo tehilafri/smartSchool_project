@@ -20,12 +20,12 @@ export const resetPastSubstitutes = async () => {// רץ כל שעה ומחזי�
 
     const schedules = await Schedule.find({
     $or: [
-      { 'weekPlan.sunday.replacementDate': { $exists: true, $ne: null } },
-      { 'weekPlan.monday.replacementDate': { $exists: true, $ne: null } },
-      { 'weekPlan.tuesday.replacementDate': { $exists: true, $ne: null } },
-      { 'weekPlan.wednesday.replacementDate': { $exists: true, $ne: null } },
-      { 'weekPlan.thursday.replacementDate': { $exists: true, $ne: null } },
-      { 'weekPlan.friday.replacementDate': { $exists: true, $ne: null } }
+      { 'weekPlan.sunday': { $elemMatch: { replacementDate: { $exists: true, $ne: null } } } },
+      { 'weekPlan.monday': { $elemMatch: { replacementDate: { $exists: true, $ne: null } } } },
+      { 'weekPlan.tuesday': { $elemMatch: { replacementDate: { $exists: true, $ne: null } } } },
+      { 'weekPlan.wednesday': { $elemMatch: { replacementDate: { $exists: true, $ne: null } } } },
+      { 'weekPlan.thursday': { $elemMatch: { replacementDate: { $exists: true, $ne: null } } } },
+      { 'weekPlan.friday': { $elemMatch: { replacementDate: { $exists: true, $ne: null } } } }
     ]
   });
 
