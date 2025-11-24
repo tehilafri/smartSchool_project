@@ -382,7 +382,8 @@ export const getScheduleByTeacher = async (req, res) => {
             endTime: lesson.endTime,
             lessonNumber: lesson.lessonNumber,
             status: lesson.status,
-            substitute: lesson.substitute
+            substitute: lesson.substitute,
+            replacementDate: lesson.replacementDate || null
           }));
 
         // מוסיפים את השיעורים לאותו יום

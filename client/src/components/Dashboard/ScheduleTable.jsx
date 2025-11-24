@@ -327,6 +327,11 @@ export const TeacherScheduleView = ({
                     });
                     
                     const hasEvents = teacherEvents.length > 0;
+                    const replacementDate = lesson?.replacementDate ? new Date(lesson.replacementDate) : null;
+                    if (replacementDate)
+                      replacementDate.setHours(0, 0, 0, 0);
+
+                    const isReplacementThisWeek = replacementDate && replacementDate >= startOfWeek && replacementDate <= endOfWeek;
                     
                     return (
                       <td key={day} className={`class-slot ${hasLesson ? "" : "empty"} ${hasEvents ? "has-events" : ""}`}>
@@ -334,7 +339,7 @@ export const TeacherScheduleView = ({
                           <>
                             <strong>{lesson.subject}</strong><br/>
                             <small>
-                              {lesson.substitute && (
+                              {lesson.substitute && isReplacementThisWeek && (
                                 <div style={{color: '#f6ad55'}}>
                                   <SubstituteDisplay substituteId={lesson.substitute} />
                                 </div>
