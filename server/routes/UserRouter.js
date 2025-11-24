@@ -17,12 +17,6 @@ import { jwtMiddleware, requireRole } from '../Middlewares.js';
 import User from '../models/User.js';
 
 const router = express.Router();
-//
-//
-//חשוב מאד!!!
-//עדיין לא עשינו אופציה של הוספה של מנהלת בצורה נכונה וחכמה...
-//
-//
 
 // --- Auth routes (לא צריכים middleware) ---
 router.post('/register', jwtMiddleware, requireRole('admin', 'secretary'), register);
