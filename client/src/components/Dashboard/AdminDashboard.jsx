@@ -213,7 +213,7 @@ const AdminDashboard = ({ onLogout }) => {
     fetchAllData();
   };
 
-  // עדכון מחנכת לכיתה
+  // עדכון מחנכ/ת לכיתה
   const handleUpdateHomeroomTeacher = async (className, teacherId) => {
     await updateHomeroomTeacher({ className, teacherId });
     closeModal();
@@ -492,7 +492,7 @@ const AdminDashboard = ({ onLogout }) => {
             </div>
           </div>
           <input type="text" 
-          placeholder="ת''ז מחנכת"
+          placeholder="ת''ז מחנכ/ת"
           value={formData.homeroomTeacher || ""}
           onChange={e => setFormData({ ...formData, homeroomTeacher: e.target.value })}
           required
@@ -743,8 +743,8 @@ const AdminDashboard = ({ onLogout }) => {
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "teachers", label: "ניהול מורות", icon: "👩‍🏫" },
-    { id: "secretaries", label: "ניהול מזכירות", icon: "👩‍💼" },
+    { id: "teachers", label: "ניהול מורים/ות", icon: "👩‍🏫" },
+    { id: "secretaries", label: "ניהול מזכירים/ות", icon: "👩‍💼" },
     { id: "students", label: "ניהול תלמידים", icon: "👨‍🎓" },
     { id: "classes", label: "ניהול כיתות", icon: "🏫" },
     { id: "schedule", label: "מערכת שעות", icon: "📅" },
@@ -837,14 +837,14 @@ const AdminDashboard = ({ onLogout }) => {
                 <div className="stat-icon">👩‍🏫</div>
                 <div className="stat-info">
                   <h3>{teachers.length}</h3>
-                  <p>מורות</p>
+                  <p>מורים/ות</p>
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-icon">👩‍💼</div>
                 <div className="stat-info">
                   <h3>{secretaries.length}</h3>
-                  <p>מזכירות</p>
+                  <p>מזכירים/ות</p>
                 </div>
               </div>
               <div className="stat-card">
@@ -885,7 +885,7 @@ const AdminDashboard = ({ onLogout }) => {
         return (
           <div className="dashboard-content">
             <div className="section-header">
-              <h2>ניהול מורות</h2>
+              <h2>ניהול מורים/ות</h2>
               <button className="btn btn-primary" onClick={() => navigate("/register_user?role=teacher")}>
                 הוסף מורה
               </button>
@@ -928,9 +928,9 @@ const AdminDashboard = ({ onLogout }) => {
         return (
           <div className="dashboard-content">
             <div className="section-header">
-              <h2>ניהול מזכירות</h2>
+              <h2>ניהול מזכירים/ות</h2>
               <button className="btn btn-primary" onClick={() => navigate("/register_user?role=secretary")}>
-                הוסף מזכירה
+                הוסף מזכיר/ה
               </button>
             </div>
             <div className="data-table">
@@ -1016,7 +1016,7 @@ const AdminDashboard = ({ onLogout }) => {
                 <div className="class-card" key={cls._id}>
                   <h3>{cls.name}</h3>
                   <p>
-                    <strong>מחנכת:</strong>{" "}
+                    <strong>מחנכ/ת:</strong>{" "}
                     {cls.homeroomTeacher
                       ? `${cls.homeroomTeacher.firstName} ${cls.homeroomTeacher.lastName}`
                       : "-"}
@@ -1026,11 +1026,11 @@ const AdminDashboard = ({ onLogout }) => {
                     {cls.students ? cls.students.length : 0}
                   </p>
 
-                  {/* עדכון מחנכת */}
+                  {/* עדכון מחנכ/ת */}
                   <div className="form-inline">
                     <input
                       type="text"
-                      placeholder="ת״ז מחנכת חדשה לשינוי"
+                      placeholder="ת״ז מחנכ/ת חדש/ה לשינוי"
                       value={formData[cls._id]?.homeroomTeacher || ""}
                       onChange={(e) =>
                         setFormData({
@@ -1295,7 +1295,7 @@ const AdminDashboard = ({ onLogout }) => {
                 <p><strong>שעות:</strong> {hoursStr}</p>
                 <p><strong>סיבה:</strong> {absence.reason || "-"}</p>
                 <p><strong>כיתה מושפעת:</strong> {className}</p>
-                <p><strong>מחליף:</strong> {substituteName}</p>
+                <p><strong>מחליפ/ה:</strong> {substituteName}</p>
                 {absence.notes && <p><strong>הערות נוספות:</strong> {absence.notes}</p>}
               </div>
             </div>
@@ -1408,10 +1408,10 @@ const AdminDashboard = ({ onLogout }) => {
         <div className="modal-content" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <h3>
-              {modalType === "addTeacher" && "הוספת מורה חדשה"}
+              {modalType === "addTeacher" && "הוספת מורה חדש/ה"}
               {modalType === "editTeacher" && "עריכת מורה"}
-              {modalType === "addSecretary" && "הוספת מזכירה חדשה"}
-              {modalType === "editSecretary" && "עריכת מזכירה"}
+              {modalType === "addSecretary" && "הוספת מזכיר/ה חדש/ה"}
+              {modalType === "editSecretary" && "עריכת מזכיר/ה"}
               {modalType === "addStudent" && "הוספת תלמיד חדש"}
               {modalType === "editStudent" && "עריכת תלמיד"}
               {modalType === "addClass" && "הוספת כיתה חדשה"}
@@ -1463,7 +1463,7 @@ const AdminDashboard = ({ onLogout }) => {
       <div className="dashboard-sidebar">
         <div className="sidebar-header" style={{marginTop: 70}}>
           <h2>Smart School</h2>
-          <p>פאנל מנהלת</p>
+          <p>פאנל מנהל/ת</p>
         </div>
         <nav className="sidebar-nav">
           {menuItems.map((item) => (

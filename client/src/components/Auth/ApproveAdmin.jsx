@@ -54,7 +54,7 @@ const ApproveAdmin = () => {
         <div className="auth-card">
           <div className="success-message">
             <h2>✅ הבקשה אושרה בהצלחה!</h2>
-            <p>המנהלת קיבלה מייל עם פרטי ההתחברות למערכת.</p>
+            <p>נשלח מייל למנהל/ת עם פרטי ההתחברות למערכת.</p>
             <button 
               className="btn btn-primary" 
               onClick={() => navigate("/")}

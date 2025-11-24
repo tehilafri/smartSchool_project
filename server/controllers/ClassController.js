@@ -51,7 +51,7 @@ export const createClass = async (req, res) => {
     });
     await newClass.save();
 
-    // עדכון המחנכת
+    // עדכון המחנכ/ת
     if (!teacher.classes.includes(newClass._id)) {
       teacher.classes.push(newClass._id);
       await teacher.save();

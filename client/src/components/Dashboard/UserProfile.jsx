@@ -75,7 +75,7 @@ const UserProfile = ({ user, onClose, onUserUpdate }) => {
   const getRoleInHebrew = (role) => {
     const roles = {
       'admin': 'מנהל',
-      'secretary': 'מזכירה',
+      'secretary': 'מזכיר/ה',
       'teacher': 'מורה',
       'student': 'תלמיד'
     };

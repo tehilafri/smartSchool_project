@@ -440,7 +440,7 @@ const SubstituteDisplay = ({ substituteId }) => {
   }, [substituteId]);
 
   return (
-    <span style={{color: '#f6ad55'}}>ממלא מקום: {substituteName}</span>
+    <span style={{color: '#f6ad55'}}>מילוי מקום: {substituteName}</span>
   );
 };
 

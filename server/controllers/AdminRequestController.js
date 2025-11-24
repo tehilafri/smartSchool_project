@@ -42,7 +42,7 @@ export const submitAdminRequest = async (req, res) => {
 
     await adminRequest.save({ session });
 
-    // שליחת מייל למנהלת
+    // שליחת מייל למנהל
     await sendEmail({
       to: email,
       subject: 'בקשתך נשלחה בהצלחה - Smart School',
@@ -61,11 +61,11 @@ export const submitAdminRequest = async (req, res) => {
     const approvalLink = `${process.env.FRONTEND_URL}/approve-admin/${approvalToken}`;
     await sendEmail({
       to: process.env.EMAIL_USER,
-      subject: 'בקשת מנהלת חדשה - Smart School',
+      subject: 'בקשת מנהל/ת חדש/ה - Smart School',
       html: `
         <div dir="rtl">
-          <h2>מנהלת חדשה בשם: ${firstName} ${lastName}</h2>
-          <p>מעוניינת ליצור בית ספר חדש.</p>
+          <h2>משתמש חדש בשם: ${firstName} ${lastName}</h2>
+          <p>מעוניין ליצור בית ספר חדש במערכת.</p>
           <br>
           <p><strong>פרטים:</strong></p>
           <ul>

@@ -11,7 +11,7 @@ export const fetchTeachers = createAsyncThunk(
       const response = await getAllTeachers();
       return response.data || [];
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'שגיאה בטעינת מורות');
+      return rejectWithValue(error.response?.data?.message || 'שגיאה בטעינת מורים');
     }
   }
 );

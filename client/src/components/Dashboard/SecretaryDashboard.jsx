@@ -209,7 +209,7 @@ const SecretaryDashboard = ({ onLogout }) => {
 
   const menuItems = [
     { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "teachers", label: "ניהול מורות", icon: "👩🏫" },
+    { id: "teachers", label: "ניהול מורים/ות", icon: "👩🏫" },
     { id: "students", label: "ניהול תלמידים", icon: "👨" },
     { id: "events", label: "ניהול אירועים", icon: "🎉" },
     { id: "classes", label: "ניהול כיתות", icon: "🏫" },
@@ -496,7 +496,7 @@ const SecretaryDashboard = ({ onLogout }) => {
                 <div className="stat-icon">👩🏫</div>
                 <div className="stat-info">
                   <h3>{teachers?.length || 0}</h3>
-                  <p>מורות</p>
+                  <p>מורים/ות</p>
                 </div>
               </div>
               <div className="stat-card">
@@ -550,7 +550,7 @@ const SecretaryDashboard = ({ onLogout }) => {
           ) : (
             <div className="dashboard-content">
               <div className="section-header">
-                <h2>ניהול מורות</h2>
+                <h2>ניהול מורים/ות</h2>
                 <button className="btn btn-primary" onClick={() => navigate("/register_user?role=teacher")}>הוסף מורה</button> {/* <-- added */}
               </div>
               <div className="data-table">
@@ -743,7 +743,7 @@ const SecretaryDashboard = ({ onLogout }) => {
                   <div className="class-card" key={cls._id}>
                     <h3>{cls.name}</h3>
                     <p>
-                      <strong>מחנכת:</strong>{" "}
+                      <strong>מחנכ/ת:</strong>{" "}
                       {cls.homeroomTeacher
                         ? `${cls.homeroomTeacher.firstName} ${cls.homeroomTeacher.lastName}`
                         : "-"}
@@ -753,11 +753,11 @@ const SecretaryDashboard = ({ onLogout }) => {
                       {cls.students ? cls.students.length : 0}
                     </p>
 
-                    {/* עדכון מחנכת */}
+                    {/* עדכון מחנכ/ת */}
                     <div className="form-inline">
                       <input
                         type="text"
-                        placeholder="ת״ז מחנכת חדשה לשינוי"
+                        placeholder="ת״ז מחנכ/ת חדש/ה לשינוי"
                         value={formData[cls._id]?.homeroomTeacher || ""}
                         onChange={(e) =>
                           setFormData({
@@ -1019,7 +1019,7 @@ const SecretaryDashboard = ({ onLogout }) => {
                 </div>
                 <input
                   type="text"
-                  placeholder="ת'ז מחנכת"
+                  placeholder="ת'ז מחנכ/ת"
                   value={formData.homeroomTeacher || ""}
                   onChange={e => setFormData({ ...formData, homeroomTeacher: e.target.value })}
                   required
@@ -1248,7 +1248,7 @@ const SecretaryDashboard = ({ onLogout }) => {
       <div className="dashboard-sidebar">
         <div className="sidebar-header" style={{marginTop: 70}}>
           <h2>Smart School</h2>
-          <p>פאנל מזכירה</p>
+          <p>פאנל מזכיר/ה</p>
         </div>
         <nav className="sidebar-nav">
           {menuItems.map(item => (

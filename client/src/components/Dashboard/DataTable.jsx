@@ -195,7 +195,7 @@ const DataTable = ({
       {data.map((cls) => (
         <div className="class-card" key={cls._id}>
           <h3>{cls.name}</h3>
-          <p><strong>מחנכת:</strong> {cls.homeroomTeacher ? `${cls.homeroomTeacher.firstName} ${cls.homeroomTeacher.lastName}` : "-"}</p>
+          <p><strong>מחנכ/ת:</strong> {cls.homeroomTeacher ? `${cls.homeroomTeacher.firstName} ${cls.homeroomTeacher.lastName}` : "-"}</p>
           <p><strong>מספר תלמידים:</strong> {cls.students ? cls.students.length : 0}</p>
           <div className="class-actions">
             <button className="btn-small btn-info" onClick={() => onExpandClass(cls._id)}>פרטים</button>
@@ -253,7 +253,7 @@ const DataTable = ({
 
   const getTitle = () => {
     switch (type) {
-      case 'teachers': return 'ניהול מורות';
+      case 'teachers': return 'ניהול מורים/ות';
       case 'students': return 'ניהול תלמידים';
       case 'events': return 'ניהול אירועים';
       case 'classes': return 'ניהול כיתות';

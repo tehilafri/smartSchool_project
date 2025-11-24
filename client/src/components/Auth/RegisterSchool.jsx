@@ -103,7 +103,7 @@ const RegisterSchool = ({ onRegister }) => {
           </div>
 
           <div className="form-group">
-            <label>ת"ז מנהלת</label>
+            <label>ת"ז מנהל/ת</label>
             <input type="text" name="principalId" value={formData.principalId} onChange={handleChange} required />
           </div>
 

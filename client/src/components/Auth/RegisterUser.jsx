@@ -100,7 +100,7 @@ const RegisterUser = () => {
     const roleNames = {
       teacher: 'מורה',
       student: 'תלמיד',
-      secretary: 'מזכירה',
+      secretary: 'מזכיר/ה',
       admin: 'מנהל'
     };
     return roleNames[role] || 'משתמש';
@@ -251,7 +251,7 @@ const RegisterUser = () => {
                 <option value="">בחר תפקיד</option>
                 <option value="student">תלמיד</option>
                 <option value="teacher">מורה</option>
-                <option value="secretary">מזכירה</option>
+                <option value="secretary">מזכיר/ה</option>
                 <option value="admin">מנהל</option>
               </select>
             </div>

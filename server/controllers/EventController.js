@@ -68,12 +68,12 @@ export const addEvent = async (req, res) => {
     if (type === 'trip' || type === 'activity') 
 {
   if (req.role !== 'admin' && req.role !== 'secretary')
-    return res.status(403).json({ message: 'רק מנהלת או מזכירה יכולה ליצור אירועים כאלה' });
+    return res.status(403).json({ message: 'רק משתמש בתפקיד מנהל/מזכיר יכול ליצור אירועים כאלו' });
 }
     else if (type === 'exam')
       {
         if (req.role !== 'teacher')
-          return res.status(403).json({ message: 'רק מורה יכולה ליצור אירועים כאלה' });
+          return res.status(403).json({ message: 'רק מורה יכול ליצור אירועים כאלה' });
         if(!req.body.subject)
           return res.status(400).json({ message: 'Missing subject for exam event' });
         

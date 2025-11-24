@@ -132,7 +132,7 @@ const StudentDashboard = ({ onLogout }) => {
                 <div className="student-details">
                   <h3>{studentInfo.firstName} {studentInfo.lastName}</h3>
                   <p>כיתה {studentInfo.classes[0]?.name} - תעודת זהות: {studentInfo.userId}</p>
-                  <p>מחנכת: {studentInfo.classes[0]?.homeroomTeacher?.firstName} {studentInfo.classes[0]?.homeroomTeacher?.lastName}</p>
+                  <p>מחנכ/ת: {studentInfo.classes[0]?.homeroomTeacher?.firstName} {studentInfo.classes[0]?.homeroomTeacher?.lastName}</p>
                 </div>
               </div>
             )}

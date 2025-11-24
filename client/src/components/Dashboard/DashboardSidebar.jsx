@@ -9,9 +9,9 @@ const DashboardSidebar = ({
 }) => {
   const getRoleTitle = () => {
     switch (userRole) {
-      case 'admin': return 'פאנל מנהלת';
+      case 'admin': return 'פאנל מנהל/ת';
       case 'teacher': return 'פאנל מורה';
-      case 'secretary': return 'פאנל מזכירה';
+      case 'secretary': return 'פאנל מזכיר/ה';
       case 'student': return 'פאנל תלמיד';
       default: return 'פאנל משתמש';
     }

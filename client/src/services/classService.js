@@ -12,7 +12,7 @@ export const getAllClasses = async () => {
   return response.data;
 };
 
-// עדכון מחנכת של כיתה
+// עדכון מחנכ/ת של כיתה
 export const updateHomeroomTeacher = async (data) => {
   const response = await api.put(`/classes/updateHomeroomTeacher/${data.className}`, { teacherId: data.teacherId });
   return response.data;

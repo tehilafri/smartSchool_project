@@ -276,7 +276,7 @@ const TeacherDashboard = ({ onLogout }) => {
 
 
 
-  // טעינת מערכת הכיתה למחנכת
+  // טעינת מערכת הכיתה למחנכ/ת
   const loadClassSchedule = async () => {
     if (!me?.ishomeroom) return;
     
@@ -1030,7 +1030,7 @@ const renderScheduleTable = () => {
                 
                 {exams.othersExams && exams.othersExams.length > 0 && (
                   <div className="exams-section">
-                    <h3>מבחנים של מורות אחרות בכיתתך</h3>
+                    <h3>מבחנים של מורים/ות אחרים/ות בכיתתך</h3>
                     <div className="exams-grid">
                       {exams.othersExams
                         .sort((a, b) => {
@@ -1243,7 +1243,7 @@ function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGet
   const teacherClasses = me?.classes || [];
   const teacherSubjects = me?.subjects || [];
   
-  // שליפת מקצועות ממערכת הכיתה למחנכת
+  // שליפת מקצועות ממערכת הכיתה למחנכ/ת
   useEffect(() => {
     if (me?.ishomeroom) {
       const fetchClassScheduleSubjects = async () => {
@@ -1397,7 +1397,7 @@ function ExamForm({ onSubmit, onCancel, showNotification, me, editingExam, onGet
             ))}
             {me?.ishomeroom && classScheduleSubjects.length > 0 && (
               <>
-                <optgroup label="מקצועות של מורות מקצועיות בכיתת החינוך">
+                <optgroup label="מקצועות של מורים מקצועיים בכיתת החינוך">
                   {classScheduleSubjects.filter(subj => !teacherSubjects.includes(subj)).map(subj => (
                     <option key={subj} value={subj}>{subj}</option>
                   ))}

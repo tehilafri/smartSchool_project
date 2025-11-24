@@ -28,7 +28,7 @@ const ScheduleSection = ({
           className={`tab-button ${activeTab === 'teachers' ? 'active' : ''}`}
           onClick={() => setActiveTab('teachers')}
         >
-          מערכת מורות
+          מערכת מורים/ות
         </button>
         <button 
           className={`tab-button ${activeTab === 'classes' ? 'active' : ''}`}
