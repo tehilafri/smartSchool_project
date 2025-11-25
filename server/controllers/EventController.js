@@ -249,8 +249,8 @@ export const updateEvent = async (req, res) => {
     Object.assign(event, updateData);
     await event.save();
 
-    // זימון הלוגיקה העסקית לאחר עדכון
-    await EventService.applyEventImpact(event);
+    // כאן מזמנים את הלוגיקה העסקית - כרגע זה לא משפיע על התצוגה לכן לא קריטי
+    // await EventService.applyEventImpact(event);
     // await EventService.sendNotifications(event);
 
     res.json({ message: 'Event updated', event });
