@@ -15,7 +15,7 @@ console.log("HEX:", api.defaults.baseURL.split("").map(c => c.charCodeAt(0)));
 console.log("JSON:", JSON.stringify(api.defaults.baseURL));
 
 // כאן אנחנו מוסיפים את הטוקן אוטומטית לכל בקשה
-// ✅ כאן מוסיפים את ה-interceptor לתיקון הבעיה
+//  כאן מוסיפים את ה-interceptor לתיקון הבעיה
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   // אל תשלחי Authorization אם זו בקשת login

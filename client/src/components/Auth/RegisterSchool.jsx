@@ -69,7 +69,7 @@ const RegisterSchool = ({ onRegister }) => {
       }
 
       const result = await createSchool(form);
-      console.log("✅ School created:", result)
+      console.log("School created:", result)
 
       setMessage("✅ בית הספר נרשם בהצלחה!\nהתחבר באמצעות הפרטים שנשלחים אליך כרגע במייל");
       setIsError(false)
@@ -78,7 +78,7 @@ const RegisterSchool = ({ onRegister }) => {
         onRegister("principal");
       }
     } catch (err) {
-      console.error("❌ Error creating school:", err);
+      console.error("Error creating school:", err);
       let msg = "קרתה שגיאה ביצירת בית הספר";
       if (err?.response?.data?.message) {
         msg = err.response.data.message;
