@@ -242,7 +242,7 @@ export const getNextLessonForStudent = async (req, res) => {
     const schedule = await Schedule.findOne({ classId: classDoc._id, schoolId: req.schoolId });
     if (!schedule) return res.status(404).json({ error: "מערכת השיעורים לא קיימת" });
 
-    const now = new Date();
+    const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
     const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
     const todayDay = daysOfWeek[now.getDay()]; // היום בשבוע
 
@@ -252,7 +252,7 @@ export const getNextLessonForStudent = async (req, res) => {
     for (const lesson of lessons) {
       if (!lesson.subject || !lesson.startTime) continue; // דילוג על שיעורים ריקים
       const [hour, minute] = lesson.startTime.split(':').map(Number);
-      const lessonDate = new Date();
+      const lessonDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
       lessonDate.setHours(hour, minute, 0, 0);
 
       if (lessonDate >= now) {
@@ -291,7 +291,7 @@ export const getNextLessonForTeacher = async (req, res) => {
     if (!schedules || schedules.length === 0)
       return res.json({});
 
-    const now = new Date();
+    const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
     const daysOfWeek = ['sunday','monday','tuesday','wednesday','thursday','friday'];
     const todayDay = daysOfWeek[now.getDay()];
 
@@ -304,7 +304,7 @@ export const getNextLessonForTeacher = async (req, res) => {
         if (!lesson.teacherId.equals(teacher._id)) continue;
 
         const [hour, minute] = lesson.startTime.split(':').map(Number);
-        const lessonDate = new Date();
+        const lessonDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
         lessonDate.setHours(hour, minute, 0, 0);
 
         if (lessonDate >= now) {
