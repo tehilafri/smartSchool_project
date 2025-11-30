@@ -5,6 +5,14 @@ import { generateCode } from '../utils/generatedCode.js';
 import { sendEmail } from '../utils/email.js';
 import bcrypt from 'bcrypt';
 import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+
+// הגדרת Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 export const createSchool = async (req, res) => {
   try {
@@ -30,11 +38,8 @@ export const createSchool = async (req, res) => {
     // טיפול בתמונה
     let imageUrl = '';
     if (req.file) {
-    // בונה URL מלא על בסיס הבקשה בפועל
-    const protocol = req.protocol; // ייתן 'http'
-    const host = req.get('host');  // ייתן 'localhost:1000'
-    imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
-
+      const result = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = result.secure_url;
     } 
 
     let { minGrade, maxGrade } = req.body;   // המרה לערכים תקינים: ריקות -> null
@@ -127,9 +132,7 @@ export const getSchoolById = async (req, res) => {
     const { id } = req.params;
     const school = await School.findOne({ schoolCode: id });
     if (!school) return res.status(404).json({ message: 'School not found' });
-    if (school && school.imageUrl && school.imageUrl.startsWith('/uploads/')) {
-      school.imageUrl = `${req.protocol}://${req.get('host')}${school.imageUrl}`;
-    }
+    // לא צריך לשנות URL כי Cloudinary מחזיר URL מלא
 
     res.json(school);
   } catch (err) {
