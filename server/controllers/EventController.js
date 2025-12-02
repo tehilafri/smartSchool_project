@@ -6,26 +6,49 @@ import User from '../models/User.js';
 import { markRowsProcessedByAbsenceCode } from '../utils/googleSheets.js';
 import axios from "axios";
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const reviewEventAI = async (req, res) => {
   try {
     const { type, date, startTime, endTime, classes, subject, mode } = req.body;
     const schoolId = req.schoolId;
 
-    // קריאה ל-FastAPI שמבצע את ניתוח ה-AI
-    const aiResponse = await axios.post("https://smartschool-project-python-yv6i.onrender.com/analyze_event", {
-      type,
-      date,
-      startTime,
-      endTime,
-      classes,
-      subject,
-      schoolId,
-      mode,
-    });
+    console.log('>>> analyze_event CALLED');
 
-    const recommendations = aiResponse.data.recommendations;
+    // Retry logic for 429 errors
+    let retries = 3;
+    let delay = 2000; // Start with 2 seconds
 
-    res.status(200).json({ recommendations });
+    for (let i = 0; i < retries; i++) {
+      try {
+        // קריאה ל-FastAPI שמבצע את ניתוח ה-AI
+        const aiResponse = await axios.post("https://smartschool-project-python-yv6i.onrender.com/analyze_event", {
+          type,
+          date,
+          startTime,
+          endTime,
+          classes,
+          subject,
+          schoolId,
+          mode,
+        });
+
+        const recommendations = aiResponse.data.recommendations;
+        return res.status(200).json({ recommendations });
+      } catch (err) {
+        console.log(`>>> Attempt ${i + 1} failed:`, err.response?.status);
+        
+        if (err.response?.status === 429 && i < retries - 1) {
+          console.log(`>>> Waiting ${delay}ms before retry...`);
+          await sleep(delay);
+          delay *= 2; // Exponential backoff
+          continue;
+        }
+        
+        // If it's not 429 or we're out of retries, throw the error
+        throw err;
+      }
+    }
   } catch (err) {
     console.error("AI review error:", err);
     res.status(500).json({ message: "AI review failed", error: err.message });
