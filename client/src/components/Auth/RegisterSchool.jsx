@@ -52,6 +52,14 @@ const RegisterSchool = ({ onRegister }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // בדיקת גודל קובץ
+    if (logo && logo.size > 10 * 1024 * 1024) { // 10MB
+      setMessage("❌ הקובץ גדול מדי. גודל מקסימלי: 10MB");
+      setIsError(true);
+      return;
+    }
+    
     try {
       const form = new FormData();
       form.append("name", formData.schoolName);
