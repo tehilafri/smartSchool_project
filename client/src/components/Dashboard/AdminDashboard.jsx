@@ -251,7 +251,13 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   const handleGetEventAISuggestions = async () => {
+    if (loadingAI) {
+      console.log('>>> AI Request blocked - already running');
+      return;
+    }
+    
     try {
+      console.log('>>> AI Request Started');
       setLoadingAI(true);
       setModalType("aiEventSuggestions");
       
@@ -267,7 +273,9 @@ const AdminDashboard = ({ onLogout }) => {
         mode: modalData ? 'edit' : 'add'
       };
       
+      console.log('>>> Sending eventData:', eventData);
       const response = await reviewEventAI(eventData);
+      console.log('>>> AI Response received');
       setAiSuggestions(response.recommendations || 'לא התקבלו הצעות');
     } catch (err) {
       console.error('AI suggestions error:', err);
