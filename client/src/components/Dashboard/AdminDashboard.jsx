@@ -245,6 +245,8 @@ const AdminDashboard = ({ onLogout }) => {
       const newEvent = await addEvent(formData);
       dispatch(addEventToStore(newEvent));
       closeModal();
+      // רענון הנתונים כדי להבטיח סינכרון
+      await dispatch(fetchEvents());
     } catch (err) {
       console.error('Error adding event:', err);
     }
@@ -291,6 +293,8 @@ const AdminDashboard = ({ onLogout }) => {
       const updatedEvent = await updateEvent(id, formData);
       dispatch(updateEventInStore({ _id: id, ...formData }));
       closeModal();
+      // רענון הנתונים כדי להבטיח סינכרון
+      await dispatch(fetchEvents());
     } catch (err) {
       console.error('Error updating event:', err);
     }
