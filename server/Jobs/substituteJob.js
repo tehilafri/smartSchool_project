@@ -127,6 +127,19 @@ export const checkPendingSubstituteRequests = async () => {
   const pendingRequests = await SubstituteRequest.find({ status: 'pending', checked: false });
 
   for (const request of pendingRequests) {
+    // בדיקה שהתאריך לא עבר
+    const requestDate = new Date(request.date);
+    requestDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (requestDate < today) {
+      // התאריך עבר - מסמנים כ-checked כדי לא לטפל בזה שוב
+      request.checked = true;
+      await request.save();
+      continue;
+    }
+    
     const weekBefore = new Date(request.date);
     weekBefore.setDate(weekBefore.getDate() - 7);
    
