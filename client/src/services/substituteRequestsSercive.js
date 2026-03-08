@@ -2,7 +2,7 @@ import api from './api';
 
 // דיווח חיסור
 export const reportAbsence = async (absenceData) => {
-  const response = await api.post('/substitute-requests/report', absenceData);
+  const response = await api.post('/substitute-requests/report', absenceData, { skipErrorInterceptor: true });
   return response.data;
 };
 

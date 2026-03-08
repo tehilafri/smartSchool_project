@@ -33,6 +33,11 @@ api.interceptors.response.use(
     const message = error.response?.data?.message;
     const config = error.config;
     
+    // אם יש דגל skipErrorInterceptor, לא מציגים שגיאה
+    if (config?.skipErrorInterceptor) {
+      return Promise.reject(error);
+    }
+    
     // הצגת שגיאות רק עבור פעולות מפורשות (לא GET)
     const shouldShowError = config?.method !== 'get' || config?.showErrorOnGet;
     

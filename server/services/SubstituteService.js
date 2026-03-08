@@ -196,6 +196,16 @@ export async function handleTeacherAbsences({ teacherId, date, startTime, endTim
   const teacher = await User.findById(teacherId);
   if (!teacher) throw new Error('Teacher not found');
 
+  // בדיקה שהתאריך לא בעבר
+  const requestedDate = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  requestedDate.setHours(0, 0, 0, 0);
+
+  if (requestedDate < today) {
+    throw new Error('לא ניתן לדווח על היעדרות בתאריך שכבר עבר');
+  }
+
   // בדיקה למניעת כפילויות - בדיקה אם כבר יש בקשה באותו יום ושעות
   const existingRequest = await SubstituteRequest.findOne({
     originalTeacherId: teacherId,
