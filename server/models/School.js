@@ -7,7 +7,7 @@ const ScheduleHourSchema = new mongoose.Schema({
 }, { _id: false });
 
 const schoolSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
   schoolCode: { type: String, required: true, unique: true },
   principalId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   address: { type: String, required: true },
