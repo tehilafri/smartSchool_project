@@ -709,19 +709,25 @@ const AdminDashboard = ({ onLogout }) => {
               {scheduleHours.map((hour, index) => (
                 <div key={index} className="schedule-hour-item">
                   <span className="hour-number">שיעור {index + 1}</span>
-                  <input
-                    type="time"
-                    value={hour.start || ""}
-                    onChange={e => updateScheduleHour(index, 'start', e.target.value)}
-                    placeholder="התחלה"
-                  />
+                  <div>
+                    <label style={{fontSize: '11px', color: '#718096', marginBottom: '2px', display: 'block'}}>שעת התחלה</label>
+                    <input
+                      type="time"
+                      value={hour.start || ""}
+                      onChange={e => updateScheduleHour(index, 'start', e.target.value)}
+                      placeholder="התחלה"
+                    />
+                  </div>
                   <span>-</span>
-                  <input
-                    type="time"
-                    value={hour.end || ""}
-                    onChange={e => updateScheduleHour(index, 'end', e.target.value)}
-                    placeholder="סיום"
-                  />
+                  <div>
+                    <label style={{fontSize: '11px', color: '#718096', marginBottom: '2px', display: 'block'}}>שעת סיום</label>
+                    <input
+                      type="time"
+                      value={hour.end || ""}
+                      onChange={e => updateScheduleHour(index, 'end', e.target.value)}
+                      placeholder="סיום"
+                    />
+                  </div>
                   <button
                     type="button"
                     className="btn-small btn-danger"

@@ -64,7 +64,7 @@ const ScheduleTable = ({
                     <div className="hour-info">
                       <div className="hour-number">שעה {hourIdx + 1}</div>
                       {hourInfo && (
-                        <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                        <div className="hour-time">({hourInfo.end} - {hourInfo.start})</div>
                       )}
                     </div>
                   </td>
@@ -280,7 +280,7 @@ export const TeacherScheduleView = ({
                     <div className="hour-info">
                       <div className="hour-number">שעה {hourIdx + 1}</div>
                       {hourInfo && (
-                        <div className="hour-time">({hourInfo.start} - {hourInfo.end})</div>
+                        <div className="hour-time">({hourInfo.end} - {hourInfo.start})</div>
                       )}
                     </div>
                   </td>
