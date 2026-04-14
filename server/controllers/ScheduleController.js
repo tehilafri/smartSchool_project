@@ -248,25 +248,32 @@ export const getNextLessonForStudent = async (req, res) => {
 
     const lessons = schedule.weekPlan[todayDay] || [];
     let nextLesson = null;
+    const upcomingLessons = [];
 
     for (const lesson of lessons) {
-      if (!lesson.subject || !lesson.startTime) continue; // דילוג על שיעורים ריקים
+      if (!lesson.subject || !lesson.startTime) continue;
       const [hour, minute] = lesson.startTime.split(':').map(Number);
       const lessonDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
       lessonDate.setHours(hour, minute, 0, 0);
 
       if (lessonDate >= now) {
-        nextLesson = {
-          day: todayDay,
+        upcomingLessons.push({
           subject: lesson.subject,
           startTime: lesson.startTime,
           endTime: lesson.endTime,
-          teacherId: lesson.teacherId,
-          status: lesson.status,
-          substitute: lesson.substitute || null
-        };
-        break;
+          time: `${lesson.startTime} - ${lesson.endTime}`
+        });
       }
+    }
+
+    if (upcomingLessons.length > 0) {
+      nextLesson = {
+        day: todayDay,
+        subject: upcomingLessons[0].subject,
+        startTime: upcomingLessons[0].startTime,
+        endTime: upcomingLessons[0].endTime,
+        upcoming: upcomingLessons.slice(1)
+      };
     }
 
     res.json({ nextLesson }); // אם אין שיעורים היום – nextLesson יהיה null
