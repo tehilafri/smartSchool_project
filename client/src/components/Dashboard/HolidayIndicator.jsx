@@ -18,7 +18,7 @@ const HolidayIndicator = ({ date }) => {
   }, []);
 
   const getHolidayForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return holidays.find(holiday => holiday.date === dateStr);
   };
 
