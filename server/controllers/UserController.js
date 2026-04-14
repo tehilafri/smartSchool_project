@@ -107,6 +107,11 @@ export const register = async (req, res) => {
   } catch (err) {
     console.error(err);
 
+    if (err.name === 'ValidationError') {
+      const errorMessages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ message: errorMessages.join(', ') });
+    }
+
     // אם זו שגיאת כפילות של MongoDB
     if (err.code === 11000) {
         const duplicateField = Object.keys(err.keyValue)[0]; // שדה שחזר כפול
