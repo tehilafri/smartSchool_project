@@ -83,7 +83,7 @@ const ScheduleTable = ({
                       eventDate.setHours(0, 0, 0, 0);
                       
                       const isSameDate = eventDate.getTime() === targetDate.getTime();
-                      const isTimeOverlap = event.startTime <= hourInfo.end;
+                      const isTimeOverlap = event.startTime < hourInfo.end && event.endTime > hourInfo.start;
                       
                       // בדיקה אם האירוע שייך לכיתת המשתמש
                       const userClass = isTeacherView 
@@ -297,7 +297,7 @@ export const TeacherScheduleView = ({
                       eventDate.setHours(0, 0, 0, 0);
                       
                       const isSameDate = eventDate.getTime() === targetDate.getTime();
-                      const isTimeOverlap = event.startTime <= hourInfo.end;
+                      const isTimeOverlap = event.startTime < hourInfo.end && event.endTime > hourInfo.start;
                       
                       // בדיקה אם האירוע קשור למורה
                       const isTeacherEvent = teacherInfo?.classes?.some(teacherClass => 
