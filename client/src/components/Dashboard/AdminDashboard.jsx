@@ -754,15 +754,15 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   const menuItems = [
-    { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "teachers", label: "ניהול מורים/ות", icon: "👩‍🏫" },
-    { id: "secretaries", label: "ניהול מזכירים/ות", icon: "👩‍💼" },
-    { id: "students", label: "ניהול תלמידים", icon: "👨‍🎓" },
-    { id: "classes", label: "ניהול כיתות", icon: "🏫" },
-    { id: "schedule", label: "מערכת שעות", icon: "📅" },
-    { id: "events", label: "אירועים", icon: "🎉" },
-    { id: "absences", label: "בקשות היעדרות", icon: "📝" },
-    { id: "settings", label: "הגדרות בית ספר", icon: "⚙️" },
+    { id: "overview", label: "סקירה כללית" },
+    { id: "teachers", label: "ניהול מורים/ות" },
+    { id: "secretaries", label: "ניהול מזכירים/ות" },
+    { id: "students", label: "ניהול תלמידים" },
+    { id: "classes", label: "ניהול כיתות" },
+    { id: "schedule", label: "מערכת שעות" },
+    { id: "events", label: "אירועים" },
+    { id: "absences", label: "בקשות היעדרות" },
+    { id: "settings", label: "הגדרות בית ספר" },
   ];
 
   // Memoized calculations to prevent unnecessary re-renders

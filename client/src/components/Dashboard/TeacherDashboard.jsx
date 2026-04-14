@@ -638,14 +638,14 @@ const renderScheduleTable = () => {
   }, [events, me]);
 
   const menuItems = [
-    { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "schedule", label: "המערכת שלי", icon: "📅" },
-    ...(me?.ishomeroom ? [{ id: "classSchedule", label: "מערכת הכיתה", icon: "🏢" }] : []),
-    { id: "nextClass", label: "השיעור הבא", icon: "⏰" },
-    { id: "absences", label: "דיווח היעדרות", icon: "📝" },
-    { id: "myAbsences", label: "ההיעדרויות שלי", icon: "📋" },
-    { id: "students", label: "פרטי תלמידים", icon: "👨🎓" },
-    { id: "exams", label: "מבחנים", icon: "📄" },
+    { id: "overview", label: "סקירה כללית" },
+    { id: "schedule", label: "המערכת שלי" },
+    ...(me?.ishomeroom ? [{ id: "classSchedule", label: "מערכת הכיתה" }] : []),
+    { id: "nextClass", label: "השיעור הבא" },
+    { id: "absences", label: "דיווח היעדרות" },
+    { id: "myAbsences", label: "ההיעדרויות שלי" },
+    { id: "students", label: "פרטי תלמידים" },
+    { id: "exams", label: "מבחנים" },
   ];
 
   return (

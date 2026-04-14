@@ -11,6 +11,7 @@ const schoolSchema = new mongoose.Schema({
   schoolCode: { type: String, required: true, unique: true },
   principalId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   address: { type: String, required: true },
+  
   phone: { type: String, required: true },
   email: { type: String, required: true, lowercase: true },
   website: { type: String },

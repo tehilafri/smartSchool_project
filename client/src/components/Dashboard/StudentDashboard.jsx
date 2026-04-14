@@ -63,10 +63,10 @@ const StudentDashboard = ({ onLogout }) => {
 
 
   const menuItems = [
-    { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "nextClass", label: "השיעור הבא", icon: "⏰" },
-    { id: "schedule", label: "המערכת שלי", icon: "📅" },
-    { id: "exams", label: "מבחנים מתוכננים", icon: "📄" },
+    { id: "overview", label: "סקירה כללית" },
+    { id: "nextClass", label: "השיעור הבא" },
+    { id: "schedule", label: "המערכת שלי" },
+    { id: "exams", label: "מבחנים מתוכננים" },
   ];
 
   // Memoized calculations to prevent unnecessary re-renders

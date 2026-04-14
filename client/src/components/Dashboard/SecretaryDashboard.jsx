@@ -208,13 +208,13 @@ const SecretaryDashboard = ({ onLogout }) => {
   }, [substituteIsLoading, substitutesList, externalSubsFallback.length]);
 
   const menuItems = [
-    { id: "overview", label: "סקירה כללית", icon: "📊" },
-    { id: "teachers", label: "ניהול מורים/ות", icon: "👩🏫" },
-    { id: "students", label: "ניהול תלמידים", icon: "👨" },
-    { id: "events", label: "ניהול אירועים", icon: "🎉" },
-    { id: "classes", label: "ניהול כיתות", icon: "🏫" },
-    { id: "schedule", label: "מערכת שעות", icon: "📅" },
-    { id: "substitutes", label: "ממלאי מקום", icon: "🔄" },
+    { id: "overview", label: "סקירה כללית"},
+    { id: "teachers", label: "ניהול מורים/ות" },
+    { id: "students", label: "ניהול תלמידים" },
+    { id: "events", label: "ניהול אירועים" },
+    { id: "classes", label: "ניהול כיתות" },
+    { id: "schedule", label: "מערכת שעות" },
+    { id: "substitutes", label: "ממלאי מקום" },
   ]
 
   // Memoized calculations to prevent unnecessary re-renders
