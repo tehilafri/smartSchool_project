@@ -667,13 +667,13 @@
   text-align: center;
   font-weight: 600;
   color: #2d3748;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #a1bee3;
 }
 
 .schedule-table td {
   padding: 15px;
-  border-bottom: 1px solid #e2e8f0;
-  border-left: 1px solid #e2e8f0;
+  border-bottom: 1px solid #546b89;
+  border-left: 1px solid #5f799a;
   text-align: center;
 }
 
@@ -704,7 +704,7 @@
 }
 
 .class-slot {
-  background: #f6f4fa;
+  background: #dfe3f8;
   color: #3d2b6e;
   font-weight: 500;
   border-radius: 3px;
