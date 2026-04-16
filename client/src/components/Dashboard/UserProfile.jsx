@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { updateUser, getMe } from '../../services/userService';
+import { fetchCurrentUser } from '../../store/slices/userSlice';
+import { useAppDispatch } from '../../store/hooks';
 import PasswordInput from '../Auth/PasswordInput';
 import './UserProfile.css';
 
 const UserProfile = ({ user, onClose, onUserUpdate }) => {
+  const dispatch = useAppDispatch();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -50,9 +53,9 @@ const UserProfile = ({ user, onClose, onUserUpdate }) => {
 
       await updateUser(user._id, updateData);
       
-      // שליפת נתונים מעודכנים
       const updatedUserResponse = await getMe();
       onUserUpdate(updatedUserResponse.data);
+      await dispatch(fetchCurrentUser());
       
       setMessage('הפרטים עודכנו בהצלחה');
       setIsEditing(false);
