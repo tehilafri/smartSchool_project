@@ -704,10 +704,10 @@
 }
 
 .class-slot {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+  background: #f6f4fa;
+  color: #3d2b6e;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: 3px;
   margin: 2px;
 }
 
