@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAppSelector } from "../../store/hooks";
 import { getSchoolById } from "../../services/schoolService";
 import { getMe } from "../../services/userService";
 import UserProfile from "./UserProfile";
@@ -6,8 +7,9 @@ import "./DashboardHeader.css";
 
 const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
   const [logo, setLogo] = useState("");
-  const [schoolName, setSchoolName] = useState("");
   const [user, setUser] = useState(null);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const schoolName = currentUser?.schoolId?.name || "";
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -45,7 +47,6 @@ const DashboardHeader = ({ schoolId, onLogout, onRefresh }) => {
         } else {
           setLogo("");
         }
-        setSchoolName(school.name);
         
         // שליפת נתוני המשתמש
         const userData = await getMe();
