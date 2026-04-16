@@ -32,8 +32,8 @@ export const addExternalSubstitute = async (req, res) => {
 // מחיקת ממלא מקום לפי ID (Mongo ObjectId)
 export const deleteExternalSubstitute = async (req, res) => {
   try {
-    const { idNumber } = req.params;
-    const deleted = await ExternalSubstitute.findOneAndDelete({ idNumber , schoolId: req.schoolId });
+    const { identityNumber } = req.params;
+    const deleted = await ExternalSubstitute.findOneAndDelete({ identityNumber, schoolId: req.schoolId });
     if (!deleted) return res.status(404).json({ message: "External substitute not found" });
     res.json({ message: "External substitute deleted successfully" });
   } catch (err) {

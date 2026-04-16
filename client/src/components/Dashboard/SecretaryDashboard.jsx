@@ -364,6 +364,7 @@ const SecretaryDashboard = ({ onLogout }) => {
   const handleAddExternalSubstitute = async () => {
     try {
       await dispatch(addExternalSubstituteThunk(formData)).unwrap();
+      await dispatch(fetchExternalSubstitutes()); // Refresh the list after add
       closeModal();
     } catch (err) {
       console.error('Error adding substitute:', err);
@@ -373,6 +374,7 @@ const SecretaryDashboard = ({ onLogout }) => {
   const handleUpdateExternalSubstitute = async (id) => {
     try {
       await dispatch(updateExternalSubstituteThunk({ id, data: formData })).unwrap();
+      await dispatch(fetchExternalSubstitutes()); // Refresh the list after update
       closeModal();
     } catch (err) {
       console.error('Error updating substitute:', err);
@@ -396,6 +398,7 @@ const SecretaryDashboard = ({ onLogout }) => {
           // העברת identityNumber אם קיימת, אחרת נסו id/_id
           const identityToDelete = substitute?.identityNumber || substitute?.id || substitute?._id || idOrIdentityNumber;
           await dispatch(removeExternalSubstituteThunk(identityToDelete)).unwrap();
+          await dispatch(fetchExternalSubstitutes()); // Refresh the list after remove
           setConfirmDelete({ show: false, type: '', item: null, action: null });
         } catch (err) {
           console.error('Error deleting substitute:', err);
