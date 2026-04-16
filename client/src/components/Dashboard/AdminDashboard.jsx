@@ -304,7 +304,7 @@ const AdminDashboard = ({ onLogout }) => {
   const handleUpdateSchool = async () => {
     await updateSchool(me.schoolId._id, formData);
     closeModal();
-    fetchAllData();
+    await dispatch(fetchCurrentUser());
   };
 
   // מחיקת בית ספר
