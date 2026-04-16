@@ -75,8 +75,8 @@ mongoose.connection.once("open", () => {
   });
 });
 
-// כל שעה – בדיקת בקשות ממתינות
-cron.schedule('45 * * * *', async () => {
+// כל 5 דקות – בדיקת בקשות ממתינות
+cron.schedule('*/5 * * * *', async () => {
   await checkPendingSubstituteRequests();
 });
 
