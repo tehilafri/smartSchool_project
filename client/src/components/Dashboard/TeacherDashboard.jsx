@@ -169,7 +169,7 @@ const TeacherDashboard = ({ onLogout }) => {
       { absenceCode, ...substituteData }
     );
 
-    alert("המחליף אושר בהצלחה");
+    await dispatch(fetchSubstituteRequests());
 
     // איפוס הטופס עבור בקשה זו
     setSubstituteForms(prev => {
